@@ -201,6 +201,8 @@ class OutputFollows(_AssertionBase):
     # level: output must hold the state while the condition holds.
     # edge: output must reach HIGH at some point after the condition starts (latching alarms).
     mode: Literal["level", "edge"] = "level"
+    # edge only: a shorter pulse is contact bounce or noise, not a trigger firmware must catch.
+    min_trigger_ms: float = Field(default=20, ge=0)
 
     @field_validator("pin")
     @classmethod

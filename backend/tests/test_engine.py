@@ -74,6 +74,65 @@ def test_max_toggles_excuses_toggles_the_input_demanded():
     assert r.status == "pass", r.evidence
 
 
+THERMOSTAT_RULES = [
+    OutputFollows(id="f", pin="D9", high_when=Condition(pin="A0", op=">=", value=30), low_when=Condition(pin="A0", op="<=", value=27), within_ms=500),
+    MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000),
+    SafeStateOnFault(id="s", fault_when=Condition(pin="A0", op="<", value=2), output_pin="D9", safe_value=1, within_ms=100),
+]
+
+
+def test_max_toggles_excuses_the_flip_into_a_fail_safe():
+    # A brief 35 C reading, a fall through 27 C, then a disconnected sensor. Every switch is required.
+    mv = [(t, 350 if t < 100 else (200 if t < 400 else 0)) for t in range(0, 1000, 10)]
+    r = one(THERMOSTAT_RULES[1], trace(mv=mv, out=[(50, 1), (200, 0), (420, 1)]), THERMOSTAT_RULES)
+    assert r.status == "pass", r.evidence
+
+
+def test_same_toggles_with_no_fault_are_not_excused():
+    mv = [(t, 350 if t < 100 else 200) for t in range(0, 1000, 10)]
+    r = one(THERMOSTAT_RULES[1], trace(mv=mv, out=[(50, 1), (200, 0), (420, 1)]), THERMOSTAT_RULES)
+    assert r.status == "fail"
+
+
+def test_chatter_during_a_fault_is_not_excused():
+    mv = [(t, 0) for t in range(0, 1000, 10)]
+    r = one(THERMOSTAT_RULES[1], trace(mv=mv, out=[(50, 1), (200, 0), (420, 1), (500, 0), (600, 1)]), THERMOSTAT_RULES)
+    assert r.status == "fail"
+
+
+SIREN = OutputFollows(id="e", pin="D9", high_when=Condition(pin="D2", op="==", value=0), within_ms=100, mode="edge")
+
+
+def siren_result(rule, inp, out):
+    rules = [SIREN] if rule is SIREN else [SIREN, rule]
+    return next(r for r in evaluate_all(rules, trace(inp=inp, out=out), BUTTON_SCENARIO, SPEC) if r.assertion_id == rule.id)
+
+
+def test_release_bounce_is_not_an_edge_trigger():
+    press_then_bouncy_release = [(100, 0), (500, 1), (501, 0), (502, 1), (503, 0), (504, 1)]
+    r = siren_result(SIREN, press_then_bouncy_release, [(120, 1), (300, 0)])
+    assert r.status == "pass", r.evidence
+    assert r.metrics == {} and "1 required" in r.evidence
+
+
+def test_a_real_short_press_must_still_trigger():
+    r = siren_result(SIREN, [(100, 0), (150, 1), (600, 0), (650, 1)], [(120, 1), (300, 0)])
+    assert r.status == "fail"
+    assert r.metrics == {"missed": 1, "triggers": 2}
+
+
+def test_max_toggles_excuses_a_timed_output_retriggered_by_a_press():
+    limit = MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000)
+    r = siren_result(limit, [(100, 0), (150, 1), (600, 0), (650, 1)], [(120, 1), (300, 0), (620, 1)])
+    assert r.status == "pass", r.evidence
+
+
+def test_max_toggles_still_catches_chatter_on_one_press():
+    limit = MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000)
+    r = siren_result(limit, [(100, 0), (500, 1)], [(120, 1), (130, 0), (140, 1), (150, 0)])
+    assert r.status == "fail"
+
+
 def test_output_follows_fails_when_output_stays_low():
     a = OutputFollows(id="f", pin="D9", high_when=Condition(pin="A0", op=">=", value=30), within_ms=50)
     r = one(a, trace(mv=[(t, 400) for t in range(0, 1000, 10)]))

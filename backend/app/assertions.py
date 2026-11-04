@@ -209,25 +209,59 @@ def _time_at_level(timeline: OutputTimeline, start: float, end: float, wanted: i
     return bad
 
 
-def _required_state_flips(a: OutputFollows, trace: dict, scenario: Scenario, spec: DeviceSpec, end_ms: float) -> list[float]:
-    """Times when the input demanded a real output change, used to excuse legitimate toggles."""
+def _edge_triggers(a: OutputFollows, trace: dict, scenario: Scenario, spec: DeviceSpec, holes: list[tuple[float, float]], end_ms: float) -> list[float]:
+    """Start times of real triggers for an edge-mode assertion."""
+    triggers: list[float] = []
+    last = -1e12
+    if a.high_when is None:
+        return triggers
+    for s, e in condition_intervals(a.high_when, trace, scenario, spec, end_ms):
+        if e - s < a.min_trigger_ms or not _subtract((s, s + 0.001), holes):
+            continue
+        if s + a.within_ms > end_ms or s < last + a.within_ms:
+            continue
+        last = s
+        triggers.append(s)
+    return triggers
+
+
+def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario, spec: DeviceSpec, timeline: OutputTimeline, end_ms: float) -> list[float]:
+    """Times when the spec itself required this output to change, used to excuse legitimate toggles."""
     demands: list[tuple[float, int]] = []
-    if a.high_when is not None:
-        for s, e in condition_intervals(a.high_when, trace, scenario, spec, end_ms):
-            if e - s >= a.within_ms:
-                demands.append((s, 1))
-    if a.low_when is not None:
-        for s, e in condition_intervals(a.low_when, trace, scenario, spec, end_ms):
-            if e - s >= a.within_ms:
-                demands.append((s, 0))
-    demands.sort()
+    faults: list[tuple[float, float]] = []
+    for other in assertions:
+        if isinstance(other, SafeStateOnFault) and other.output_pin == pin and other.fault_when is not None:
+            for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms):
+                if e - s >= other.within_ms:
+                    demands.append((s, other.safe_value))
+                    faults.append((s, e))
+
     flips: list[float] = []
+    for other in assertions:
+        if not isinstance(other, OutputFollows) or other.pin != pin:
+            continue
+        if other.mode == "edge":
+            # The output falls by itself on a timer, so each trigger that finds it low is one demand.
+            cond_pins = {other.high_when.pin} if other.high_when is not None else set()
+            holes = _suspended(pin, cond_pins, assertions, trace, scenario, spec, end_ms)
+            flips.extend(t for t in _edge_triggers(other, trace, scenario, spec, holes, end_ms) if timeline.level_at(t) == 0)
+            continue
+        for cond, wanted in ((other.high_when, 1), (other.low_when, 0)):
+            if cond is None:
+                continue
+            # A fault overrides normal control, so the two never both demand a state at once.
+            for s, e in condition_intervals(cond, trace, scenario, spec, end_ms):
+                for ps, pe in _subtract((s, e), faults):
+                    if pe - ps >= other.within_ms:
+                        demands.append((ps, wanted))
+
+    demands.sort()
     state = 0
     for t, wanted in demands:
         if wanted != state:
             flips.append(t)
             state = wanted
-    return flips
+    return sorted(flips)
 
 
 def eval_output_follows(a: OutputFollows, trace: dict, scenario: Scenario, spec: DeviceSpec, assertions: list) -> AssertionResult:
@@ -238,33 +272,28 @@ def eval_output_follows(a: OutputFollows, trace: dict, scenario: Scenario, spec:
     violations: list[Violation] = []
     exercised = False
     checked = 0
-    last_trigger = -1e12
+
+    if a.mode == "edge":
+        for s in _edge_triggers(a, trace, scenario, spec, holes, end_ms):
+            deadline = s + a.within_ms
+            exercised = True
+            checked += 1
+            ok = timeline.level_at(s) == 1 or any(s <= t <= deadline and lv == 1 for t, lv in zip(timeline.times, timeline.levels))
+            if not ok:
+                violations.append(
+                    Violation(
+                        t_start=s,
+                        t_end=deadline,
+                        detail=f"{a.pin} never went HIGH within {a.within_ms:.0f} ms of the trigger at {_fmt_ms(s)}",
+                    )
+                )
 
     def check(cond: Optional[Condition], wanted: int) -> None:
-        nonlocal exercised, checked, last_trigger
+        nonlocal exercised, checked
         if cond is None:
             return
         word = "HIGH" if wanted else "LOW"
         for s, e in condition_intervals(cond, trace, scenario, spec, end_ms):
-            if a.mode == "edge":
-                if wanted != 1 or not _subtract((s, s + 0.001), holes):
-                    continue
-                deadline = s + a.within_ms
-                if deadline > end_ms or s < last_trigger + a.within_ms:
-                    continue  # contact bounce on one press is not a new trigger
-                last_trigger = s
-                exercised = True
-                checked += 1
-                ok = timeline.level_at(s) == 1 or any(s <= t <= deadline and lv == 1 for t, lv in zip(timeline.times, timeline.levels))
-                if not ok:
-                    violations.append(
-                        Violation(
-                            t_start=s,
-                            t_end=deadline,
-                            detail=f"{a.pin} never went {word} within {a.within_ms:.0f} ms of the trigger at {_fmt_ms(s)}",
-                        )
-                    )
-                continue
             for ps, pe in _subtract((s, e), holes):
                 if pe - ps < a.within_ms:
                     continue
@@ -281,8 +310,8 @@ def eval_output_follows(a: OutputFollows, trace: dict, scenario: Scenario, spec:
                         )
                     )
 
-    check(a.high_when, 1)
     if a.mode == "level":
+        check(a.high_when, 1)
         check(a.low_when, 0)
     violations.sort(key=lambda v: v.t_start)
 
@@ -313,16 +342,15 @@ def eval_output_follows(a: OutputFollows, trace: dict, scenario: Scenario, spec:
 
 def eval_max_toggles(a: MaxToggles, trace: dict, scenario: Scenario, spec: DeviceSpec, assertions: list) -> AssertionResult:
     end_ms = trace.get("sim_ms", scenario.duration_ms)
-    toggles = output_timeline(trace, a.pin).toggles()
-    excused: list[float] = []
+    timeline = output_timeline(trace, a.pin)
+    toggles = timeline.toggles()
+    excused = _demanded_flips(a.pin, assertions, trace, scenario, spec, timeline, end_ms)
     controlling: set[str] = set()
     for other in assertions:
         if isinstance(other, OutputFollows) and other.pin == a.pin:
-            excused.extend(_required_state_flips(other, trace, scenario, spec, end_ms))
             controlling.update(c.pin for c in (other.high_when, other.low_when) if c is not None)
         elif isinstance(other, TogglePerPress) and other.output_pin == a.pin:
             controlling.add(other.input_pin)
-    excused.sort()
     floats = _floating_windows(scenario, controlling, end_ms)
     toggles = [t for t in toggles if not any(fs <= t <= fe for fs, fe in floats)]
 
