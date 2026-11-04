@@ -30,6 +30,8 @@ MAX_VIOLATIONS = 40
 # A 10-bit ADC at 5 V cannot resolve better than 4.9 mV. A reading within two steps of a
 # threshold is ambiguous, so correct firmware is never failed for rounding.
 ADC_MARGIN_MV = 10.0
+# An output that changes this soon after a brief glitch ended is treated as reacting to that glitch.
+GLITCH_REACTION_MS = 250.0
 
 
 def _fmt_ms(t: float) -> str:
@@ -117,9 +119,15 @@ def digital_input_levels(trace: dict, scenario: Scenario, pin: str) -> tuple[int
 
 
 def condition_intervals(
-    cond: Condition, trace: dict, scenario: Scenario, spec: DeviceSpec, end_ms: float
+    cond: Condition, trace: dict, scenario: Scenario, spec: DeviceSpec, end_ms: float, may_hold: bool = False
 ) -> list[tuple[float, float]]:
-    """Maximal intervals during which the condition holds on the injected input."""
+    """Maximal intervals during which the condition holds on the injected input.
+
+    Readings within the ADC margin of a threshold are ambiguous. By default the condition only
+    counts once it clearly holds, which is what to use when demanding behaviour from firmware.
+    With may_hold it counts as soon as firmware could fairly see it, which is what to use when
+    excusing behaviour, because firmware may legitimately act anywhere inside the margin.
+    """
     pin_spec = spec.pin(cond.pin)
     series = analog_series(trace, cond.pin) if (pin_spec is None or pin_spec.type == "analog_input") else None
     intervals: list[tuple[float, float]] = []
@@ -127,6 +135,8 @@ def condition_intervals(
     if series is not None:
         start: Optional[float] = None
         margin = {">": -ADC_MARGIN_MV, ">=": -ADC_MARGIN_MV, "<": ADC_MARGIN_MV, "<=": ADC_MARGIN_MV}.get(cond.op, 0.0)
+        if may_hold:
+            margin = -margin
         for t, mv in zip(series.times, series.last):
             holds = cond.holds(spec.to_physical(cond.pin, mv + margin))
             if holds and start is None:
@@ -185,7 +195,7 @@ def _suspended(output_pin: str, cond_pins: set[str], assertions: list, trace: di
     holes = _floating_windows(scenario, cond_pins, end_ms)
     for other in assertions:
         if isinstance(other, SafeStateOnFault) and other.output_pin == output_pin and other.fault_when is not None:
-            holes.extend(condition_intervals(other.fault_when, trace, scenario, spec, end_ms))
+            holes.extend(condition_intervals(other.fault_when, trace, scenario, spec, end_ms, may_hold=True))
     return holes
 
 
@@ -244,7 +254,11 @@ def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario,
             # The output falls by itself on a timer, so each trigger that finds it low is one demand.
             cond_pins = {other.high_when.pin} if other.high_when is not None else set()
             holes = _suspended(pin, cond_pins, assertions, trace, scenario, spec, end_ms)
-            flips.extend(t for t in _edge_triggers(other, trace, scenario, spec, holes, end_ms) if timeline.level_at(t) == 0)
+            rises = [t for t, lv in zip(timeline.times, timeline.levels) if lv == 1]
+            for t in _edge_triggers(other, trace, scenario, spec, holes, end_ms):
+                # Firmware may react to the first bounce edge, just before the press settles.
+                if timeline.level_at(t) == 0 or any(t - other.within_ms <= r <= t for r in rises):
+                    flips.append(t)
             continue
         for cond, wanted in ((other.high_when, 1), (other.low_when, 0)):
             if cond is None:
@@ -262,6 +276,23 @@ def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario,
             flips.append(t)
             state = wanted
     return sorted(flips)
+
+
+def _glitch_toggles(pin: str, toggles: list[float], assertions: list, trace: dict, scenario: Scenario, spec: DeviceSpec, end_ms: float) -> int:
+    """How many toggles followed a fault-range excursion too brief to require the safe state."""
+    count = 0
+    seen: set[float] = set()
+    for other in assertions:
+        if not isinstance(other, SafeStateOnFault) or other.output_pin != pin or other.fault_when is None:
+            continue
+        for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms):
+            if e - s >= other.within_ms:
+                continue
+            for t in toggles:
+                if s <= t <= e + GLITCH_REACTION_MS and t not in seen:
+                    seen.add(t)
+                    count += 1
+    return count
 
 
 def eval_output_follows(a: OutputFollows, trace: dict, scenario: Scenario, spec: DeviceSpec, assertions: list) -> AssertionResult:
@@ -382,12 +413,14 @@ def eval_max_toggles(a: MaxToggles, trace: dict, scenario: Scenario, spec: Devic
             f"{a.pin} toggled {len(toggles)} time(s) in {_fmt_ms(end_ms)}, within the limit of {a.max_toggles} per {a.window_ms:.0f} ms.",
             {"total_toggles": len(toggles)},
         )
+    glitched = _glitch_toggles(a.pin, toggles, assertions, trace, scenario, spec, end_ms)
+    cause = f" {glitched} of those toggles followed a fault-range glitch too brief to require the safe state, so the firmware is reacting to noise." if glitched else ""
     return _result(
         a,
         scenario,
         "fail",
-        f"{a.pin} toggled {worst} times in a {a.window_ms:.0f} ms window starting at {_fmt_ms(worst_start)} (limit {a.max_toggles}), and {len(toggles)} times over the whole {_fmt_ms(end_ms)} run.",
-        {"worst_window_toggles": worst, "total_toggles": len(toggles), "limit": a.max_toggles},
+        f"{a.pin} toggled {worst} times in a {a.window_ms:.0f} ms window starting at {_fmt_ms(worst_start)} (limit {a.max_toggles}), and {len(toggles)} times over the whole {_fmt_ms(end_ms)} run.{cause}",
+        {"worst_window_toggles": worst, "total_toggles": len(toggles), "limit": a.max_toggles, "glitch_toggles": glitched},
         violations[:MAX_VIOLATIONS],
     )
 

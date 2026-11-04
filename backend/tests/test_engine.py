@@ -102,6 +102,60 @@ def test_chatter_during_a_fault_is_not_excused():
     assert r.status == "fail"
 
 
+def falling_ramp():
+    """35 C falling to 0 C at 1 mV every 2 ms, so 2 C (20 mV) is crossed at 660 ms."""
+    return [(t, max(0.0, 350 - t / 2)) for t in range(0, 1000, 2)]
+
+
+def test_fail_safe_entered_inside_the_adc_margin_is_not_a_follow_failure():
+    # The firmware sees 2 C at 24 mV, which is correct, before the reading is clearly below 2 C.
+    rules = [OutputFollows(id="f", pin="D9", low_when=Condition(pin="A0", op="<=", value=27), within_ms=50), THERMOSTAT_RULES[2]]
+    r = one(rules[0], trace(mv=falling_ramp(), out=[(10, 1), (150, 0), (652, 1)]), rules)
+    assert r.status == "pass", r.evidence
+
+
+def test_fail_safe_entered_well_above_the_threshold_is_still_a_follow_failure():
+    # 50 mV is 5 C: well outside the margin, so normal control still applies and the fan must be off.
+    rules = [OutputFollows(id="f", pin="D9", low_when=Condition(pin="A0", op="<=", value=27), within_ms=50), THERMOSTAT_RULES[2]]
+    r = one(rules[0], trace(mv=falling_ramp(), out=[(10, 1), (150, 0), (600, 1)]), rules)
+    assert r.status == "fail"
+    assert r.metrics["intervals"] == 1
+
+
+def test_fail_safe_is_still_demanded_only_once_the_fault_is_clear():
+    # Never going safe is a failure, so widening the excuse did not widen the demand.
+    r = one(THERMOSTAT_RULES[2], trace(mv=[(t, 0) for t in range(0, 1000, 10)]), THERMOSTAT_RULES)
+    assert r.status == "fail"
+
+
+GLITCH_RULES = [THERMOSTAT_RULES[1], SafeStateOnFault(id="h", fault_when=Condition(pin="A0", op=">", value=120), output_pin="D9", safe_value=1, within_ms=500)]
+
+
+def spike_train():
+    """20 C with 30 ms spikes to 475 mV (47.5 C) is not a fault here, so spikes go to 4750 mV."""
+    return [(t, 4750 if 100 <= t % 300 < 130 else 200) for t in range(0, 1000, 10)]
+
+
+def test_switching_on_a_glitch_too_short_to_require_the_fail_safe_still_fails():
+    out = [(100, 1), (200, 0), (400, 1), (500, 0), (700, 1), (800, 0)]
+    r = one(GLITCH_RULES[0], trace(mv=spike_train(), out=out), GLITCH_RULES)
+    assert r.status == "fail"
+    assert r.metrics["glitch_toggles"] == 6
+    assert "reacting to noise" in r.evidence
+
+
+def test_firmware_that_ignores_the_glitch_passes():
+    assert one(GLITCH_RULES[0], trace(mv=spike_train(), out=[]), GLITCH_RULES).status == "pass"
+
+
+def test_chatter_with_no_glitch_does_not_blame_a_glitch():
+    mv = [(t, 200) for t in range(0, 1000, 10)]
+    r = one(GLITCH_RULES[0], trace(mv=mv, out=[(100, 1), (200, 0), (400, 1), (500, 0)]), GLITCH_RULES)
+    assert r.status == "fail"
+    assert r.metrics["glitch_toggles"] == 0
+    assert "reacting to noise" not in r.evidence
+
+
 SIREN = OutputFollows(id="e", pin="D9", high_when=Condition(pin="D2", op="==", value=0), within_ms=100, mode="edge")
 
 
@@ -126,6 +180,14 @@ def test_a_real_short_press_must_still_trigger():
 def test_max_toggles_excuses_a_timed_output_retriggered_by_a_press():
     limit = MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000)
     r = siren_result(limit, [(100, 0), (150, 1), (600, 0), (650, 1)], [(120, 1), (300, 0), (620, 1)])
+    assert r.status == "pass", r.evidence
+
+
+def test_max_toggles_excuses_a_reaction_to_the_first_bounce_edge():
+    # The output rises on the first edge at 100, before the press settles at 106.
+    limit = MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000)
+    press = [(100, 0), (102, 1), (104, 0), (500, 1), (600, 0), (602, 1), (604, 0), (900, 1)]
+    r = siren_result(limit, press, [(100, 1), (400, 0), (600, 1)])
     assert r.status == "pass", r.evidence
 
 
