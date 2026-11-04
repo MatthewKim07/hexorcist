@@ -371,22 +371,39 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
     initial, events = digital_input_levels(trace, scenario, a.input_pin)
     toggles = output_timeline(trace, a.output_pin).toggles()
 
-    # Group input edges into settled presses: bounce is any edge within settle_ms of the last.
+    # Group input edges into settle events: bounce is any edge within settle_ms of the last.
     groups: list[tuple[float, float, int]] = []
     for t, value in events:
         if groups and t - groups[-1][1] <= a.settle_ms:
             groups[-1] = (groups[-1][0], t, value)
         else:
             groups.append((t, t, value))
-    presses = [g for g in groups if g[2] == a.active_level]
+
+    # A press is a settled change from idle to active. A blip that returns to where it
+    # started is not a press: it needs no toggle, and may not cause one if it is plainly noise.
+    presses: list[float] = []
+    ambiguous: list[tuple[float, float]] = []
+    settled = initial
+    for start, end, value in groups:
+        if value == a.active_level and settled != a.active_level:
+            presses.append(start)
+        elif value == settled and (settled != a.active_level or end - start >= a.settle_ms / 2):
+            # A short tap, or a gap in a hold long enough to be a real release and re-press.
+            # The spec does not settle these, so firmware may reasonably go either way.
+            ambiguous.append((start, end + a.within_ms))
+        settled = value
     if not presses:
         return _result(a, scenario, "not_exercised", f"{a.input_pin} was never pressed in this scenario.")
 
     violations: list[Violation] = []
     counts: list[int] = []
-    for start, _settled, _value in presses:
+    windows: list[tuple[float, float]] = []
+    for i, start in enumerate(presses):
         window_end = start + a.within_ms
-        if window_end > end_ms:
+        if i + 1 < len(presses):
+            window_end = min(window_end, presses[i + 1])
+        windows.append((start, window_end))
+        if start + a.within_ms > end_ms:
             continue
         n = sum(1 for t in toggles if start <= t <= window_end)
         counts.append(n)
@@ -400,14 +417,28 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
             )
     if not counts:
         return _result(a, scenario, "not_exercised", "No press finished inside the run.")
+
+    # Toggles the input did not ask for: on release, on a glitch, or out of nowhere. Boot is exempt.
+    allowed = windows + ambiguous
+    first_input = events[0][0] if events else end_ms
+    spurious = [t for t in toggles if t >= first_input and not any(s <= t <= e for s, e in allowed)]
+    violations.extend(Violation(t_start=t, t_end=t, detail=f"{a.output_pin} toggled at {_fmt_ms(t)} with no press to explain it") for t in spurious)
+    violations.sort(key=lambda v: v.t_start)
+
     if not violations:
         return _result(a, scenario, "pass", f"All {len(counts)} press(es) toggled {a.output_pin} exactly once.", {"presses": len(counts)})
+    wrong = sum(1 for n in counts if n != 1)
+    parts: list[str] = []
+    if wrong:
+        parts.append(f"{wrong} of {len(counts)} press(es) did not toggle {a.output_pin} exactly once; toggle counts per press were {counts}.")
+    if spurious:
+        parts.append(f"{a.output_pin} also toggled {len(spurious)} time(s) with no press to explain it, first at {_fmt_ms(spurious[0])}.")
     return _result(
         a,
         scenario,
         "fail",
-        f"{len(violations)} of {len(counts)} press(es) did not toggle {a.output_pin} exactly once; toggle counts per press were {counts}.",
-        {"presses": len(counts), "toggles_per_press": counts},
+        " ".join(parts),
+        {"presses": len(counts), "toggles_per_press": counts, "spurious_toggles": len(spurious)},
         violations[:MAX_VIOLATIONS],
     )
 

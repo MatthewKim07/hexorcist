@@ -4,6 +4,7 @@ from app.guard import screen_request
 from app.models import (
     Condition,
     DeviceSpec,
+    DigitalInput,
     MaxToggles,
     NoCrash,
     OutputFollows,
@@ -24,6 +25,7 @@ SPEC = DeviceSpec(
     ]
 )
 SCENARIO = Scenario(id="s", name="s", duration_ms=1000)
+BUTTON_SCENARIO = Scenario(id="b", name="b", duration_ms=1000, digital=[DigitalInput(pin="D2", initial=1)])
 
 
 def trace(mv=None, out=None, serial=None, inp=None, exit_reason="completed"):
@@ -91,13 +93,48 @@ def test_fault_overrides_normal_control():
     assert one(follows, tr, [follows, fault]).status != "fail"
 
 
-def test_toggle_per_press_groups_bounce():
+def press_result(inp, out):
     a = TogglePerPress(id="t", input_pin="D2", output_pin="D9", settle_ms=20, within_ms=100)
-    scenario_trace = trace(inp=[(100, 0), (102, 1), (104, 0)], out=[(110, 1), (112, 0), (114, 1)])
-    r = one(a, scenario_trace)
+    return next(r for r in evaluate_all([a], trace(inp=inp, out=out), BUTTON_SCENARIO, SPEC) if r.assertion_id == "t")
+
+
+def test_toggle_per_press_groups_bounce():
+    bounce = [(100, 0), (102, 1), (104, 0)]
+    r = press_result(bounce, [(110, 1), (112, 0), (114, 1)])
     assert r.status == "fail"
     assert r.metrics["toggles_per_press"] == [3]
-    assert one(a, trace(inp=[(100, 0), (102, 1), (104, 0)], out=[(130, 1)])).status == "pass"
+    assert press_result(bounce, [(130, 1)]).status == "pass"
+
+
+def test_glitch_during_a_hold_is_not_a_new_press():
+    hold = [(100, 0), (500, 1), (502, 0), (800, 1)]
+    r = press_result(hold, [(130, 1)])
+    assert r.status == "pass", r.evidence
+    assert r.metrics["presses"] == 1
+
+
+def test_toggling_on_a_glitch_during_a_hold_fails():
+    hold = [(100, 0), (500, 1), (502, 0), (800, 1)]
+    r = press_result(hold, [(130, 1), (503, 0)])
+    assert r.status == "fail"
+    assert r.metrics["spurious_toggles"] == 1
+
+
+def test_toggling_on_release_fails():
+    r = press_result([(100, 0), (500, 1)], [(130, 1), (510, 0)])
+    assert r.status == "fail"
+    assert r.metrics["toggles_per_press"] == [1]
+    assert r.metrics["spurious_toggles"] == 1
+
+
+def test_missing_a_press_still_fails():
+    r = press_result([(100, 0), (300, 1), (500, 0), (700, 1)], [(130, 1)])
+    assert r.status == "fail"
+    assert r.metrics["toggles_per_press"] == [1, 0]
+
+
+def test_toggle_set_at_boot_is_not_spurious():
+    assert press_result([(100, 0), (500, 1)], [(5, 1), (130, 0)]).status == "pass"
 
 
 def test_serial_value_matches_detects_wrong_unit():
