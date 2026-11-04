@@ -57,39 +57,72 @@ def summarize(run: dict) -> None:
         print(f"  warning: {w[:170]}")
 
 
+def result_row(preset_id: str, run: dict, seconds: float) -> dict:
+    report = run.get("report") or {}
+    score = report.get("score", {})
+    fix = report.get("fix") or {}
+    llm = report.get("llm", {})
+    return {
+        "preset": preset_id,
+        "run": run.get("id", ""),
+        "status": run["status"],
+        "bugs": score.get("bugs_found", 0),
+        "verified": score.get("bugs_verified", 0),
+        "patch": fix.get("iteration", "-"),
+        "attempts": score.get("fix_attempts", 0),
+        "lines": f"+{fix['diff']['added']} -{fix['diff']['removed']}" if fix else "-",
+        "scenarios": score.get("scenarios", 0),
+        "seconds": round(seconds),
+        "tokens": llm.get("prompt_tokens", 0) + llm.get("completion_tokens", 0),
+    }
+
+
+def print_table(rows: list[dict]) -> None:
+    print(f"\n{'preset':<12} {'status':<10} {'bugs':>4} {'verified':>8} {'patch':>5} {'attempts':>8} {'lines':>10} {'scenarios':>9} {'time':>6} {'tokens':>7}  run")
+    for r in rows:
+        print(f"{r['preset']:<12} {r['status']:<10} {r['bugs']:>4} {r['verified']:>8} {r['patch']!s:>5} {r['attempts']:>8} {r['lines']:>10} {r['scenarios']:>9} {r['seconds']:>5}s {r['tokens']:>7}  {r['run']}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", default="http://127.0.0.1:8000")
     parser.add_argument("--passcode", default="")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--repeat", type=int, default=1, help="Run each preset this many times, to measure how stable it is")
     parser.add_argument("presets", nargs="*")
     args = parser.parse_args()
 
     headers = {"X-Demo-Passcode": args.passcode} if args.passcode else {}
     bad = 0
+    rows: list[dict] = []
     with httpx.Client(base_url=args.api, headers=headers, timeout=60) as client:
         health = client.get("/api/health").json()
         print(f"health ok={health['ok']} llm={health['llm_model']} at {health['llm_base_url']}")
-        for preset in client.get("/api/presets").json():
-            if args.presets and preset["id"] not in args.presets:
-                continue
-            print(f"\n===== {preset['id']}: {preset['title']} =====")
-            start = time.monotonic()
-            created = client.post("/api/runs", json={"mode": "break", "title": preset["title"], "firmware": preset["firmware"], "pins": preset["pins"], "behaviour": preset["behaviour"]})
-            if created.status_code != 201:
-                print(f"  REJECTED {created.status_code}: {created.text[:300]}")
-                bad += 1
-                continue
-            run_id = created.json()["run_id"]
-            print(f"  run {run_id} guard={created.json()['guard']['allowed']} score={created.json()['guard']['score']}")
-            follow(client, run_id, not args.quiet)
-            run = client.get(f"/api/runs/{run_id}").json()
-            print(f"  took {time.monotonic() - start:.0f} s")
-            summarize(run)
-            expected = "contained" if preset["id"] == "containment" else "fixed"
-            if run["status"] != expected:
-                bad += 1
-    print(f"\n{'ALL PRESETS REACHED THEIR EXPECTED STATE' if bad == 0 else f'{bad} PRESET(S) DID NOT'}")
+        presets = client.get("/api/presets").json()
+        for round_number in range(args.repeat):
+            for preset in presets:
+                if args.presets and preset["id"] not in args.presets:
+                    continue
+                print(f"\n===== {preset['id']}: {preset['title']} (round {round_number + 1} of {args.repeat}) =====")
+                start = time.monotonic()
+                created = client.post("/api/runs", json={"mode": "break", "title": preset["title"], "firmware": preset["firmware"], "pins": preset["pins"], "behaviour": preset["behaviour"]})
+                if created.status_code != 201:
+                    print(f"  REJECTED {created.status_code}: {created.text[:300]}")
+                    bad += 1
+                    continue
+                run_id = created.json()["run_id"]
+                print(f"  run {run_id} guard={created.json()['guard']['allowed']} score={created.json()['guard']['score']}")
+                follow(client, run_id, not args.quiet)
+                run = client.get(f"/api/runs/{run_id}").json()
+                seconds = time.monotonic() - start
+                print(f"  took {seconds:.0f} s")
+                summarize(run)
+                rows.append(result_row(preset["id"], {**run, "id": run_id}, seconds))
+                expected = "contained" if preset["id"] == "containment" else "fixed"
+                if run["status"] != expected:
+                    bad += 1
+    print_table(rows)
+    print(f"\n{'ALL PRESETS REACHED THEIR EXPECTED STATE' if bad == 0 else f'{bad} RUN(S) DID NOT'}")
     sys.exit(1 if bad else 0)
 
 
