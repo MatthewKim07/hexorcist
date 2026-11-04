@@ -154,6 +154,14 @@ def test_repeating_measured_failures_is_rejected_even_under_new_names():
     assert status == "partial"
 
 
+def test_a_patch_identical_to_its_input_gets_one_free_retry():
+    status, report, runner, llm = run([ORIGINAL, PERSIST_FIXED])
+    assert status == "fixed"
+    assert report["fix"]["iteration"] == 1
+    assert ORIGINAL not in runner.compiled[1:]
+    assert "byte-for-byte" in llm.fix_prompts[1]
+
+
 def test_refining_the_best_patch_is_allowed():
     status, report, runner, _ = run([DWELL + "// CHATTER\n", PERSIST, PERSIST_FIXED])
     assert status == "fixed"

@@ -428,7 +428,14 @@ class Pipeline:
             try:
                 code, raw_reply = await self.llm.code(prompts.FIX_SYSTEM, prompts.fix_user(current, spec, failures, assertions_json, previous, history()), "fix")
                 reverted = find_code_reversion(code, disproven(), best["code"] if best else None, firmware)
-                if reverted is not None:
+                if code.strip() == current.strip():
+                    # One free chance: a model can claim a fix and still repeat the code. Nothing was tested.
+                    await self._warn(f"Patch {n} repeated the firmware unchanged, so it was sent back.")
+                    await bus.step("fix", "running", f"Patch {n} changed nothing. Asking again")
+                    redo = {**(previous or {}), "rejected_without_testing": "Your reply was byte-for-byte the firmware above, although your summary claimed a change. The failures above still happen. Change the code."}
+                    code, raw_reply = await self.llm.code(prompts.FIX_SYSTEM, prompts.fix_user(current, spec, failures, assertions_json, redo, history()), "fix")
+                    reverted = find_code_reversion(code, disproven(), best["code"] if best else None, firmware)
+                elif reverted is not None:
                     # One free chance to change course: this patch was never tested, so it costs no attempt.
                     await self._warn(f"Patch {n} was sent back without testing. {reverted.reason}")
                     await bus.step("fix", "running", f"Patch {n} went back to attempt {reverted.attempt}, which was disproven. Asking for a different approach")
