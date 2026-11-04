@@ -294,6 +294,47 @@ def test_missing_a_press_still_fails():
     assert r.metrics["toggles_per_press"] == [1, 0]
 
 
+# Press, a clean 15 ms open gap (more than half of the 20 ms settle time), then press again.
+DOUBLE_PRESS = [(100, 0), (150, 1), (165, 0), (500, 1)]
+
+
+def test_a_real_gap_may_be_read_as_one_press():
+    assert press_result(DOUBLE_PRESS, [(125, 1)]).status == "pass"
+
+
+def test_a_real_gap_may_be_read_as_two_presses():
+    r = press_result(DOUBLE_PRESS, [(125, 1), (190, 0)])
+    assert r.status == "pass", r.evidence
+    assert press_result(DOUBLE_PRESS, [(125, 1), (260, 0)]).status == "pass"
+
+
+def test_a_real_gap_does_not_excuse_more_toggles_than_it_explains():
+    assert press_result(DOUBLE_PRESS, [(125, 1), (130, 0), (135, 1)]).status == "fail"
+
+
+def test_a_real_gap_still_needs_a_toggle():
+    assert press_result(DOUBLE_PRESS, []).status == "fail"
+
+
+def test_bounce_blips_are_not_real_gaps():
+    # Open for 8 ms at a time, and each is under half of the 20 ms settle time.
+    bounce = [(100, 0), (150, 1), (158, 0), (170, 1), (178, 0), (500, 1)]
+    r = press_result(bounce, [(125, 1), (215, 0)])
+    assert r.status == "fail"
+    assert r.metrics["spurious_toggles"] == 1
+
+
+def test_a_real_gap_inside_one_bounce_group_may_be_two_presses():
+    # The shape a real model scenario produced: every edge is within settle time of the last,
+    # but the contact stayed open for 15 ms in the middle.
+    burst = [(100, 0), (105, 1), (108, 0), (120, 1), (135, 0), (140, 1), (143, 0), (400, 1)]
+    assert press_result(burst, [(125, 1)]).status == "pass"
+    r = press_result(burst, [(125, 1), (200, 0)])
+    assert r.status == "pass", r.evidence
+    assert press_result(burst, [(125, 1), (240, 0)]).status == "pass"
+    assert press_result(burst, [(125, 1), (130, 0), (135, 1)]).status == "fail"
+
+
 def test_toggle_set_at_boot_is_not_spurious():
     assert press_result([(100, 0), (500, 1)], [(5, 1), (130, 0)]).status == "pass"
 

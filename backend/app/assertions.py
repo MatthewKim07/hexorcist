@@ -439,24 +439,32 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
     toggles = output_timeline(trace, a.output_pin).toggles()
 
     # Group input edges into settle events: bounce is any edge within settle_ms of the last.
-    groups: list[tuple[float, float, int]] = []
+    # Count the times the contact stayed open long enough inside a group to be a real release,
+    # since debounce times differ and firmware may fairly read that as a second press.
+    groups: list[list] = []  # [start, end, final value, real gaps]
+    level = initial
+    last_edge = 0.0
     for t, value in events:
         if groups and t - groups[-1][1] <= a.settle_ms:
-            groups[-1] = (groups[-1][0], t, value)
+            if level != a.active_level and t - last_edge >= a.settle_ms / 2:
+                groups[-1][3] += 1
+            groups[-1][1] = t
+            groups[-1][2] = value
         else:
-            groups.append((t, t, value))
+            groups.append([t, t, value, 0])
+        level = value
+        last_edge = t
 
     # A press is a settled change from idle to active. A blip that returns to where it
     # started is not a press: it needs no toggle, and may not cause one if it is plainly noise.
-    presses: list[float] = []
+    presses: list[tuple[float, int]] = []
     ambiguous: list[tuple[float, float]] = []
     settled = initial
-    for start, end, value in groups:
+    for start, end, value, gaps in groups:
         if value == a.active_level and settled != a.active_level:
-            presses.append(start)
-        elif value == settled and (settled != a.active_level or end - start >= a.settle_ms / 2):
-            # A short tap, or a gap in a hold long enough to be a real release and re-press.
-            # The spec does not settle these, so firmware may reasonably go either way.
+            presses.append((start, gaps))
+        if gaps or (value == settled and settled != a.active_level):
+            # A real gap, or a short tap. The spec does not settle these, so firmware may go either way.
             ambiguous.append((start, end + a.within_ms))
         settled = value
     if not presses:
@@ -465,16 +473,20 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
     violations: list[Violation] = []
     counts: list[int] = []
     windows: list[tuple[float, float]] = []
-    for i, start in enumerate(presses):
+    wrong = 0
+    for i, (start, gaps) in enumerate(presses):
         window_end = start + a.within_ms
         if i + 1 < len(presses):
-            window_end = min(window_end, presses[i + 1])
+            window_end = min(window_end, presses[i + 1][0])
         windows.append((start, window_end))
         if start + a.within_ms > end_ms:
             continue
-        n = sum(1 for t in toggles if start <= t <= window_end)
+        # A toggle inside a later ambiguous group belongs to that group, not to this press.
+        later = [w for w in ambiguous if w[0] > start]
+        n = sum(1 for t in toggles if start <= t <= window_end and not any(s <= t <= e for s, e in later))
         counts.append(n)
-        if n != 1:
+        if not 1 <= n <= 1 + gaps:
+            wrong += 1
             violations.append(
                 Violation(
                     t_start=start,
@@ -494,7 +506,6 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
 
     if not violations:
         return _result(a, scenario, "pass", f"All {len(counts)} press(es) toggled {a.output_pin} exactly once.", {"presses": len(counts)})
-    wrong = sum(1 for n in counts if n != 1)
     parts: list[str] = []
     if wrong:
         parts.append(f"{wrong} of {len(counts)} press(es) did not toggle {a.output_pin} exactly once; toggle counts per press were {counts}.")
