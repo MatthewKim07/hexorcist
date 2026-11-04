@@ -36,9 +36,14 @@ const float FAN_ON_C = 30.0;
 const float FAN_OFF_C = 27.0;
 const float FAULT_LOW_C = 2.0;
 const float FAULT_HIGH_C = 120.0;
+// A new state must persist before it counts, within the 500 ms and 1000 ms deadlines,
+// so noise beyond the hysteresis band and one-sample glitches cannot switch the fan.
+const int SWITCH_SAMPLES = 4;
 const int FAULT_SAMPLES = 3;
 
 bool fanOn = false;
+int onCount = 0;
+int offCount = 0;
 int faultCount = 0;
 
 void setup()
@@ -54,21 +59,16 @@ void loop()
     bool outOfRange = tempC < FAULT_LOW_C || tempC > FAULT_HIGH_C;
 
     faultCount = outOfRange ? faultCount + 1 : 0;
+    onCount = (!outOfRange && tempC >= FAN_ON_C) ? onCount + 1 : 0;
+    offCount = (!outOfRange && tempC <= FAN_OFF_C) ? offCount + 1 : 0;
 
-    if (faultCount >= FAULT_SAMPLES)
+    if (faultCount >= FAULT_SAMPLES || onCount >= SWITCH_SAMPLES)
     {
         fanOn = true;
     }
-    else if (!outOfRange)
+    else if (offCount >= SWITCH_SAMPLES)
     {
-        if (tempC >= FAN_ON_C)
-        {
-            fanOn = true;
-        }
-        else if (tempC <= FAN_OFF_C)
-        {
-            fanOn = false;
-        }
+        fanOn = false;
     }
 
     digitalWrite(FAN_PIN, fanOn ? HIGH : LOW);
