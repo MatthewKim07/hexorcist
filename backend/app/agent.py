@@ -17,6 +17,7 @@ from typing import Any, Optional
 from pydantic import TypeAdapter, ValidationError
 
 from . import prompts
+from .approach import Attempt, find_code_reversion, find_measured_reversion
 from .assertions import evaluate_all
 from .config import Settings
 from .events import RunBus
@@ -403,17 +404,49 @@ class Pipeline:
         previous: Optional[dict] = None
         best: Optional[dict] = None
         suites: dict[int, SuiteResult] = {0: baseline}
+        tested: list[Attempt] = []
+
+        def disproven() -> list[Attempt]:
+            return [a for a in tested if best is None or a.n != best["n"]]
+
+        def history() -> list[dict]:
+            return [
+                {
+                    "attempt": a.n,
+                    "approach": a.summary[:300],
+                    "failing_checks": len(a.failing),
+                    "failing_requirements": sorted({descriptions[aid] for aid, _ in a.failing}),
+                    "status": "your best patch so far" if best is not None and a.n == best["n"] else "disproven",
+                }
+                for a in tested
+            ]
+
+        descriptions = {a.id: a.description for a in assertions}
 
         for n in range(1, MAX_FIX_ITERATIONS + 1):
             await bus.step("fix", "running", f"Writing patch, attempt {n} of {MAX_FIX_ITERATIONS}")
             try:
-                code, raw_reply = await self.llm.code(prompts.FIX_SYSTEM, prompts.fix_user(current, spec, failures, assertions_json, previous), "fix")
+                code, raw_reply = await self.llm.code(prompts.FIX_SYSTEM, prompts.fix_user(current, spec, failures, assertions_json, previous, history()), "fix")
+                reverted = find_code_reversion(code, disproven(), best["code"] if best else None, firmware)
+                if reverted is not None:
+                    # One free chance to change course: this patch was never tested, so it costs no attempt.
+                    await self._warn(f"Patch {n} was sent back without testing. {reverted.reason}")
+                    await bus.step("fix", "running", f"Patch {n} went back to attempt {reverted.attempt}, which was disproven. Asking for a different approach")
+                    redo = {**(previous or {}), "rejected_without_testing": f"{reverted.reason} That approach was already measured and it failed. Use a different mechanism."}
+                    code, raw_reply = await self.llm.code(prompts.FIX_SYSTEM, prompts.fix_user(current, spec, failures, assertions_json, redo, history()), "fix")
+                    reverted = find_code_reversion(code, disproven(), best["code"] if best else None, firmware)
             except LLMError as exc:
                 await self._warn(f"The fix attempt failed: {exc}")
                 await bus.step("fix", "failed", str(exc)[:200])
                 break
             summary = text_before_fence(raw_reply)
             await bus.step("fix", "done", summary[:200] or f"Patch {n} written")
+
+            if reverted is not None:
+                previous = {"rejected_without_testing": f"Patch {n} was rejected. {reverted.reason} That approach was already measured and it failed.", "firmware_above": "your best patch so far"}
+                iterations.append({"n": n, "compile_ok": False, "rejected": True, "reverted_to": reverted.attempt, "summary": f"Rejected: {reverted.reason}", "patch": code, "failing": None, "still_failing": [], "regressions": []})
+                await self._warn(f"Patch {n} was rejected without testing. {reverted.reason}")
+                continue
 
             screened = screen_request(code, "")
             if not screened["allowed"]:
@@ -432,9 +465,9 @@ class Pipeline:
             patched = await self._compile(code, f"compile patch {n}")
             await bus.emit("compile_log", iteration=n, ok=patched.ok, log=patched.log)
             if not patched.ok:
-                previous = {"compile_errors": patched.log[:3000]}
+                previous = {"compile_errors": patched.log[:3000], "firmware_above": "your last patch, which did not compile"}
                 current = code
-                iterations.append({"n": n, "compile_ok": False, "summary": summary, "failing": None, "still_failing": [], "regressions": []})
+                iterations.append({"n": n, "compile_ok": False, "summary": summary, "patch": code, "failing": None, "still_failing": [], "regressions": []})
                 await bus.step("verify", "running", f"Patch {n} did not compile, feeding the errors back")
                 continue
 
@@ -444,21 +477,36 @@ class Pipeline:
             still = now_failing & baseline_failures
             regressions = now_failing - baseline_failures
             row = self._iteration_row(n, suite, still, regressions, summary, True, assertions)
+            row["patch"] = code
+
+            # A patch must beat the best so far to replace it, so a tie keeps the earlier, smaller change.
+            improved = best is None or len(now_failing) < len(best["failing"])
+            repeated = None if improved else find_measured_reversion(now_failing, disproven())
+            if repeated is not None:
+                row["rejected"] = True
+                row["reverted_to"] = repeated.attempt
+                await self._warn(f"Patch {n} was rejected after testing. {repeated.reason}")
             iterations.append(row)
             await bus.emit("iteration", iteration=row)
 
-            if best is None or len(now_failing) <= len(best["failing"]):
+            tested.append(Attempt(n=n, code=code, summary=summary, failing=now_failing))
+            if improved:
                 best = {"n": n, "code": code, "summary": summary, "failing": now_failing, "still": still, "regressions": regressions}
+                best_suite = suite
             if not now_failing:
                 break
 
-            current = code
-            failures = self._failure_payload(suite, assertions, scenarios)
+            # Always build on the best measured patch. A worse patch is a dead end, not a starting point.
+            current = best["code"]
+            failures = self._failure_payload(best_suite, assertions, scenarios)
             previous = {
-                "still_failing_count": len(still),
+                "latest_patch": f"attempt {n}: {len(now_failing)} failing checks, {len(still)} of them from the original firmware, {len(regressions)} new",
                 "new_regressions": [{"assertion": a, "scenario": s} for a, s in sorted(regressions)][:10],
+                "firmware_above": "your best patch so far" if improved else f"your best patch so far, attempt {best['n']}. Attempt {n} was no better, so it was discarded",
             }
-            await bus.step("verify", "running", f"Patch {n}: {len(still)} still failing, {len(regressions)} new. Trying again")
+            if repeated is not None:
+                previous["rejected_after_testing"] = repeated.reason
+            await bus.step("verify", "running", f"Patch {n}: {len(still)} still failing, {len(regressions)} new. Building on patch {best['n']}")
 
         # 8. REPORT
         if best is None:

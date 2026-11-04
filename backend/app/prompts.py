@@ -150,6 +150,8 @@ Rules:
 - Make the smallest change that fixes the listed failures. Every changed line must be needed by a listed failure. Keep names, structure, comments and output formats. Do not rewrite the sketch, and leave working code alone even if you would have written it differently.
 - Reach for the simplest mechanism first. A threshold pair (hysteresis) and a range check are a few lines. Only add filters, sample buffers, or rate limiters if a listed failure needs them.
 - Before you answer, check the patch against ALL assertions, not just the failing ones. Anything that delays or suppresses an output (a filter, a debounce, a minimum dwell, a rate limit) must still meet every within_ms. A fail-safe must never be held back by a limiter.
+- A minimum dwell or a rate limit delays switches that may be required, so it usually breaks a response deadline. To reject noise, require the new state to hold for several consecutive samples, taking less time than its within_ms. Apply this to fault checks too: a fail-safe that trips on one sample switches the output on every glitch.
+- Attempts marked disproven were measured and failed. Do not go back to their mechanism: a patch that does is rejected.
 - Fix the behaviour for real. Never special-case the tests, remove features, or weaken what the firmware does.
 - Only replace delay() with millis() where a listed failure comes from blocking. If nothing needs to be responsive, keep the delay().
 - Use Allman brace style.
@@ -158,14 +160,16 @@ Rules:
 Reply with a one or two sentence summary of the change, then the COMPLETE patched sketch in one ```cpp fenced code block."""
 
 
-def fix_user(firmware: str, spec: DeviceSpec, failures: list[dict], assertions: list[dict], previous_attempt: Optional[dict] = None) -> str:
+def fix_user(firmware: str, spec: DeviceSpec, failures: list[dict], assertions: list[dict], previous_attempt: Optional[dict] = None, history: Optional[list[dict]] = None) -> str:
     text = (
         f"{spec_block(spec)}\n\nCURRENT FIRMWARE:\n```cpp\n{firmware}\n```\n\n"
         f"ALL ASSERTIONS the patched firmware must pass:\n{json.dumps(assertions, ensure_ascii=False)}\n\n"
-        f"FAILURES measured on the emulator:\n{json.dumps(failures, ensure_ascii=False, indent=1)}\n"
+        f"FAILURES measured on the emulator for the firmware above:\n{json.dumps(failures, ensure_ascii=False, indent=1)}\n"
     )
+    if history:
+        text += f"\nEARLIER ATTEMPTS, with what the emulator measured:\n{json.dumps(history, ensure_ascii=False, indent=1)}\n"
     if previous_attempt:
-        text += f"\nYOUR PREVIOUS PATCH did not pass. What happened:\n{json.dumps(previous_attempt, ensure_ascii=False, indent=1)}\nThe firmware above is that previous patch. Correct it.\n"
+        text += f"\nYOUR LAST PATCH did not pass. What happened:\n{json.dumps(previous_attempt, ensure_ascii=False, indent=1)}\nCorrect the firmware above.\n"
     return text
 
 
