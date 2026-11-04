@@ -102,6 +102,44 @@ def test_chatter_during_a_fault_is_not_excused():
     assert r.status == "fail"
 
 
+FOLLOW_AND_LIMIT = [
+    OutputFollows(id="f", pin="D9", high_when=Condition(pin="A0", op=">=", value=30), low_when=Condition(pin="A0", op="<=", value=27), within_ms=100),
+    MaxToggles(id="m", pin="D9", max_toggles=1, window_ms=1000),
+]
+
+
+def swing(hold_ms):
+    """Alternate between 35 C and 20 C, starting cold. Returns the input and an output that follows it."""
+    mv = [(t, 350 if (t // hold_ms) % 2 else 200) for t in range(0, 1000, 5)]
+    out = [(t + 5, 1 if (t // hold_ms) % 2 else 0) for t in range(hold_ms, 1000, hold_ms)]
+    return mv, out
+
+
+def test_following_holds_near_the_deadline_is_a_real_change():
+    mv, out = swing(80)
+    r = one(FOLLOW_AND_LIMIT[1], trace(mv=mv, out=out), FOLLOW_AND_LIMIT)
+    assert r.status == "pass", r.evidence
+
+
+def test_following_holds_well_short_of_the_deadline_is_short_cycling():
+    mv, out = swing(50)
+    r = one(FOLLOW_AND_LIMIT[1], trace(mv=mv, out=out), FOLLOW_AND_LIMIT)
+    assert r.status == "fail"
+
+
+def test_brownout_inside_the_adc_margin_still_excuses_the_fail_safe():
+    # 31 C, down through 27 C, a real fault at 1.5 C (inside the 10 mV margin of 2 C), then recovery to 28 C.
+    rules = [
+        OutputFollows(id="f", pin="D9", high_when=Condition(pin="A0", op=">=", value=30), low_when=Condition(pin="A0", op="<=", value=27), within_ms=100),
+        MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=1000),
+        SafeStateOnFault(id="s", fault_when=Condition(pin="A0", op="<", value=2), output_pin="D9", safe_value=1, within_ms=100),
+    ]
+    mv = [(t, 310 if t < 200 else (200 if t < 400 else (15 if t < 700 else 200))) for t in range(0, 1000, 5)]
+    r = one(rules[1], trace(mv=mv, out=[(50, 1), (250, 0), (450, 1), (750, 0)]), rules)
+    assert r.status == "pass", r.evidence
+    assert r.metrics["total_toggles"] == 4
+
+
 def falling_ramp():
     """35 C falling to 0 C at 1 mV every 2 ms, so 2 C (20 mV) is crossed at 660 ms."""
     return [(t, max(0.0, 350 - t / 2)) for t in range(0, 1000, 2)]

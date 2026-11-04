@@ -32,6 +32,8 @@ MAX_VIOLATIONS = 40
 ADC_MARGIN_MV = 10.0
 # An output that changes this soon after a brief glitch ended is treated as reacting to that glitch.
 GLITCH_REACTION_MS = 250.0
+# A hold this much of the way to a deadline is a real input change, not noise.
+REAL_CHANGE_FRACTION = 0.75
 
 
 def _fmt_ms(t: float) -> str:
@@ -236,13 +238,17 @@ def _edge_triggers(a: OutputFollows, trace: dict, scenario: Scenario, spec: Devi
 
 
 def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario, spec: DeviceSpec, timeline: OutputTimeline, end_ms: float) -> list[float]:
-    """Times when the spec itself required this output to change, used to excuse legitimate toggles."""
+    """Times when the input really called for this output to change, used to excuse legitimate toggles.
+
+    This excuses rather than demands, so readings inside the ADC margin count. A hold counts as a
+    real change once firmware that filters noise for most of its deadline could fairly react to it.
+    """
     demands: list[tuple[float, int]] = []
     faults: list[tuple[float, float]] = []
     for other in assertions:
         if isinstance(other, SafeStateOnFault) and other.output_pin == pin and other.fault_when is not None:
-            for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms):
-                if e - s >= other.within_ms:
+            for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms, may_hold=True):
+                if e - s >= other.within_ms * REAL_CHANGE_FRACTION:
                     demands.append((s, other.safe_value))
                     faults.append((s, e))
 
@@ -264,9 +270,9 @@ def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario,
             if cond is None:
                 continue
             # A fault overrides normal control, so the two never both demand a state at once.
-            for s, e in condition_intervals(cond, trace, scenario, spec, end_ms):
+            for s, e in condition_intervals(cond, trace, scenario, spec, end_ms, may_hold=True):
                 for ps, pe in _subtract((s, e), faults):
-                    if pe - ps >= other.within_ms:
+                    if pe - ps >= other.within_ms * REAL_CHANGE_FRACTION:
                         demands.append((ps, wanted))
 
     demands.sort()
@@ -285,8 +291,8 @@ def _glitch_toggles(pin: str, toggles: list[float], assertions: list, trace: dic
     for other in assertions:
         if not isinstance(other, SafeStateOnFault) or other.output_pin != pin or other.fault_when is None:
             continue
-        for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms):
-            if e - s >= other.within_ms:
+        for s, e in condition_intervals(other.fault_when, trace, scenario, spec, end_ms, may_hold=True):
+            if e - s >= other.within_ms * REAL_CHANGE_FRACTION:
                 continue
             for t in toggles:
                 if s <= t <= e + GLITCH_REACTION_MS and t not in seen:
