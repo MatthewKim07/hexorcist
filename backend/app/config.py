@@ -3,6 +3,12 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# For running outside Docker. Real environment variables win, and compose passes env_file itself.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env", override=False)
 
 
 def _int(name: str, default: int) -> int:
