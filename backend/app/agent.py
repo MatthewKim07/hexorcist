@@ -35,9 +35,10 @@ from .models import (
     SerialPeriod,
     SerialValueMatches,
     TogglePerPress,
+    normalize_pin,
 )
 from .sandbox import CompileResult, ContainmentRecord, SandboxError, SandboxRunner
-from .scenario_lib import builtin_scenarios, fill_defaults
+from .scenario_lib import builtin_scenarios, fill_defaults, idle_level
 from .store import Store
 
 log = logging.getLogger("hexorcist.agent")
@@ -158,6 +159,16 @@ def normalize_scenarios(raw: list[dict], spec: DeviceSpec, assertions: list) -> 
         data["id"] = f"llm-{i + 1}"
         data["source"] = "llm"
         data.setdefault("seed", 100 + i)
+        # A button left unstated rests at idle. Pydantic's default of 0 would hold an active-LOW button down.
+        pins = {p.pin: p for p in spec.inputs()}
+        for d in data.get("digital") or []:
+            if isinstance(d, dict) and "initial" not in d:
+                try:
+                    pin = pins.get(normalize_pin(d.get("pin", "")))
+                except ValueError:
+                    pin = None
+                if pin is not None:
+                    d["initial"] = idle_level(pin)
         try:
             data["duration_ms"] = min(float(data.get("duration_ms", 8000)), MAX_LLM_SCENARIO_MS)
             scenario = Scenario.model_validate(data)
@@ -412,7 +423,8 @@ class Pipeline:
                 await self._warn(f"Patch {n} was rejected by the input guard: {screened['reasons']}")
                 continue
             if code.strip() == current.strip():
-                previous = {"problem": "Your patch was identical to the firmware it was meant to change."}
+                log.info("run %s patch %d was identical to its input. Reply was:\n%s", self.run_id, n, raw_reply[:6000])
+                previous = {"problem": "Your patch was byte-for-byte identical to the firmware it was meant to change, so the failures above still happen. Change the code."}
                 iterations.append({"n": n, "compile_ok": False, "rejected": True, "summary": "Patch made no changes.", "failing": None, "still_failing": [], "regressions": []})
                 continue
 

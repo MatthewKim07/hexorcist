@@ -39,12 +39,14 @@ def extract_json_text(text: str) -> str:
 
 
 def extract_code(text: str) -> Optional[str]:
-    """Return the longest fenced block, which is the sketch when a reply has several."""
+    """Return the sketch from a reply. A model may quote the old code first, so the last whole sketch wins."""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     blocks = _FENCE_RE.findall(text)
     if not blocks:
         return None
-    return max(blocks, key=len).strip() + "\n"
+    sketches = [b for b in blocks if "setup" in b and "loop" in b]
+    chosen = sketches[-1] if sketches else max(blocks, key=len)
+    return chosen.strip() + "\n"
 
 
 @dataclass

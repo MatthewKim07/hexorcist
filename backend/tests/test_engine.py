@@ -1,6 +1,8 @@
 """Fast engine tests on synthetic traces. No Docker, no LLM."""
+from app.agent import normalize_scenarios
 from app.assertions import evaluate_all, output_timeline
 from app.guard import screen_request
+from app.llm import extract_code
 from app.models import (
     Condition,
     DeviceSpec,
@@ -215,6 +217,25 @@ def test_pwm_counts_as_high_then_returns_to_gpio():
     timeline = output_timeline(tr, "D9")
     assert timeline.level_at(15) == 1
     assert timeline.level_at(25) == 0
+
+
+def test_extract_code_prefers_the_last_whole_sketch():
+    old = "void setup() {}\nvoid loop() { /* a long, long, long, long comment */ }"
+    new = "void setup() {}\nvoid loop() { fixed(); }"
+    assert extract_code(f"Before:\n```cpp\n{old}\n```\nAfter:\n```cpp\n{new}\n```") == new + "\n"
+    assert extract_code(f"```cpp\n{new}\n```\nThe key line:\n```cpp\nfixed();\n```") == new + "\n"
+    assert extract_code("no code here") is None
+
+
+def test_llm_scenario_button_idles_at_its_rest_level_unless_stated():
+    spec = DeviceSpec(pins=[PinSpec(pin="D2", type="digital_input", active_low=True), PinSpec(pin="D9", type="digital_output")])
+    raw = [
+        {"name": "no initial", "digital": [{"pin": "D2", "events": [{"t_ms": 100, "value": 0}]}]},
+        {"name": "held at boot", "digital": [{"pin": "D2", "initial": 0, "events": [{"t_ms": 100, "value": 1}]}]},
+    ]
+    kept, warnings = normalize_scenarios(raw, spec, [])
+    assert not warnings
+    assert [s.digital[0].initial for s in kept] == [1, 0]
 
 
 def test_guard_flags_containment_preset_and_passes_the_others():
