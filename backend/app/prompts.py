@@ -50,8 +50,8 @@ class UnderstandReply(BaseModel):
 ASSERTION_DOC = """Assertion types (a condition is {"pin": "A0", "op": ">=", "value": 30}. For analog pins "value" is in PHYSICAL units of that pin's scale, such as °C. For digital input pins it is the level, 0 or 1):
 - {"type":"output_follows","pin":"D9","high_when":<condition>,"low_when":<condition>,"within_ms":500,"mode":"level","description":"..."}
   "level": while the condition holds, the output must hold that state after within_ms.
-  "edge": use for latching behaviour. When high_when begins, the output must go HIGH at some point within within_ms, however short the trigger. Omit low_when.
-- {"type":"max_toggles","pin":"D9","max_toggles":2,"window_ms":5000,"description":"..."}  no more than N level changes in any window.
+  "edge": use for latching or timed outputs. When high_when begins, the output must go HIGH at some point within within_ms. Omit low_when. Add "min_trigger_ms" if the spec names a shortest pulse below 20 ms: shorter pulses count as contact bounce, not triggers.
+- {"type":"max_toggles","pin":"D9","max_toggles":2,"window_ms":5000,"description":"..."}  no more than N level changes in any window. Only use it when the spec states a switching limit.
 - {"type":"toggle_per_press","input_pin":"D2","output_pin":"D13","active_level":0,"settle_ms":50,"within_ms":100,"description":"..."}  each settled press toggles the output exactly once.
 - {"type":"serial_period","pattern":"^hb$","period_ms":500,"tolerance_ms":100,"description":"..."}  a matching line appears every period.
 - {"type":"serial_value_matches","pattern":"Temp: (-?[0-9.]+)","input_pin":"A0","tolerance":1.0,"max_lag_ms":300,"description":"..."}  capture group 1 must match the injected value in physical units.
@@ -63,7 +63,9 @@ UNDERSTAND_SYSTEM = f"""You are the requirements engineer in a firmware QA syste
 
 {UNTRUSTED}
 
-Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Use exact numbers from the spec. Do not invent requirements the spec does not imply.
+Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Use exact numbers from the spec. Do not invent requirements the spec does not imply, and never derive a numeric limit the spec does not state.
+
+Correct firmware must be able to pass every assertion at once, so check that they cannot conflict. Write one assertion per requirement: do not restate a requirement in a second assertion. For example, toggle_per_press already rules out double toggles, so it needs no max_toggles beside it.
 
 {ASSERTION_DOC}
 
@@ -145,9 +147,11 @@ FIX_SYSTEM = f"""You are a senior embedded engineer patching Arduino firmware. Y
 {UNTRUSTED}
 
 Rules:
-- Make the smallest change that fixes the listed failures. Keep names, structure, comments and output formats. Do not rewrite the sketch.
+- Make the smallest change that fixes the listed failures. Every changed line must be needed by a listed failure. Keep names, structure, comments and output formats. Do not rewrite the sketch, and leave working code alone even if you would have written it differently.
+- Reach for the simplest mechanism first. A threshold pair (hysteresis) and a range check are a few lines. Only add filters, sample buffers, or rate limiters if a listed failure needs them.
+- Before you answer, check the patch against ALL assertions, not just the failing ones. Anything that delays or suppresses an output (a filter, a debounce, a minimum dwell, a rate limit) must still meet every within_ms. A fail-safe must never be held back by a limiter.
 - Fix the behaviour for real. Never special-case the tests, remove features, or weaken what the firmware does.
-- Use millis() rather than delay() for anything that must stay responsive.
+- Only replace delay() with millis() where a listed failure comes from blocking. If nothing needs to be responsive, keep the delay().
 - Use Allman brace style.
 - Do not add #include lines beyond Arduino libraries that the sketch needs. Never reference host files.
 
