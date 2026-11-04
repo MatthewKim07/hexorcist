@@ -335,6 +335,28 @@ def test_a_real_gap_inside_one_bounce_group_may_be_two_presses():
     assert press_result(burst, [(125, 1), (130, 0), (135, 1)]).status == "fail"
 
 
+# Down for 25 ms, open for 15 ms, then a steady hold: a shape a real model scenario produced.
+SPLIT_PRESS = [(100, 0), (125, 1), (140, 0), (500, 1)]
+
+
+def test_a_long_debounce_may_read_a_split_press_as_one():
+    r = press_result(SPLIT_PRESS, [(169, 1)])
+    assert r.status == "pass", r.evidence
+    assert r.metrics["presses"] == 1
+
+
+def test_a_short_debounce_may_read_a_split_press_as_two():
+    assert press_result(SPLIT_PRESS, [(124, 1), (165, 0)]).status == "pass"
+
+
+def test_a_split_press_with_no_toggle_still_fails():
+    assert press_result(SPLIT_PRESS, []).status == "fail"
+
+
+def test_a_split_press_does_not_excuse_double_toggling_the_first_part():
+    assert press_result(SPLIT_PRESS, [(110, 1), (120, 0)]).status == "fail"
+
+
 # Contact chatter from 100 to 175 ms, every edge within settle time of the last, then a steady hold.
 LONG_CHATTER = [(100, 0), (115, 1), (130, 0), (145, 1), (160, 0), (165, 1), (175, 0), (600, 1)]
 

@@ -483,11 +483,14 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
         windows.append((start, window_end))
         if deadline > end_ms:
             continue
-        # A toggle inside a later ambiguous group belongs to that group, not to this press.
+        # A toggle inside a later ambiguous group may answer this press, since firmware may read the
+        # whole burst as one press. It just cannot count as an extra toggle against this press.
         later = [w for w in ambiguous if w[0] > start]
-        n = sum(1 for t in toggles if start <= t <= window_end and not any(s <= t <= e for s, e in later))
+        in_window = [t for t in toggles if start <= t <= window_end]
+        own = [t for t in in_window if not any(s <= t <= e for s, e in later)]
+        n = len(own) if own else len(in_window)
         counts.append(n)
-        if not 1 <= n <= 1 + gaps:
+        if not in_window or len(own) > 1 + gaps:
             wrong += 1
             violations.append(
                 Violation(
