@@ -1,0 +1,97 @@
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: #0b0d12;
+  color: #e7e9ee;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-line bg-panel;
+  }
+  .panel-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.09em] text-faint;
+  }
+  .field {
+    @apply w-full rounded-md border border-line bg-raised px-2.5 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-faint focus:border-halo/60;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-halo px-4 py-2 text-sm font-semibold text-[#14110a] shadow-halo transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-raised px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:border-faint hover:text-ink;
+  }
+}
+
+.cm-editor {
+  height: 100%;
+  font-size: 12.5px;
+}
+.cm-editor .cm-scroller {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.pulse-soft {
+  animation: pulse-soft 1.4s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin {
+  animation: spin-slow 1.1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-soft, .spin {
+    animation: none;
+  }
+}
+
+input[type="range"].scrub {
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #262b36;
+  outline-offset: 4px;
+}
+input[type="range"].scrub::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f0c05a;
+  box-shadow: 0 0 10px rgba(240, 192, 90, 0.6);
+  cursor: grab;
+}
+input[type="range"].scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #f0c05a;
+  cursor: grab;
+}
