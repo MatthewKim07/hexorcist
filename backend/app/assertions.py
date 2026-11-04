@@ -457,12 +457,12 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
 
     # A press is a settled change from idle to active. A blip that returns to where it
     # started is not a press: it needs no toggle, and may not cause one if it is plainly noise.
-    presses: list[tuple[float, int]] = []
+    presses: list[tuple[float, float, int]] = []
     ambiguous: list[tuple[float, float]] = []
     settled = initial
     for start, end, value, gaps in groups:
         if value == a.active_level and settled != a.active_level:
-            presses.append((start, gaps))
+            presses.append((start, end, gaps))
         if gaps or (value == settled and settled != a.active_level):
             # A real gap, or a short tap. The spec does not settle these, so firmware may go either way.
             ambiguous.append((start, end + a.within_ms))
@@ -474,12 +474,14 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
     counts: list[int] = []
     windows: list[tuple[float, float]] = []
     wrong = 0
-    for i, (start, gaps) in enumerate(presses):
-        window_end = start + a.within_ms
+    for i, (start, settled_at, gaps) in enumerate(presses):
+        # The deadline runs from when the contact settles: firmware cannot know any sooner.
+        deadline = settled_at + a.within_ms
+        window_end = deadline
         if i + 1 < len(presses):
             window_end = min(window_end, presses[i + 1][0])
         windows.append((start, window_end))
-        if start + a.within_ms > end_ms:
+        if deadline > end_ms:
             continue
         # A toggle inside a later ambiguous group belongs to that group, not to this press.
         later = [w for w in ambiguous if w[0] > start]

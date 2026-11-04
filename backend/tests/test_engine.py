@@ -335,6 +335,26 @@ def test_a_real_gap_inside_one_bounce_group_may_be_two_presses():
     assert press_result(burst, [(125, 1), (130, 0), (135, 1)]).status == "fail"
 
 
+# Contact chatter from 100 to 175 ms, every edge within settle time of the last, then a steady hold.
+LONG_CHATTER = [(100, 0), (115, 1), (130, 0), (145, 1), (160, 0), (165, 1), (175, 0), (600, 1)]
+
+
+def test_press_deadline_runs_from_when_the_contact_settles():
+    r = press_result(LONG_CHATTER, [(205, 1)])
+    assert r.status == "pass", r.evidence
+
+
+def test_toggling_after_the_settled_deadline_still_fails():
+    r = press_result(LONG_CHATTER, [(280, 1)])
+    assert r.status == "fail"
+    assert r.metrics["toggles_per_press"] == [0]
+
+
+def test_clean_press_deadline_is_unchanged():
+    assert press_result([(100, 0), (500, 1)], [(195, 1)]).status == "pass"
+    assert press_result([(100, 0), (500, 1)], [(205, 1)]).status == "fail"
+
+
 def test_toggle_set_at_boot_is_not_spurious():
     assert press_result([(100, 0), (500, 1)], [(5, 1), (130, 0)]).status == "pass"
 
