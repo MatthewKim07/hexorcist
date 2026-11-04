@@ -39,7 +39,7 @@ const float FAULT_HIGH_C = 120.0;
 // A new state must persist before it counts, within the 500 ms and 1000 ms deadlines,
 // so noise beyond the hysteresis band and one-sample glitches cannot switch the fan.
 const int SWITCH_SAMPLES = 4;
-const int FAULT_SAMPLES = 3;
+const int FAULT_SAMPLES = 5;
 
 bool fanOn = false;
 int onCount = 0;
