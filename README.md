@@ -124,7 +124,10 @@ docker build -t hexorcist-sandbox:latest ../sandbox
 .venv/bin/python -m scripts.verify_sandbox        # the harness and lockdown, on real firmware
 .venv/bin/python -m scripts.check_presets         # planted bugs fail, reference fixes pass, no LLM
 .venv/bin/python -m scripts.run_presets           # all presets through a running API
+.venv/bin/python -m scripts.replay_reference RUN  # a stored run's scenarios against known-good firmware
 ```
+
+A failure in `replay_reference` means a scenario, an assertion or the evaluator is unfair, because the firmware is known to be correct. Every engine change is checked both ways: correct firmware must pass, and planted bugs must still fail.
 
 `tests/mock_llm.py` is a scripted OpenAI-compatible server for testing the pipeline without a key. Its replies are canned, so a run against it says nothing about a real model.
 
