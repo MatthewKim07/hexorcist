@@ -238,6 +238,31 @@ class TogglePerPress(_AssertionBase):
         return normalize_pin(v)
 
 
+class TimedPulse(_AssertionBase):
+    """A trigger starts an output pulse of a fixed length, such as a siren that stays on for 3 s."""
+
+    type: Literal["timed_pulse"] = "timed_pulse"
+    pin: str
+    trigger: Condition
+    duration_ms: float = Field(gt=0)
+    tolerance_ms: Optional[float] = Field(default=None, ge=0)
+    within_ms: float = Field(default=100, gt=0)
+    # A shorter pulse is contact bounce or noise, not a trigger firmware must catch.
+    min_trigger_ms: float = Field(default=20, ge=0)
+    active_level: int = Field(default=1, ge=0, le=1)
+    # What a trigger does while the pulse is running. "unspecified" leaves that pulse's length unjudged.
+    during_pulse: Literal["ignore", "restart", "unspecified"] = "unspecified"
+
+    @field_validator("pin")
+    @classmethod
+    def _pin(cls, v: str) -> str:
+        return normalize_pin(v)
+
+    def tolerance(self) -> float:
+        """A stated tolerance, or one wide enough for firmware that polls every 100 ms."""
+        return self.tolerance_ms if self.tolerance_ms is not None else max(150.0, self.duration_ms * 0.05)
+
+
 class SerialPeriod(_AssertionBase):
     type: Literal["serial_period"] = "serial_period"
     pattern: str
@@ -292,6 +317,7 @@ Assertion = Annotated[
         OutputFollows,
         MaxToggles,
         TogglePerPress,
+        TimedPulse,
         SerialPeriod,
         SerialValueMatches,
         SafeStateOnFault,

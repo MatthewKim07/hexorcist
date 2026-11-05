@@ -14,6 +14,7 @@ from app.models import (
     SafeStateOnFault,
     Scenario,
     SerialValueMatches,
+    TimedPulse,
     TogglePerPress,
     normalize_pin,
 )
@@ -429,3 +430,150 @@ def test_guard_flags_containment_preset_and_passes_the_others():
 
 def test_guard_allows_normal_library_includes():
     assert screen_request('#include <Servo.h>\n#include "config.h"\n', "Move a servo")["allowed"]
+
+
+def pulse(tr_inp, tr_out, during="ignore", sim_ms=12000.0, **kwargs):
+    """Judge a 3 s pulse on D9 triggered by the active-LOW button on D2."""
+    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=3000, within_ms=100, during_pulse=during, **kwargs)
+    tr = trace(inp=tr_inp, out=tr_out)
+    tr["sim_ms"] = sim_ms
+    return evaluate_all([a], tr, BUTTON_SCENARIO, SPEC)[0]
+
+
+def test_timed_pulse_passes_the_stated_length():
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1), (4005, 0)])
+    assert r.status == "pass"
+    assert r.metrics["pulses_ms"] == [3000]
+
+
+def test_timed_pulse_fails_a_short_pulse():
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1), (2005, 0)])
+    assert r.status == "fail"
+    assert r.metrics["wrong_length"] == 1
+    assert "lasted 1000 ms, expected 3000 ± 150 ms" in r.evidence
+
+
+def test_timed_pulse_fails_a_long_pulse():
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1), (6005, 0)])
+    assert r.status == "fail"
+    assert "lasted 5000 ms" in r.evidence
+
+
+def test_timed_pulse_fails_a_pulse_that_never_ends():
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1)])
+    assert r.status == "fail"
+    assert "still on after" in r.evidence
+
+
+def test_timed_pulse_tolerance_edges():
+    assert pulse([(1000, 0), (1060, 1)], [(1005, 1), (3855, 0)]).status == "pass"
+    assert pulse([(1000, 0), (1060, 1)], [(1005, 1), (4155, 0)]).status == "pass"
+    assert pulse([(1000, 0), (1060, 1)], [(1005, 1), (3854, 0)]).status == "fail"
+    assert pulse([(1000, 0), (1060, 1)], [(1005, 1), (4156, 0)]).status == "fail"
+    assert pulse([(1000, 0), (1060, 1)], [(1005, 1), (4105, 0)], tolerance_ms=50).status == "fail"
+
+
+def test_timed_pulse_fails_a_missed_trigger():
+    r = pulse([(1000, 0), (1060, 1)], [])
+    assert r.status == "fail"
+    assert r.metrics["missed"] == 1
+    assert "missed 1 of 1 trigger" in r.evidence
+
+
+def test_timed_pulse_fails_a_late_start():
+    r = pulse([(1000, 0), (1060, 1)], [(1200, 1), (4200, 0)])
+    assert r.status == "fail"
+    assert r.metrics["missed"] == 1
+
+
+def test_timed_pulse_ignored_press_changes_nothing():
+    r = pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (4005, 0)])
+    assert r.status == "pass"
+
+
+def test_timed_pulse_fails_a_press_that_restarts_it():
+    r = pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (5500, 0)])
+    assert r.status == "fail"
+    assert "lasted 4495 ms" in r.evidence
+    assert "A trigger at 2.50 s came during this pulse" in r.evidence
+
+
+def test_timed_pulse_fails_a_press_that_cancels_it():
+    r = pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (2505, 0)])
+    assert r.status == "fail"
+    assert "lasted 1500 ms" in r.evidence
+    assert "A trigger at 2.50 s came during this pulse" in r.evidence
+
+
+def test_timed_pulse_fails_a_queued_press():
+    r = pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (4005, 0), (4006, 1), (7006, 0)], during="ignore")
+    assert r.status == "fail"
+    assert r.metrics["spurious"] == 1
+    assert "queued instead of ignored" in r.evidence
+
+
+def test_timed_pulse_fails_a_pulse_with_no_trigger():
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1), (4005, 0), (6000, 1), (9000, 0)])
+    assert r.status == "fail"
+    assert r.metrics["spurious"] == 1
+
+
+def test_timed_pulse_restart_mode_measures_from_the_last_press():
+    assert pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (5500, 0)], during="restart").status == "pass"
+    assert pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1)], [(1005, 1), (4005, 0)], during="restart").status == "fail"
+
+
+def test_timed_pulse_unspecified_leaves_a_pressed_pulse_unjudged():
+    r = pulse([(1000, 0), (1060, 1), (2500, 0), (2560, 1), (6000, 0), (6060, 1)], [(1005, 1), (5500, 0), (6005, 1), (9005, 0)], during="unspecified")
+    assert r.status == "pass"
+    assert r.metrics["pulses_ms"] == [3000]
+
+
+def test_timed_pulse_allows_firing_again_while_still_held():
+    # Level-triggered firmware fires again at once, and the two pulses may look like one.
+    assert pulse([(1000, 0), (5000, 1)], [(1005, 1), (4005, 0), (4006, 1), (7006, 0)]).status == "pass"
+    assert pulse([(1000, 0), (5000, 1)], [(1005, 1), (4005, 0), (4005.5, 1), (7006, 0)]).status == "pass"
+    # Edge-triggered firmware does not, which is also fine.
+    assert pulse([(1000, 0), (5000, 1)], [(1005, 1), (4005, 0)]).status == "pass"
+    # Holding does not excuse staying on long after the release.
+    assert pulse([(1000, 0), (5000, 1)], [(1005, 1), (4005, 0), (4006, 1), (9000, 0)]).status == "fail"
+
+
+def test_timed_pulse_accepts_a_reaction_to_the_first_bounce():
+    r = pulse([(1000, 0), (1001, 1), (1002, 0), (1003, 1), (1004, 0), (1060, 1)], [(1000.5, 1), (4000, 0)])
+    assert r.status == "pass"
+
+
+def test_timed_pulse_ignores_a_blip_but_allows_firmware_to_react_to_it():
+    assert pulse([(1000, 0), (1005, 1)], []).status == "not_exercised"
+    assert pulse([(1000, 0), (1005, 1)], [(1002, 1), (4002, 0)]).status == "pass"
+
+
+def test_timed_pulse_is_not_exercised_without_a_finished_pulse():
+    assert pulse([], []).status == "not_exercised"
+    r = pulse([(1000, 0), (1060, 1)], [(1005, 1)], sim_ms=2000.0)
+    assert r.status == "not_exercised"
+    assert "no pulse finished" in r.evidence
+
+
+def test_timed_pulse_exempts_pins_set_up_at_boot():
+    assert pulse([(1000, 0), (1060, 1)], [(0.5, 1), (1, 0), (1005, 1), (4005, 0)]).status == "pass"
+
+
+def test_timed_pulse_active_low_output():
+    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=3000, active_level=0)
+    tr = trace(inp=[(1000, 0), (1060, 1)], out=[(1, 1), (1005, 0), (4005, 1)])
+    tr["sim_ms"] = 8000.0
+    assert evaluate_all([a], tr, BUTTON_SCENARIO, SPEC)[0].status == "pass"
+    tr = trace(inp=[(1000, 0), (1060, 1)], out=[(1, 1), (1005, 0), (2005, 1)])
+    tr["sim_ms"] = 8000.0
+    assert evaluate_all([a], tr, BUTTON_SCENARIO, SPEC)[0].status == "fail"
+
+
+def test_max_toggles_excuses_a_timed_pulse():
+    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=300)
+    limit = MaxToggles(id="m", pin="D9", max_toggles=1, window_ms=1000)
+    tr = trace(inp=[(100, 0), (160, 1)], out=[(105, 1), (405, 0)])
+    assert evaluate_all([a, limit], tr, BUTTON_SCENARIO, SPEC)[1].status == "pass"
+    chatter = trace(inp=[(100, 0), (160, 1)], out=[(105, 1), (205, 0), (305, 1), (405, 0)])
+    assert evaluate_all([a, limit], chatter, BUTTON_SCENARIO, SPEC)[1].status == "fail"

@@ -22,6 +22,7 @@ from .models import (
     Scenario,
     SerialPeriod,
     SerialValueMatches,
+    TimedPulse,
     TogglePerPress,
     Violation,
 )
@@ -34,6 +35,8 @@ ADC_MARGIN_MV = 10.0
 GLITCH_REACTION_MS = 250.0
 # A hold this much of the way to a deadline is a real input change, not noise.
 REAL_CHANGE_FRACTION = 0.75
+# An unexplained pulse this early is firmware initialising its pins, not a false alarm.
+BOOT_GRACE_MS = 100.0
 
 
 def _fmt_ms(t: float) -> str:
@@ -237,6 +240,15 @@ def _edge_triggers(a: OutputFollows, trace: dict, scenario: Scenario, spec: Devi
     return triggers
 
 
+def _pulse_triggers(a: TimedPulse, trace: dict, scenario: Scenario, spec: DeviceSpec, holes: list[tuple[float, float]], end_ms: float) -> list[float]:
+    """Start times of inputs held long enough that firmware has to notice them."""
+    return [
+        s
+        for s, e in condition_intervals(a.trigger, trace, scenario, spec, end_ms)
+        if e - s >= a.min_trigger_ms and _subtract((s, s + 0.001), holes)
+    ]
+
+
 def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario, spec: DeviceSpec, timeline: OutputTimeline, end_ms: float) -> list[float]:
     """Times when the input really called for this output to change, used to excuse legitimate toggles.
 
@@ -254,6 +266,12 @@ def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario,
 
     flips: list[float] = []
     for other in assertions:
+        if isinstance(other, TimedPulse) and other.pin == pin:
+            # A trigger asks for two flips: the output rises, then falls by itself on its timer.
+            holes = _suspended(pin, {other.trigger.pin}, assertions, trace, scenario, spec, end_ms)
+            for t in _pulse_triggers(other, trace, scenario, spec, holes, end_ms):
+                flips.extend([t, t + other.duration_ms])
+            continue
         if not isinstance(other, OutputFollows) or other.pin != pin:
             continue
         if other.mode == "edge":
@@ -388,6 +406,8 @@ def eval_max_toggles(a: MaxToggles, trace: dict, scenario: Scenario, spec: Devic
             controlling.update(c.pin for c in (other.high_when, other.low_when) if c is not None)
         elif isinstance(other, TogglePerPress) and other.output_pin == a.pin:
             controlling.add(other.input_pin)
+        elif isinstance(other, TimedPulse) and other.pin == a.pin:
+            controlling.add(other.trigger.pin)
     floats = _floating_windows(scenario, controlling, end_ms)
     toggles = [t for t in toggles if not any(fs <= t <= fe for fs, fe in floats)]
 
@@ -522,6 +542,111 @@ def eval_toggle_per_press(a: TogglePerPress, trace: dict, scenario: Scenario) ->
         "fail",
         " ".join(parts),
         {"presses": len(counts), "toggles_per_press": counts, "spurious_toggles": len(spurious)},
+        violations[:MAX_VIOLATIONS],
+    )
+
+
+def _pulses(timeline: OutputTimeline, active: int) -> list[tuple[float, Optional[float]]]:
+    """(rise, fall) of each pulse, with fall None if it is still on. A gap under 1 ms is one write sequence."""
+    pulses: list[tuple[float, Optional[float]]] = []
+    for t, level in zip(timeline.times, timeline.levels):
+        if level == active:
+            if pulses and pulses[-1][1] is not None and t - pulses[-1][1] < 1.0:
+                pulses[-1] = (pulses[-1][0], None)
+            else:
+                pulses.append((t, None))
+        elif pulses and pulses[-1][1] is None:
+            pulses[-1] = (pulses[-1][0], t)
+    return pulses
+
+
+def eval_timed_pulse(a: TimedPulse, trace: dict, scenario: Scenario, spec: DeviceSpec, assertions: list) -> AssertionResult:
+    end_ms = trace.get("sim_ms", scenario.duration_ms)
+    pulses = _pulses(output_timeline(trace, a.pin), a.active_level)
+    holes = _suspended(a.pin, {a.trigger.pin}, assertions, trace, scenario, spec, end_ms)
+    # Everything firmware could fairly have seen as the trigger, even a bounce too short to require a reaction.
+    seen = condition_intervals(a.trigger, trace, scenario, spec, end_ms, may_hold=True)
+    tol = a.tolerance()
+    expected = f"{a.duration_ms:.0f} ± {tol:.0f} ms"
+
+    # Sort each trigger: it found the output idle, so must start a pulse, or it arrived during one.
+    rises = [rise for rise, _ in pulses]
+    during: dict[float, list[float]] = {}
+    missed: list[Violation] = []
+    demanded = 0
+    for s in _pulse_triggers(a, trace, scenario, spec, holes, end_ms):
+        running = next((p for p in pulses if p[0] <= s and (p[1] is None or s < p[1])), None)
+        if running is not None:
+            # A rise just before the trigger is this same press: firmware reacted to its first bounce.
+            if s - running[0] > a.within_ms:
+                during.setdefault(running[0], []).append(s)
+            continue
+        if s + a.within_ms > end_ms:
+            continue
+        demanded += 1
+        if not any(s <= r <= s + a.within_ms for r in rises):
+            missed.append(Violation(t_start=s, t_end=s + a.within_ms, detail=f"{a.pin} did not start within {a.within_ms:.0f} ms of the trigger at {_fmt_ms(s)}"))
+
+    wrong: list[Violation] = []
+    spurious: list[Violation] = []
+    lengths: list[float] = []
+    earlier_during: list[float] = []
+    for rise, fall in pulses:
+        stop = fall if fall is not None else end_ms
+        if any(hs < stop and he > rise for hs, he in holes):
+            continue
+        if not any(s <= rise <= e + a.within_ms for s, e in seen):
+            if rise >= BOOT_GRACE_MS:
+                queued = f": the trigger at {_fmt_ms(earlier_during[-1])} came during the previous pulse and was queued instead of ignored" if earlier_during and a.during_pulse == "ignore" else " with no trigger to explain it"
+                spurious.append(Violation(t_start=rise, t_end=stop, detail=f"{a.pin} started at {_fmt_ms(rise)}{queued}"))
+            continue
+        arrivals = during.get(rise, [])
+        earlier_during.extend(arrivals)
+        if arrivals and a.during_pulse == "unspecified":
+            continue
+
+        if arrivals and a.during_pulse == "restart":
+            # Firmware may restart on the press edge, or keep restarting until the release.
+            last = arrivals[-1]
+            released = next((e for s, e in seen if s <= last <= e), last)
+            shortest, longest = last + a.duration_ms - tol, released + a.duration_ms + tol
+        else:
+            shortest, longest = rise + a.duration_ms - tol, rise + a.duration_ms + tol
+            # A trigger still held as the pulse ends may fairly fire it again, and the spec rarely settles that.
+            while any(s <= longest and e >= longest - 2 * tol for s, e in seen):
+                longest += a.duration_ms
+
+        if fall is None and end_ms <= longest:
+            continue  # Still on when the run ended, and not yet too long: nothing to judge.
+        lengths.append(round(stop - rise, 1))
+        if shortest <= stop <= longest:
+            continue
+        ran = f"lasted {stop - rise:.0f} ms" if fall is not None else f"was still on after {stop - rise:.0f} ms"
+        detail = f"pulse from {_fmt_ms(rise)} {ran}, expected {expected}"
+        if arrivals and a.during_pulse == "ignore":
+            detail += f". A trigger at {_fmt_ms(arrivals[0])} came during this pulse, which must not change its length"
+        wrong.append(Violation(t_start=rise, t_end=stop, detail=detail))
+
+    if not demanded and not lengths:
+        return _result(a, scenario, "not_exercised", "No trigger reached a finished pulse in this scenario.")
+    violations = sorted(missed + wrong + spurious, key=lambda v: v.t_start)
+    if not violations:
+        if not lengths:
+            return _result(a, scenario, "not_exercised", f"{a.pin} started on all {demanded} trigger(s), but no pulse finished inside the run.")
+        return _result(a, scenario, "pass", f"{a.pin} ran {len(lengths)} pulse(s), lasting {min(lengths):.0f} to {max(lengths):.0f} ms (expected {expected}).", {"pulses_ms": lengths, "triggers": demanded})
+    parts: list[str] = []
+    if missed:
+        parts.append(f"{a.pin} missed {len(missed)} of {demanded} trigger(s): {missed[0].detail}.")
+    if wrong:
+        parts.append(f"{len(wrong)} of {len(lengths)} pulse(s) had the wrong length: {wrong[0].detail}.")
+    if spurious:
+        parts.append(f"{len(spurious)} pulse(s) had no trigger: {spurious[0].detail}.")
+    return _result(
+        a,
+        scenario,
+        "fail",
+        " ".join(parts),
+        {"missed": len(missed), "triggers": demanded, "wrong_length": len(wrong), "spurious": len(spurious), "pulses_ms": lengths},
         violations[:MAX_VIOLATIONS],
     )
 
@@ -743,6 +868,8 @@ def evaluate(assertion, trace: dict, scenario: Scenario, spec: DeviceSpec, asser
         return eval_max_toggles(assertion, trace, scenario, spec, assertions)
     if isinstance(assertion, TogglePerPress):
         return eval_toggle_per_press(assertion, trace, scenario)
+    if isinstance(assertion, TimedPulse):
+        return eval_timed_pulse(assertion, trace, scenario, spec, assertions)
     if isinstance(assertion, SerialPeriod):
         return eval_serial_period(assertion, trace, scenario)
     if isinstance(assertion, SerialValueMatches):

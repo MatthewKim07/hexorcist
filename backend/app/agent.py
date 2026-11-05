@@ -35,6 +35,7 @@ from .models import (
     Scenario,
     SerialPeriod,
     SerialValueMatches,
+    TimedPulse,
     TogglePerPress,
     normalize_pin,
 )
@@ -95,6 +96,8 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec) -> tuple[list, list[
             refs.append(a.pin)
         elif isinstance(a, TogglePerPress):
             refs.extend([a.input_pin, a.output_pin])
+        elif isinstance(a, TimedPulse):
+            refs.extend([a.pin, a.trigger.pin])
         elif isinstance(a, SerialValueMatches):
             refs.append(a.input_pin)
         elif isinstance(a, SafeStateOnFault):
