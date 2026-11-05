@@ -53,6 +53,8 @@ flowchart LR
 - `sandbox/`: the image with arduino-cli, the arduino:avr core, simavr, and `hexharness`, a C program linked against libsimavr. It injects analog voltages, digital levels, bounce and floating pins from a JSON scenario, then records serial, pin changes, PWM duty and exit reason in simulated time.
 - `backend/`: the FastAPI control layer, the agent pipeline, the assertion engine and the sandbox runner.
 - `frontend/`: React, Vite, TypeScript, Tailwind, CodeMirror and Recharts.
+- `ml/`: dataset, training and evaluation for the guard classifier.
+- `deploy/`: scripts and docs for a fresh Vultr VM.
 
 ## Containment design
 
@@ -89,7 +91,7 @@ The fifth preset is a hostile upload: `#include "/etc/passwd"`, `"/proc/self/env
 
 The run ends with a pass or fail for each containment check, computed from Docker's inspection data and from a probe that runs inside the sandbox.
 
-`backend/app/guard.py` is a deliberately small interface, `screen_request(firmware, spec) -> {allowed, score, reasons}`, using regex rules for now. The sandbox does not rely on it: containment has to hold even when the guard misses something.
+`backend/app/guard.py` is a deliberately small interface, `screen_request(firmware, spec) -> {allowed, score, reasons}`: hard regex rules, plus a [trained classifier](ml/README.md) as defense in depth. On attack styles held out of training it raises recall from 10% to 39%, at a 3.4% false positive rate and about 2 ms per upload. That still misses most of them, so the sandbox does not rely on it: containment has to hold even when the guard misses something.
 
 ## Setup
 
@@ -138,6 +140,7 @@ A failure in `replay_reference` means a scenario, an assertion or the evaluator 
 - Arduino Uno (ATmega328P) only, and sensors are modelled as voltages at the pin. There is no I2C or SPI peripheral emulation yet.
 - simavr does not model pull-ups, so the harness drives undriven inputs from the port register.
 - `analogWrite` is captured by reading timer registers, since simavr does not move the GPIO. PWM is reported as duty, not as a waveform.
+- `timed_pulse` judges a steady output level. A siren driven by `tone()` toggles, so each cycle would read as a short pulse.
 - simavr silently wraps some out-of-bounds data writes rather than faulting, so a wild pointer is not always reported as a crash. Running off the end of flash and sleeping with interrupts off are detected.
 - Emulation runs at about 1.4x to 1.8x realtime on one Apple Silicon core. Check scenario lengths against the 30 s limit on slower machines.
 - The virtual board and chart show the first 8000 pin events of a run. Verdicts always use the full trace.
