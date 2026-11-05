@@ -72,7 +72,7 @@ If the threshold could be made to hold, MiniLM would be the better model. It cat
 
 - **The test set was looked at twice.** The first look showed the baseline at 10.0% FPR, flagging 37% of real library sketches, because training had too little real human code. Regex + TF-IDF scored P 0.884, R 0.618, FPR 12.0% then. I added real sketches from other repositories to train and validation, and retrained both models. A checksum confirms test did not change, and no held-out attack was used to make that fix. Still, these are not pristine first-look numbers.
 - **Precision depends on the attack share.** 60% of this test set is attacks. If 1 upload in 100 were hostile, the shipped guard's 3.4% FPR and 48.9% recall would give a precision of about 13%. FPR is the number to watch.
-- **Most attacks are synthetic.** I wrote the training styles and the held-out styles, so they share an author's habits. The `llm_*` styles were written by DeepSeek as a partial check on that, and it scored them from the same kind of prompts.
+- **Most attacks are synthetic.** I wrote the training styles and the held-out styles, so they share an author's habits. The `llm_*` styles were written by DeepSeek as a partial check on that, but from prompts I wrote.
 - **The threshold is sensitive.** Small data changes moved it between 0.90 and 0.98, because a few validation documents decide it. Each model's FPR also moved a lot between the two looks: MiniLM went from 2.0% to 7.0%. One test run does not prove the baseline's 1.4% is stable.
 - **It misses a lot.** The guard catches under half of the attacks, and almost no request for a hidden backdoor, which reads like an ordinary requirement. This is why it is defense in depth and the sandbox is the real boundary.
 

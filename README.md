@@ -31,7 +31,7 @@ An LLM reading your code says "this might chatter." Hexorcist runs it and measur
 | Possessed thermostat | No sensor fault check | `During the fault, D9 was not in safe state HIGH for 5000 ms` |
 | Bouncing button | No debounce | `toggle counts per press were [4, 4, 4, 4]` |
 | Lying logger | Wrong unit conversion | `printed 230.74 °C while the injected input was 300.0 °C: off by 69.3 °C` |
-| Comatose alarm | Blocking `delay()` | `went silent for 3000 ms`, and `missed 2 of 4 triggers` |
+| Comatose alarm | Blocking `delay()` | `went silent for 3000 ms`, and `missed 2 of 2 triggers` |
 
 **The model proposes, and the engine judges.** The LLM writes assertions, attacks, explanations and patches. It never decides whether anything passed. Every verdict and evidence string comes from deterministic Python evaluating the trace, so a model cannot talk a failure into a pass. If the spec could not be turned into checks, the result is `inconclusive`, never `clean`.
 
