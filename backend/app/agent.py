@@ -138,11 +138,38 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec) -> tuple[list, list[
         seen.add(key)
         kept.append(parsed)
 
+    kept = _resolve_overlaps(kept, warnings)
     kept.append(NoCrash())
     for i, a in enumerate(kept):
         a.id = f"a{i + 1}"
         a.description = _describe(a)
     return kept, warnings
+
+
+def _same_condition(a: Any, b: Any) -> bool:
+    return a is not None and b is not None and a.pin == b.pin and a.op == b.op and a.value == b.value
+
+
+def _resolve_overlaps(assertions: list, warnings: list[str]) -> list:
+    """Remove checks that repeat a timed_pulse, and any that no correct firmware could pass with it."""
+    pulses = [a for a in assertions if isinstance(a, TimedPulse)]
+    kept: list = []
+    for a in assertions:
+        pulse = None
+        if isinstance(a, OutputFollows) and a.mode == "edge":
+            pulse = next((p for p in pulses if p.pin == a.pin and _same_condition(p.trigger, a.high_when)), None)
+            if pulse is not None:
+                # The start deadline is already part of the pulse check. Keep the shortest press the model read from the spec.
+                pulse.min_trigger_ms = max(pulse.min_trigger_ms, a.min_trigger_ms)
+                warnings.append(f"Dropped output_follows on {a.pin}: timed_pulse already checks that the trigger starts it.")
+                continue
+        if isinstance(a, SafeStateOnFault):
+            pulse = next((p for p in pulses if p.pin == a.output_pin and _same_condition(p.trigger, a.fault_when) and a.safe_value != p.active_level), None)
+            if pulse is not None:
+                warnings.append(f"Dropped safe_state_on_fault on {a.output_pin}: its fault condition is the trigger that must turn the output on, so no firmware could pass both.")
+                continue
+        kept.append(a)
+    return kept
 
 
 def fallback_assertions(spec: DeviceSpec) -> list:
