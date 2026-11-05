@@ -643,3 +643,44 @@ def test_unrelated_checks_stay_beside_a_pulse():
     kept, warnings = normalize_assertions([PULSE, other_edge, same_value_fault], _spec_for_overlaps())
     assert [a.type for a in kept] == ["timed_pulse", "output_follows", "safe_state_on_fault", "no_crash"]
     assert not warnings
+
+
+def test_timed_pulse_treats_a_bounce_length_release_as_the_same_press():
+    # Measured on real firmware: a press straddling the end of the ring, with a 5 ms release in it.
+    # With a 20 ms debounce that is one press which began during the ring, so it starts nothing.
+    inp = [(500, 0), (560, 1), (2495, 0), (2555, 1), (2560, 0), (2620, 1)]
+    r = pulse(inp, [(520, 1), (2520, 0)], sim_ms=7000.0, duration_ms=2000, min_trigger_ms=20)
+    assert r.status == "pass"
+
+
+def test_timed_pulse_still_demands_a_press_after_a_real_release():
+    inp = [(500, 0), (560, 1), (2495, 0), (2555, 1), (2600, 0), (2660, 1)]
+    r = pulse(inp, [(520, 1), (2520, 0)], sim_ms=7000.0, duration_ms=2000, min_trigger_ms=20)
+    assert r.status == "fail"
+    assert r.metrics["missed"] == 1
+    # The firmware may also take the bounce-separated press as new, since it can see it.
+    inp = [(500, 0), (560, 1), (2495, 0), (2555, 1), (2560, 0), (2620, 1)]
+    r = pulse(inp, [(520, 1), (2520, 0), (2580, 1), (4580, 0)], sim_ms=7000.0, duration_ms=2000, min_trigger_ms=20)
+    assert r.status == "pass"
+
+
+def test_a_button_held_at_power_on_demands_nothing_but_may_fire():
+    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=2000, during_pulse="ignore")
+    held = Scenario(id="h", name="h", duration_ms=6000, digital=[DigitalInput(pin="D2", initial=0)])
+
+    def judge(out):
+        tr = trace(inp=[(1000, 1), (2000, 0), (2060, 1)], out=out)
+        tr["sim_ms"] = 6000.0
+        return evaluate_all([a], tr, held, SPEC)[0]
+
+    ignored_at_boot = judge([(2020, 1), (4020, 0)])
+    assert ignored_at_boot.status == "pass"
+    assert ignored_at_boot.metrics["triggers"] == 1
+    assert judge([(30, 1), (2030, 0), (2040, 1), (4040, 0)]).status == "pass"
+    assert judge([]).status == "fail"
+
+
+def test_edge_follow_demands_nothing_of_a_button_held_at_power_on():
+    a = OutputFollows(id="e", pin="D9", high_when=Condition(pin="D2", op="==", value=0), within_ms=100, mode="edge")
+    held = Scenario(id="h", name="h", duration_ms=1000, digital=[DigitalInput(pin="D2", initial=0)])
+    assert evaluate_all([a], trace(), held, SPEC)[0].status == "not_exercised"

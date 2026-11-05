@@ -35,7 +35,8 @@ ADC_MARGIN_MV = 10.0
 GLITCH_REACTION_MS = 250.0
 # A hold this much of the way to a deadline is a real input change, not noise.
 REAL_CHANGE_FRACTION = 0.75
-# An unexplained pulse this early is firmware initialising its pins, not a false alarm.
+# Firmware is still starting up this early: an unexplained pulse is it initialising its pins, and an
+# input already active was never pressed, so it demands no reaction.
 BOOT_GRACE_MS = 100.0
 
 
@@ -231,7 +232,7 @@ def _edge_triggers(a: OutputFollows, trace: dict, scenario: Scenario, spec: Devi
     if a.high_when is None:
         return triggers
     for s, e in condition_intervals(a.high_when, trace, scenario, spec, end_ms):
-        if e - s < a.min_trigger_ms or not _subtract((s, s + 0.001), holes):
+        if e - s < a.min_trigger_ms or s < BOOT_GRACE_MS or not _subtract((s, s + 0.001), holes):
             continue
         if s + a.within_ms > end_ms or s < last + a.within_ms:
             continue
@@ -241,12 +242,23 @@ def _edge_triggers(a: OutputFollows, trace: dict, scenario: Scenario, spec: Devi
 
 
 def _pulse_triggers(a: TimedPulse, trace: dict, scenario: Scenario, spec: DeviceSpec, holes: list[tuple[float, float]], end_ms: float) -> list[float]:
-    """Start times of inputs held long enough that firmware has to notice them."""
-    return [
-        s
-        for s, e in condition_intervals(a.trigger, trace, scenario, spec, end_ms)
-        if e - s >= a.min_trigger_ms and _subtract((s, s + 0.001), holes)
-    ]
+    """Start times of inputs held long enough that firmware has to notice them.
+
+    A release shorter than min_trigger_ms is contact bounce, so what follows is the same press and
+    not a new one. An input already active at power-on was never pressed, so it demands nothing.
+    """
+    triggers: list[float] = []
+    previous_end: Optional[float] = None
+    continuing = False
+    for s, e in condition_intervals(a.trigger, trace, scenario, spec, end_ms):
+        continuing = continuing and previous_end is not None and s - previous_end < a.min_trigger_ms
+        previous_end = e
+        if e - s < a.min_trigger_ms:
+            continue
+        if not continuing and s >= BOOT_GRACE_MS and _subtract((s, s + 0.001), holes):
+            triggers.append(s)
+        continuing = True
+    return triggers
 
 
 def _demanded_flips(pin: str, assertions: list, trace: dict, scenario: Scenario, spec: DeviceSpec, timeline: OutputTimeline, end_ms: float) -> list[float]:
