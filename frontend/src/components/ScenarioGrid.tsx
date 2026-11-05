@@ -32,24 +32,22 @@ export function ScenarioGrid({ state, iteration, onIteration, selected, onSelect
         ) : undefined
       }
     >
-      <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-1.5 p-3 sm:grid-cols-2 xl:grid-cols-3">
         {tiles.map((s) => {
           const r = results[s.id];
           const tone = !r ? "border-line" : r.passed ? "border-pass/40 bg-pass/5" : "border-fail/50 bg-fail/10";
           return (
-            <button key={s.id} onClick={() => onSelect(s.id)} title={s.hypothesis} className={`min-w-0 rounded-md border p-2 text-left transition-colors hover:border-faint ${tone} ${selected === s.id ? "ring-1 ring-halo/70" : ""}`}>
-              <div className="flex items-start gap-1.5">
-                <span className="mt-0.5 shrink-0">
-                  {!r && <span className="pulse-soft block h-3 w-3 rounded-full bg-line" aria-label="pending" />}
-                  {r && (r.passed ? <Icon name="check" className="text-pass" /> : <Icon name="x" className="text-fail" />)}
-                </span>
-                <span className="min-w-0 flex-1 text-[12px] font-medium leading-snug">{s.name}</span>
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-5">
-                <Badge>{s.source === "llm" ? "agent" : "built-in"}</Badge>
+            <button key={s.id} onClick={() => onSelect(s.id)} title={s.hypothesis} className={`flex min-h-[46px] min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left transition-colors hover:border-faint ${tone} ${selected === s.id ? "ring-1 ring-halo/70" : ""}`}>
+              <span className="shrink-0">
+                {!r && <span className="pulse-soft block h-3.5 w-3.5 rounded-full bg-line" aria-label="pending" />}
+                {r && (r.passed ? <Icon name="check" className="h-3.5 w-3.5 text-pass" /> : <Icon name="x" className="h-3.5 w-3.5 text-fail" />)}
+              </span>
+              <span className="line-clamp-2 min-w-0 flex-1 text-[12px] font-medium leading-snug">{s.name}</span>
+              <span className="flex shrink-0 flex-col items-end gap-0.5">
                 {r && !r.passed && <Badge tone="fail">{r.failed.length ? `${r.failed.length} failed` : r.exit_reason}</Badge>}
-                {r && r.exit_reason !== "completed" && <Badge tone="warn">{r.exit_reason}</Badge>}
-              </div>
+                {r && r.passed && r.exit_reason !== "completed" && <Badge tone="warn">{r.exit_reason}</Badge>}
+                <span className="font-mono text-[10px] leading-none text-faint">{s.source === "llm" ? "agent" : "built-in"}</span>
+              </span>
             </button>
           );
         })}
