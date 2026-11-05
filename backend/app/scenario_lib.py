@@ -11,11 +11,13 @@ from .models import (
     DigitalEvent,
     DigitalInput,
     FloatingWindow,
+    MAX_SCENARIO_MS,
     OutputFollows,
     PinSpec,
     SafeStateOnFault,
     Scenario,
     Spike,
+    TimedPulse,
 )
 
 DURATION_MS = 8000.0
@@ -249,6 +251,42 @@ def _button_scenarios(p: PinSpec) -> list[Scenario]:
     return out
 
 
+def _pulse_scenarios(a: TimedPulse, spec: DeviceSpec) -> list[Scenario]:
+    """One trigger to measure the pulse, then a second trigger arriving in the middle of it."""
+    pin = a.trigger.pin
+    pin_spec = spec.pin(pin)
+    is_analog = pin_spec is not None and pin_spec.type == "analog_input"
+    press_ms = max(60.0, a.min_trigger_ms * 2)
+    start = 1000.0
+    out: list[Scenario] = []
+
+    def build(sid: str, name: str, hypothesis: str, presses: list[float], seed: int) -> None:
+        # Leave room after the pulse for a late fall, or for a pulse that starts again by itself.
+        duration = presses[-1] + a.duration_ms + a.tolerance() + 1500.0
+        if duration > MAX_SCENARIO_MS:
+            return
+        scenario = Scenario(id=f"builtin-{sid}-{a.pin.lower()}", name=f"{name} ({a.pin})", hypothesis=hypothesis, source="builtin", seed=seed, duration_ms=duration)
+        if is_analog:
+            on_mv = _clamp(spec.to_mv(pin, a.trigger.value) + (100 if a.trigger.op in (">", ">=") else -100))
+            off_mv = _clamp(spec.to_mv(pin, a.trigger.value) + (-300 if a.trigger.op in (">", ">=") else 300))
+            points = [AnalogPoint(t_ms=0, mv=off_mv)]
+            for t in presses:
+                points += [AnalogPoint(t_ms=t - 1, mv=off_mv), AnalogPoint(t_ms=t, mv=on_mv), AnalogPoint(t_ms=t + press_ms, mv=on_mv), AnalogPoint(t_ms=t + press_ms + 1, mv=off_mv)]
+            scenario.analog = [AnalogInput(pin=pin, segments=points)]
+        else:
+            active = int(a.trigger.value)
+            events: list[DigitalEvent] = []
+            for t in presses:
+                events += [DigitalEvent(t_ms=t, value=active), DigitalEvent(t_ms=t + press_ms, value=1 - active)]
+            scenario.digital = [DigitalInput(pin=pin, initial=1 - active, events=events)]
+        out.append(scenario)
+
+    build("pulse-length", "Pulse length", f"One short trigger should hold {a.pin} active for {a.duration_ms:.0f} ms, no shorter and no longer.", [start], 41)
+    if a.during_pulse != "unspecified":
+        build("pulse-retrigger", "Trigger during the pulse", f"A second trigger halfway through may cut the pulse short, extend it, or queue another one.", [start, start + a.duration_ms / 2], 42)
+    return out
+
+
 def builtin_scenarios(spec: DeviceSpec, assertions: list) -> list[Scenario]:
     scenarios: list[Scenario] = []
     inputs = spec.inputs()
@@ -257,6 +295,9 @@ def builtin_scenarios(spec: DeviceSpec, assertions: list) -> list[Scenario]:
             scenarios.extend(_analog_scenarios(p, spec, assertions, inputs))
         else:
             scenarios.extend(_button_scenarios(p))
+    for a in assertions:
+        if isinstance(a, TimedPulse):
+            scenarios.extend(_pulse_scenarios(a, spec))
     if not scenarios:
         scenarios.append(
             Scenario(id="builtin-idle", name="Free run", hypothesis="With no inputs the firmware should simply run without crashing.", source="builtin", seed=31, duration_ms=DURATION_MS)
