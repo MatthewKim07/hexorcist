@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 
@@ -86,7 +87,8 @@ def print_table(rows: list[dict]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--api", default="http://127.0.0.1:8000")
-    parser.add_argument("--passcode", default="")
+    # From the environment, so a passcode never sits on a command line.
+    parser.add_argument("--passcode", default=os.environ.get("DEMO_PASSCODE", ""))
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--repeat", type=int, default=1, help="Run each preset this many times, to measure how stable it is")
     parser.add_argument("presets", nargs="*")
