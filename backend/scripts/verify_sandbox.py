@@ -106,6 +106,21 @@ def main() -> None:
     check(any(e["pin"] == "D9" and e["duty"] == -1 for e in trace["pwm_events"]), "analogWrite(9,0) hands D9 back to GPIO")
     check(any(v == 1 for _, v in d9), "digitalRead(3) with INPUT_PULLUP idles HIGH")
 
+    print("\n== An injected input survives firmware writes to the same port")
+    built = runner.compile((EXAMPLES / "same_port.ino").read_text(), "same port")
+    check(built.ok, "same-port sketch compiles")
+    trace = runner.run(built.elf, json.loads((EXAMPLES / "same_port_scenario.json").read_text()), "same port").trace
+    d2 = [(round(e["t_ms"], 2), e["value"]) for e in trace["pin_events"] if e["pin"] == "D2"]
+    print(f"  D2 input events: {d2}")
+    readings = [(line["t_ms"], line["text"]) for line in trace["serial_log"] if line["text"].startswith("btn=")]
+    held = [text for t, text in readings if 600 <= t <= 1450]
+    released = [text for t, text in readings if t >= 1600 or t <= 450]
+    print(f"  firmware saw: {len(held)} readings during the press, {sum('btn=0' in t for t in held)} of them LOW")
+    check(len(held) > 10 and all("btn=0" in t for t in held), "firmware reads the press as LOW throughout")
+    check(len(released) > 10 and all("btn=1" in t for t in released), "firmware reads HIGH before and after the press")
+    check(all("pull=1" in text for _, text in readings), "an undriven pull-up on the same port still reads HIGH")
+    check([v for _, v in d2 if _ > 0] == [0, 1], "the trace shows one press and one release, at the injected times")
+
     print("\n== Determinism: same seed gives an identical trace, new seed does not")
     built = runner.compile((EXAMPLES / "analog_serial.ino").read_text(), "noise")
     noise = json.loads((EXAMPLES / "noise_scenario.json").read_text())

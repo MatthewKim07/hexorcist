@@ -156,6 +156,8 @@ static uint64_t g_rng;
 static pin_input_t g_inputs[NUM_PINS];
 static int g_last_level[NUM_PINS];
 static pin_ctx_t g_pin_ctx[NUM_PINS];
+static uint8_t g_external_mask[3];  /* per port, B, C and D */
+static uint8_t g_external_value[3];
 static avr_irq_t *g_pin_irq[NUM_PINS];
 static avr_irq_t *g_adc_irq[6];
 
@@ -478,6 +480,32 @@ static double analog_value_mv(pin_input_t *in, double t)
     return v;
 }
 
+/*
+ * Any write to PORTx makes simavr re-raise every input on that port whose pull-up is on, pulling
+ * it HIGH. On real hardware an external driver beats the weak pull-up, so declare the pins this
+ * harness drives as externally held. Without this, firmware toggling D7 would release a press on D2.
+ */
+static void set_external(int pin, int held, int level)
+{
+    const pin_ctx_t *c = &g_pin_ctx[pin];
+    int port = c->port - 'B';
+    uint8_t bit = (uint8_t)(1u << c->bit);
+    uint8_t mask = held ? (g_external_mask[port] | bit) : (g_external_mask[port] & ~bit);
+    uint8_t value = level ? (g_external_value[port] | bit) : (g_external_value[port] & ~bit);
+    avr_ioport_external_t external;
+
+    if (mask == g_external_mask[port] && value == g_external_value[port])
+    {
+        return;
+    }
+    g_external_mask[port] = mask;
+    g_external_value[port] = value;
+    external.name = (char)c->port;
+    external.mask = mask;
+    external.value = value;
+    avr_ioctl(g_avr, AVR_IOCTL_IOPORT_SET_EXTERNAL(c->port), &external);
+}
+
 static void drive_pin(int pin, int level)
 {
     pin_input_t *in = &g_inputs[pin];
@@ -488,6 +516,12 @@ static void drive_pin(int pin, int level)
     }
     in->driven_level = level;
     avr_raise_irq(g_pin_irq[pin], (uint32_t)level);
+}
+
+static void drive_external(int pin, int level)
+{
+    set_external(pin, 1, level);
+    drive_pin(pin, level);
 }
 
 static void update_digital(int pin, double t)
@@ -505,7 +539,7 @@ static void update_digital(int pin, double t)
             in->float_level = rng_uniform() < 0.5 ? 0 : 1;
             in->float_next_flip_ms = t + 1.0 + rng_uniform() * 25.0;
         }
-        drive_pin(pin, in->float_level);
+        drive_external(pin, in->float_level);
         return;
     }
     if (in->has_digital)
@@ -517,7 +551,7 @@ static void update_digital(int pin, double t)
             level = in->events[in->next_event].value;
             in->next_event++;
         }
-        drive_pin(pin, level);
+        drive_external(pin, level);
         return;
     }
     if (pin >= 14 && in->has_analog)
@@ -525,6 +559,7 @@ static void update_digital(int pin, double t)
         return; /* analog-driven pin, the ADC IRQ is what matters */
     }
     /* simavr does not model pull-ups, so an undriven input follows PORTx here. */
+    set_external(pin, 0, 0);
     drive_pin(pin, pin_pullup_on(pin));
 }
 
