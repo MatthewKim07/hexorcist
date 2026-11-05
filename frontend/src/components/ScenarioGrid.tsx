@@ -43,10 +43,10 @@ export function ScenarioGrid({ state, iteration, onIteration, selected, onSelect
                 {r && (r.passed ? <Icon name="check" className="h-3.5 w-3.5 text-pass" /> : <Icon name="x" className="h-3.5 w-3.5 text-fail" />)}
               </span>
               <span className="line-clamp-2 min-w-0 flex-1 text-[12px] font-medium leading-snug">{s.name}</span>
-              <span className="flex shrink-0 flex-col items-end gap-0.5">
+              <span className="flex shrink-0 items-center gap-1.5">
+                <span className="font-mono text-[10px] leading-none text-faint">{s.source === "llm" ? "agent" : "built-in"}</span>
                 {r && !r.passed && <Badge tone="fail">{r.failed.length ? `${r.failed.length} failed` : r.exit_reason}</Badge>}
                 {r && r.passed && r.exit_reason !== "completed" && <Badge tone="warn">{r.exit_reason}</Badge>}
-                <span className="font-mono text-[10px] leading-none text-faint">{s.source === "llm" ? "agent" : "built-in"}</span>
               </span>
             </button>
           );

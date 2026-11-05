@@ -157,7 +157,7 @@ export function Replay({ runId, pins, scenarios, assertions, scenarioId, onScena
               </div>
             )}
           </div>
-          <div className="max-h-[230px] overflow-auto border-b border-line p-3">
+          <div className="max-h-[300px] overflow-auto border-b border-line p-3">
             <h3 className="panel-title mb-1.5">Checks on this run</h3>
             {results.length === 0 && <p className="text-[12px] text-faint">Results appear when the run finishes.</p>}
             <ul className="space-y-1.5">
