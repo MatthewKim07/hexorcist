@@ -159,6 +159,30 @@ export interface RunDetail extends RunSummary {
   report: Report | null;
 }
 
+export interface ReviewConcern {
+  title: string;
+  detail: string;
+  lines: number[];
+  confidence: "low" | "medium" | "high";
+}
+
+export interface Review {
+  model: string;
+  verdict: "issues_found" | "looks_correct";
+  summary: string;
+  concerns: ReviewConcern[];
+  suggested_fix: string;
+  executed: false;
+  duration_ms: number;
+  tokens: number;
+}
+
+export interface ReviewState {
+  review: Review | null;
+  pending: boolean;
+  error: string;
+}
+
 const PASSCODE_KEY = "hexorcist.passcode";
 
 export function getPasscode(): string {
@@ -185,28 +209,32 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
+async function postJson<T>(path: string, body?: Record<string, unknown>): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Demo-Passcode": getPasscode() },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let detail = `${res.status}`;
+    try {
+      const parsed = await res.json();
+      detail = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
+    } catch {
+      // Keep the status code as the message.
+    }
+    throw new Error(detail);
+  }
+  return res.json();
+}
+
 export const api = {
   health: () => getJson<Health>("/api/health"),
   presets: () => getJson<Preset[]>("/api/presets"),
   runs: () => getJson<RunSummary[]>("/api/runs"),
   run: (id: string) => getJson<RunDetail>(`/api/runs/${id}`),
   trace: (id: string, iteration: number, scenario: string) => getJson<Trace>(`/api/runs/${id}/traces/${iteration}/${scenario}`),
-  async start(body: Record<string, unknown>): Promise<{ run_id: string; guard: Guard }> {
-    const res = await fetch("/api/runs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Demo-Passcode": getPasscode() },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      let detail = `${res.status}`;
-      try {
-        const parsed = await res.json();
-        detail = typeof parsed.detail === "string" ? parsed.detail : JSON.stringify(parsed.detail);
-      } catch {
-        // Keep the status code as the message.
-      }
-      throw new Error(detail);
-    }
-    return res.json();
-  },
+  review: (id: string) => getJson<ReviewState>(`/api/runs/${id}/review`),
+  requestReview: (id: string) => postJson<ReviewState>(`/api/runs/${id}/review`),
+  start: (body: Record<string, unknown>) => postJson<{ run_id: string; guard: Guard }>("/api/runs", body),
 };

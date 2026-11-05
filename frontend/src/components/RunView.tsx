@@ -3,6 +3,7 @@ import { PinSpec, Report } from "../api";
 import { useRun } from "../useRun";
 import { Badge, DiffView, Icon, Panel, StatusBadge } from "./Common";
 import { BugCards } from "./BugCards";
+import { ComparePanel } from "./ComparePanel";
 import { ContainmentPanel } from "./ContainmentPanel";
 import { Replay } from "./Replay";
 import { ScenarioGrid } from "./ScenarioGrid";
@@ -78,6 +79,7 @@ export function RunView({ runId }: { runId: string }) {
   const guard = state.guard ?? state.run?.guard;
   const warnings = report?.warnings ?? state.warnings;
   const hasBoard = emulated.length > 0 && pins.length > 0;
+  const comparable = state.run?.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
 
   return (
     <div className="space-y-4">
@@ -160,6 +162,8 @@ export function RunView({ runId }: { runId: string }) {
       )}
 
       <BugCards bugs={bugs} report={report} onReplay={replayTo} />
+
+      {comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
 
       {report?.fix && (
         <Panel title={`The patch: ${report.fix.diff.added} lines added, ${report.fix.diff.removed} removed`}>

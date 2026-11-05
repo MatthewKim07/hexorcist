@@ -31,6 +31,7 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
   const [firmware, setFirmware] = useState(STARTER);
   const [pins, setPins] = useState<PinSpec[]>([{ pin: "D13", role: "Status LED", type: "digital_output", scale: "", active_low: false }]);
   const [behaviour, setBehaviour] = useState("The LED blinks with 500 ms on and 500 ms off.");
+  const [compare, setCompare] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,7 +52,7 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
     setBusy(true);
     setError("");
     try {
-      const { run_id } = await api.start({ mode: "break", title, firmware, pins, behaviour });
+      const { run_id } = await api.start({ mode: "break", title, firmware, pins, behaviour, compare });
       onStarted(run_id);
     } catch (e) {
       setError((e as Error).message);
@@ -104,6 +105,12 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
             </div>
           </Panel>
           {error && <div className="rounded-md border border-fail/40 bg-fail/10 px-3 py-2 text-[13px] text-fail">{error}</div>}
+          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-3 py-2 text-[12.5px] text-muted">
+            <input type="checkbox" className="mt-0.5 accent-[#f0c05a]" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
+            <span>
+              <span className="text-ink">Also ask the LLM for a plain code review</span>, to show beside the measured results. One extra call, no emulator. Off by default.
+            </span>
+          </label>
           <button className="btn-primary w-full py-2.5" disabled={busy} onClick={start}>
             {busy ? "Starting…" : "Cast the bugs out"}
           </button>
