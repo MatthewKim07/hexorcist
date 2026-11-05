@@ -15,7 +15,7 @@ from app.models import Assertion, DeviceSpec, NoCrash, PinSpec
 from app.presets import PRESETS
 from app.sandbox import SandboxRunner
 from app.scenario_lib import builtin_scenarios
-from tests.fixtures import ASSERTIONS, CORRECT_FIRMWARE
+from tests.fixtures import ASSERTIONS, CORRECT_FIRMWARE, MUTANTS, VARIANTS
 
 ADAPTER = TypeAdapter(Assertion)
 
@@ -88,6 +88,20 @@ def main() -> None:
             if exercised.get(a.id, 0) == 0:
                 print(f"  PROBLEM: {a.id} {a.type} is never exercised")
                 problems += 1
+
+        for name, (expected_type, firmware) in MUTANTS.get(preset["id"], {}).items():
+            planted = suite(runner, firmware, spec, assertions, f"{preset['id']} mutant")
+            hits = [r.evidence for _s, _t, results in planted["runs"] for r in results if r.status == "fail" and r.type == expected_type]
+            print(f"MUTANT {name}: {len(hits)} failing scenario(s). {hits[0][:190] if hits else 'PROBLEM: NOT DETECTED'}")
+            problems += 0 if hits else 1
+
+        for name, firmware in VARIANTS.get(preset["id"], {}).items():
+            variant = suite(runner, firmware, spec, assertions, f"{preset['id']} variant")
+            unfair = [(s.name, r.assertion_id, r.evidence) for s, _t, results in variant["runs"] for r in results if r.status == "fail"]
+            print(f"VARIANT {name}: {len(variant['runs'])} scenarios, {len(unfair)} failures")
+            for scenario_name, assertion_id, evidence in unfair:
+                print(f"  UNFAIR? [{scenario_name}] {assertion_id}: {evidence[:220]}")
+            problems += len(unfair)
 
     print(f"\n{'ALL GOOD' if problems == 0 else f'{problems} PROBLEM(S)'}")
     sys.exit(1 if problems else 0)

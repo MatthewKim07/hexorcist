@@ -21,7 +21,7 @@ ASSERTIONS = {
         {"type": "serial_value_matches", "pattern": "Temp: (-?[0-9.]+)", "input_pin": "A0", "tolerance": 1.0, "max_lag_ms": 300, "description": "Printed temperature is correct"},
     ],
     "alarm": [
-        {"type": "output_follows", "pin": "D8", "high_when": {"pin": "D2", "op": "==", "value": 0}, "within_ms": 100, "mode": "edge", "description": "Press starts the siren within 100 ms"},
+        {"type": "timed_pulse", "pin": "D8", "trigger": {"pin": "D2", "op": "==", "value": 0}, "duration_ms": 3000, "within_ms": 100, "during_pulse": "ignore", "description": "Press starts the siren within 100 ms, it stays on 3 s, and a press during it is ignored"},
         {"type": "serial_period", "pattern": "^hb$", "period_ms": 500, "tolerance_ms": 100, "description": "Heartbeat every 500 ms"},
         {"type": "responsive", "max_gap_ms": 700, "description": "Never silent for more than 700 ms"},
     ],
@@ -179,4 +179,124 @@ void loop()
     }
 }
 """,
+}
+
+_ALARM = CORRECT_FIRMWARE["alarm"]
+_ALARM_START = """    if (!sirenOn && digitalRead(BUTTON_PIN) == LOW)
+    {
+        sirenOn = true;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, HIGH);
+    }
+"""
+
+
+def _alarm_with(start: str, *replacements: tuple[str, str]) -> str:
+    code = _ALARM.replace(_ALARM_START, start)
+    for old, new in replacements:
+        code = code.replace(old, new)
+    return code
+
+
+# Planted timing bugs. Each must fail the named assertion type.
+MUTANTS = {
+    "alarm": {
+        "short siren": ("timed_pulse", _ALARM.replace("SIREN_MS = 3000", "SIREN_MS = 1000")),
+        "long siren": ("timed_pulse", _ALARM.replace("SIREN_MS = 3000", "SIREN_MS = 5000")),
+        "siren never stops": (
+            "timed_pulse",
+            _ALARM.replace("        sirenOn = false;\n        digitalWrite(SIREN_PIN, LOW);\n", "        sirenStart = now;\n"),
+        ),
+        "press restarts the siren": (
+            "timed_pulse",
+            _alarm_with(
+                """    if (digitalRead(BUTTON_PIN) == LOW)
+    {
+        sirenOn = true;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, HIGH);
+    }
+"""
+            ),
+        ),
+        "press cancels the siren": (
+            "timed_pulse",
+            _alarm_with(
+                """    bool pressed = digitalRead(BUTTON_PIN) == LOW;
+    if (pressed && !wasPressed)
+    {
+        sirenOn = !sirenOn;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, sirenOn ? HIGH : LOW);
+    }
+    wasPressed = pressed;
+""",
+                ("bool sirenOn = false;", "bool sirenOn = false;\nbool wasPressed = false;"),
+            ),
+        ),
+        "press during the siren is queued": (
+            "timed_pulse",
+            _alarm_with(
+                """    bool pressed = digitalRead(BUTTON_PIN) == LOW;
+    if (pressed && !wasPressed)
+    {
+        if (sirenOn)
+        {
+            queued = true;
+        }
+        else
+        {
+            sirenOn = true;
+            sirenStart = now;
+            digitalWrite(SIREN_PIN, HIGH);
+        }
+    }
+    wasPressed = pressed;
+    if (!sirenOn && queued)
+    {
+        queued = false;
+        sirenOn = true;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, HIGH);
+    }
+""",
+                ("bool sirenOn = false;", "bool sirenOn = false;\nbool wasPressed = false;\nbool queued = false;"),
+            ),
+        ),
+    },
+}
+
+# Correct firmware written differently from the reference. A failure here means the engine is unfair.
+VARIANTS = {
+    "alarm": {
+        "fires only on the press edge": _alarm_with(
+            """    bool pressed = digitalRead(BUTTON_PIN) == LOW;
+    if (pressed && !wasPressed && !sirenOn)
+    {
+        sirenOn = true;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, HIGH);
+    }
+    wasPressed = pressed;
+""",
+            ("bool sirenOn = false;", "bool sirenOn = false;\nbool wasPressed = false;"),
+        ),
+        "polls every 40 ms": _ALARM.replace('        Serial.println("hb");\n    }\n', '        Serial.println("hb");\n    }\n    delay(40);\n'),
+        "debounces for 25 ms": _alarm_with(
+            """    int reading = digitalRead(BUTTON_PIN);
+    if (reading != lastReading)
+    {
+        lastChange = now;
+        lastReading = reading;
+    }
+    if (now - lastChange >= 25 && reading == LOW && !sirenOn)
+    {
+        sirenOn = true;
+        sirenStart = now;
+        digitalWrite(SIREN_PIN, HIGH);
+    }
+""",
+            ("bool sirenOn = false;", "bool sirenOn = false;\nint lastReading = HIGH;\nunsigned long lastChange = 0;"),
+        ),
+    },
 }
