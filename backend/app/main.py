@@ -127,7 +127,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
         spec = DeviceSpec(pins=pins, behaviour=body.behaviour)
         spec_text = "\n".join([body.behaviour, body.description, body.title] + [f"{p.role} {p.scale}" for p in pins])
-        verdict = screen_request(body.firmware, spec_text)
+        # The classifier is plain Python, and a large upload takes a moment, so keep it off the event loop.
+        verdict = await asyncio.to_thread(screen_request, body.firmware, spec_text)
 
         run_id = uuid.uuid4().hex[:12]
         title = body.title or (body.description[:60] if body.mode == "build" else _sketch_title(body.firmware))

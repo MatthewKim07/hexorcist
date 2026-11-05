@@ -4,6 +4,9 @@ Sources and licenses, checked on 2026-11-04:
 - deepset/prompt-injections, Apache-2.0
 - Lakera/gandalf_ignore_instructions, MIT
 - arduino/arduino-examples, CC0-1.0
+- Train and validation sketches, per GitHub's license API: bblanchon/ArduinoJson, FastLED/FastLED,
+  adafruit/Adafruit_MQTT_Library, tzapu/WiFiManager, knolleary/pubsubclient, adafruit/DHT-sensor-library,
+  thomasfredericks/Bounce2, all MIT, and miguelbalboa/rfid, Unlicense
 - arduino/ArduinoCore-avr and arduino-libraries/*, library examples, LGPL or similar, used only as
   evaluation data on this machine and never redistributed
 
@@ -26,6 +29,14 @@ DATASETS = {
 REPOS = {
     "arduino-examples": "https://github.com/arduino/arduino-examples.git",
     "arduino-core": "https://github.com/arduino/ArduinoCore-avr.git",
+    "real-arduinojson": "https://github.com/bblanchon/ArduinoJson.git",
+    "real-fastled": "https://github.com/FastLED/FastLED.git",
+    "real-mqtt": "https://github.com/adafruit/Adafruit_MQTT_Library.git",
+    "real-wifimanager": "https://github.com/tzapu/WiFiManager.git",
+    "real-pubsubclient": "https://github.com/knolleary/pubsubclient.git",
+    "real-dht": "https://github.com/adafruit/DHT-sensor-library.git",
+    "real-bounce2": "https://github.com/thomasfredericks/Bounce2.git",
+    "real-rfid": "https://github.com/miguelbalboa/rfid.git",
     "lib-servo": "https://github.com/arduino-libraries/Servo.git",
     "lib-lcd": "https://github.com/arduino-libraries/LiquidCrystal.git",
     "lib-stepper": "https://github.com/arduino-libraries/Stepper.git",

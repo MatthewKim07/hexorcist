@@ -645,6 +645,80 @@ def test_unrelated_checks_stay_beside_a_pulse():
     assert not warnings
 
 
+class StubModel:
+    version = "stub"
+    threshold = 0.9
+
+    def __init__(self, score):
+        self.value = score
+
+    def score(self, firmware, spec):
+        return self.value, "the worst chunk"
+
+
+def test_classifier_adds_a_block_the_rules_missed():
+    verdict = screen_request("void setup(){} void loop(){}", "Blinks an LED.", model=StubModel(0.95))
+    assert not verdict["allowed"]
+    assert verdict["classifier"]["flagged"] is True
+    assert "Trained classifier" in verdict["reasons"][0]
+
+
+def test_classifier_blocks_even_if_calibrated_low():
+    model = StubModel(0.4)
+    model.threshold = 0.3
+    assert not screen_request("void setup(){} void loop(){}", "x", model=model)["allowed"]
+
+
+def test_low_classifier_score_cannot_clear_a_hard_rule():
+    verdict = screen_request('#include "/etc/passwd"', "x", model=StubModel(0.0))
+    assert not verdict["allowed"]
+    assert verdict["classifier"]["flagged"] is False
+
+
+def test_guard_falls_back_to_rules_without_a_model():
+    verdict = screen_request("void setup(){} void loop(){}", "Blinks an LED.", model=None)
+    assert verdict["allowed"]
+    assert verdict["classifier"] == {"available": False}
+    assert not screen_request('#include "/etc/passwd"', "x", model=None)["allowed"]
+
+
+def test_shipped_classifier_keeps_presets_on_the_right_side():
+    from app.guard import _MODEL
+    from tests.fixtures import CORRECT_FIRMWARE
+
+    assert _MODEL is not None, "guard_model.json is missing"
+    for preset in PRESETS:
+        pins = "\n".join(f"{p['role']} {p['scale']}" for p in preset["pins"])
+        verdict = screen_request(preset["firmware"], "\n".join([preset["behaviour"], preset["title"], pins]))
+        assert verdict["allowed"] == (preset["id"] != "containment"), (preset["id"], verdict)
+        assert verdict["classifier"]["available"]
+    for name, firmware in CORRECT_FIRMWARE.items():
+        assert screen_request(firmware, "")["allowed"], name
+
+
+def test_shipped_classifier_catches_the_containment_preset_on_its_own():
+    from app.guard import _MODEL
+
+    preset = next(p for p in PRESETS if p["id"] == "containment")
+    assert _MODEL.score(preset["firmware"], preset["behaviour"])[0] >= _MODEL.threshold
+
+
+def test_exported_inference_handles_empty_and_unusual_input():
+    from app.guard import _MODEL
+    from app.guard_model import chunks
+
+    assert _MODEL.score("", "") == (0.0, "")
+    assert chunks("", "") == []
+    assert chunks("\n\n", "   ") == []
+    assert _MODEL.score_chunk("\u0000\ud7ff") >= 0.0
+    assert len(chunks("x" * 5000, "")) > 1
+
+
+def test_shipped_classifier_passes_the_arduino_ide_new_sketch():
+    sketch = "void setup() {\n  // put your setup code here, to run once:\n\n}\n\nvoid loop() {\n  // put your main code here, to run repeatedly:\n\n}\n"
+    assert screen_request(sketch, "")["allowed"]
+
+
 def test_timed_pulse_treats_a_bounce_length_release_as_the_same_press():
     # Measured on real firmware: a press straddling the end of the ring, with a 5 ms release in it.
     # With a 20 ms debounce that is one press which began during the ring, so it starts nothing.

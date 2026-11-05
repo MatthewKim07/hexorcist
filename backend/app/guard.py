@@ -1,20 +1,27 @@
 """Input guard, called before the agent runs.
 
-The interface is deliberately small so these rules can be swapped for a trained
-classifier: screen_request(firmware, spec) -> {allowed, score, reasons}.
+The interface is deliberately small: screen_request(firmware, spec) -> {allowed, score, reasons}.
+Hard regex rules run first, and a trained classifier adds a score as defense in depth. The sandbox
+does not rely on either: containment has to hold even when the guard misses something.
 """
 from __future__ import annotations
 
 import re
-from typing import TypedDict
+from typing import NotRequired, TypedDict
+
+from .guard_model import load_model
 
 BLOCK_THRESHOLD = 0.5
+# A classifier hit must block on its own, however the threshold was calibrated.
+MIN_CLASSIFIER_WEIGHT = 0.6
+_MODEL = load_model()
 
 
 class GuardVerdict(TypedDict):
     allowed: bool
     score: float
     reasons: list[str]
+    classifier: NotRequired[dict]
 
 
 _INJECTION_PATTERNS = [
@@ -46,8 +53,8 @@ def _weight(reasons: list[tuple[float, str]]) -> float:
     return round(1.0 - miss, 3)
 
 
-def screen_request(firmware: str, spec: str) -> GuardVerdict:
-    """Screen the upload. `spec` is the plain-English text, including pin roles."""
+def _rule_findings(firmware: str, spec: str) -> dict[str, float]:
+    """Hard rules. Each finding maps a reason to its weight."""
     found: list[tuple[float, str]] = []
     combined = f"{firmware}\n{spec}"
 
@@ -69,6 +76,30 @@ def screen_request(firmware: str, spec: str) -> GuardVerdict:
     unique: dict[str, float] = {}
     for weight, reason in found:
         unique[reason] = max(unique.get(reason, 0.0), weight)
-    reasons = list(unique.keys())
-    score = _weight([(w, r) for r, w in unique.items()])
-    return {"allowed": score < BLOCK_THRESHOLD, "score": score, "reasons": reasons}
+    return unique
+
+
+def _verdict(findings: dict[str, float]) -> GuardVerdict:
+    score = _weight([(w, r) for r, w in findings.items()])
+    return {"allowed": score < BLOCK_THRESHOLD, "score": score, "reasons": list(findings)}
+
+
+def rule_verdict(firmware: str, spec: str) -> GuardVerdict:
+    """The regex rules alone, for evaluating what the classifier adds."""
+    return _verdict(_rule_findings(firmware, spec))
+
+
+def screen_request(firmware: str, spec: str, model=_MODEL) -> GuardVerdict:
+    """Screen the upload. `spec` is the plain-English text, including pin roles."""
+    findings = _rule_findings(firmware, spec)
+    details: dict = {"available": False}
+    if model is not None:
+        score, chunk = model.score(firmware, spec)
+        flagged = score >= model.threshold
+        details = {"available": True, "version": model.version, "score": round(score, 4), "threshold": model.threshold, "flagged": flagged}
+        if flagged:
+            excerpt = " ".join(chunk.split())[:120]
+            findings[f"Trained classifier ({score:.2f}) flagged: {excerpt}"] = max(score, MIN_CLASSIFIER_WEIGHT)
+    verdict = _verdict(findings)
+    verdict["classifier"] = details
+    return verdict

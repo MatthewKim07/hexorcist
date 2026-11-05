@@ -30,6 +30,8 @@ SEED = 20261104
 TRAIN_PER_FAMILY = 150
 VAL_PER_FAMILY = 30
 TEST_PER_FAMILY = 70
+REAL_REPOS = {"train": ["real-arduinojson", "real-fastled", "real-mqtt", "real-wifimanager"], "val": ["real-pubsubclient", "real-dht", "real-bounce2", "real-rfid"]}
+MAX_PER_REPO = 40
 TEST_LIBRARIES = ["arduino-core", "lib-servo", "lib-lcd", "lib-stepper", "lib-sd", "lib-ethernet", "lib-wifi", "lib-wifi101"]
 
 
@@ -120,6 +122,17 @@ def main() -> None:
     # Real uploads and model patches from earlier runs set the threshold, since they are what it will face.
     for row in read_jsonl(HERE / "corpus" / "real_runs.jsonl"):
         docs.append(doc("val", 0, "real_run", row["kind"], row["firmware"], row["spec"]))
+
+    # Real human code using networks, displays and sensors. Whole repositories go to one split, so the
+    # threshold is set on code from repositories the model did not train on. A separate generator keeps
+    # the rest of the dataset, including the test split, exactly as it was.
+    real_rng = random.Random(SEED + 2)
+    for split, repos in REAL_REPOS.items():
+        for repo in repos:
+            paths = sketches(repo)
+            real_rng.shuffle(paths)
+            for path in paths[:MAX_PER_REPO]:
+                docs.append(doc(split, 0, "real_sketch", repo, path.read_text(errors="replace"), ""))
 
     # ---- attacks in training styles
     for family, make in TRAIN_FAMILIES.items():

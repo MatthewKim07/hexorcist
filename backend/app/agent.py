@@ -485,7 +485,7 @@ class Pipeline:
                 await self._warn(f"Patch {n} was rejected without testing. {reverted.reason}")
                 continue
 
-            screened = screen_request(code, "")
+            screened = await asyncio.to_thread(screen_request, code, "")
             if not screened["allowed"]:
                 previous = {"rejected_by_input_guard": screened["reasons"]}
                 current = code
@@ -828,7 +828,7 @@ class Pipeline:
             except LLMError as exc:
                 await bus.step("write", "failed", str(exc)[:300])
                 return "error", self._report("error", code, spec, error=str(exc))
-            screened = screen_request(code, "")
+            screened = await asyncio.to_thread(screen_request, code, "")
             if not screened["allowed"]:
                 last_error = f"Rejected by the input guard: {screened['reasons']}. Use only the Arduino core and Servo."
                 attempts.append({"attempt": attempt, "ok": False, "error": last_error})
