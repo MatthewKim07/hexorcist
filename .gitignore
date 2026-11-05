@@ -251,3 +251,6 @@ smoke-results-*.txt
 
 # OS
 .DS_Store
+
+# Editor ignore config
+.cursorignore
