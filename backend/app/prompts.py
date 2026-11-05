@@ -51,7 +51,7 @@ ASSERTION_DOC = """Assertion types (a condition is {"pin": "A0", "op": ">=", "va
 - {"type":"output_follows","pin":"D9","high_when":<condition>,"low_when":<condition>,"within_ms":500,"mode":"level","description":"..."}
   "level": while the condition holds, the output must hold that state after within_ms.
   "edge": use for latching outputs with no stated on-time. When high_when begins, the output must go HIGH at some point within within_ms. Omit low_when. Add "min_trigger_ms" if the spec names a shortest pulse below 20 ms: shorter pulses count as contact bounce, not triggers.
-- {"type":"timed_pulse","pin":"D8","trigger":<condition>,"duration_ms":3000,"within_ms":100,"during_pulse":"ignore","description":"..."}  use when a trigger turns an output on for a stated time, instead of output_follows. Each trigger that finds the output off must start it within within_ms, and it must stay on for duration_ms and then turn off. "during_pulse" is what a trigger does while the output is on: "ignore" if the spec says it is ignored, "restart" if it restarts the time, otherwise "unspecified". Add "tolerance_ms" only if the spec states one, and "active_level":0 for an active-LOW output.
+- {"type":"timed_pulse","pin":"D8","trigger":<condition>,"duration_ms":3000,"within_ms":100,"during_pulse":"ignore","description":"..."}  use when a trigger turns an output on for a stated time, instead of output_follows. Each trigger that finds the output off must start it within within_ms, and it must stay on for duration_ms and then turn off. "during_pulse" is what a trigger does while the output is on: "ignore" if the spec says it is ignored, "restart" if it restarts the time, otherwise "unspecified". Add "tolerance_ms" only if the spec states one, and "active_level":0 for an active-LOW output. Add "min_trigger_ms" if the spec names a shortest press, such as 50 for "as short as 50 ms": shorter pulses then need no reaction.
 - {"type":"max_toggles","pin":"D9","max_toggles":2,"window_ms":5000,"description":"..."}  no more than N level changes in any window. Only use it when the spec states a switching limit.
 - {"type":"toggle_per_press","input_pin":"D2","output_pin":"D13","active_level":0,"settle_ms":50,"within_ms":100,"description":"..."}  each settled press toggles the output exactly once.
 - {"type":"serial_period","pattern":"^hb$","period_ms":500,"tolerance_ms":100,"description":"..."}  a matching line appears every period.
@@ -65,6 +65,8 @@ UNDERSTAND_SYSTEM = f"""You are the requirements engineer in a firmware QA syste
 {UNTRUSTED}
 
 Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Use exact numbers from the spec. Do not invent requirements the spec does not imply, and never derive a numeric limit the spec does not state.
+
+A condition is only an input level or threshold right now: it cannot say "held for more than 10 s". If a requirement depends on how long an input has been held, leave it out rather than approximate it, because a condition on the level alone would demand something else.
 
 Correct firmware must be able to pass every assertion at once, so check that they cannot conflict. Write one assertion per requirement: do not restate a requirement in a second assertion. For example, toggle_per_press already rules out double toggles, so it needs no max_toggles beside it.
 
@@ -153,6 +155,7 @@ Rules:
 - Before you answer, check the patch against ALL assertions, not just the failing ones. Anything that delays or suppresses an output (a filter, a debounce, a minimum dwell, a rate limit) must still meet every within_ms. A fail-safe must never be held back by a limiter.
 - A minimum dwell or a rate limit delays switches that may be required, so it usually breaks a response deadline. To reject noise, require the new state to hold continuously for a set time before accepting it, and restart that time whenever the reading disagrees. Measure the time with millis(). Never count loop passes in a loop with no fixed delay: it runs in microseconds, so a count filters nothing. Pick the time from the numbers in the spec: longer than any stated bounce or noise, and as long as the deadline safely allows, about 80% of it for sensor readings. Apply this to fault checks too: a fail-safe that trips on one reading switches the output on every glitch. If an output still toggles too often, lengthen this time before you add anything else.
 - Attempts marked disproven were measured and failed. Do not go back to their mechanism: a patch that does is rejected.
+- If the spec says a press as short as N ms must count, the press may end at N, so debounce and any confirmation must finish well inside N. Do not add a filter that rejects presses the spec requires.
 - Fix the behaviour for real. Never special-case the tests, remove features, or weaken what the firmware does.
 - Only replace delay() with millis() where a listed failure comes from blocking. If nothing needs to be responsive, keep the delay().
 - Use Allman brace style.
@@ -196,6 +199,8 @@ BUILD_SPEC_SYSTEM = f"""You are a firmware architect. Turn a device description 
 {UNTRUSTED}
 
 Fill gaps with sensible engineering defaults: hysteresis for thresholds, debounce times for buttons, a fail-safe state for sensor faults, and exact numbers for every timing and threshold. Keep the wiring simple.
+
+Keep every requirement the description states, with its numbers, and do not add features it does not ask for, such as stuck-button detection or extra modes. "A press as short as 50 ms" is the shortest press the firmware must catch: choose a debounce well inside it, and do not add a rule rejecting presses by length.
 
 Pin "type" is one of analog_input, digital_input, digital_output, pwm_output. Pins are D0 to D13 or A0 to A5, avoiding D0 and D1, which belong to Serial. Analog scales are written like "10 mV/°C" or "10 mV/°C + 500 mV". Buttons wired to ground with the internal pull-up have "active_low": true.
 
