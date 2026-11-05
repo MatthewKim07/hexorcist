@@ -35,6 +35,11 @@ CREATE TABLE IF NOT EXISTS traces (
     payload BLOB NOT NULL,
     PRIMARY KEY (run_id, iteration, scenario_id)
 );
+CREATE TABLE IF NOT EXISTS reviews (
+    run_id TEXT PRIMARY KEY,
+    created_at REAL NOT NULL,
+    payload TEXT NOT NULL
+);
 """
 
 
@@ -94,6 +99,16 @@ class Store:
                 (run_id, iteration, scenario_id),
             ).fetchone()
         return json.loads(gzip.decompress(row["payload"])) if row else None
+
+    def save_review(self, run_id: str, review: dict) -> None:
+        with self._lock:
+            self._db.execute("INSERT OR REPLACE INTO reviews (run_id, created_at, payload) VALUES (?, ?, ?)", (run_id, time.time(), json.dumps(review)))
+            self._db.commit()
+
+    def get_review(self, run_id: str) -> Optional[dict]:
+        with self._lock:
+            row = self._db.execute("SELECT payload FROM reviews WHERE run_id=?", (run_id,)).fetchone()
+        return json.loads(row["payload"]) if row else None
 
     def get_run(self, run_id: str) -> Optional[dict]:
         with self._lock:

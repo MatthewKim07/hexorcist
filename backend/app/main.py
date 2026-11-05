@@ -19,8 +19,10 @@ from .agent import Pipeline, execute_run
 from .config import Settings, load_settings
 from .events import BusRegistry
 from .guard import screen_request
+from .llm import LLMError
 from .models import DeviceSpec, PinSpec
 from .presets import PRESETS
+from .review import review_firmware
 from .sandbox import SandboxRunner
 from .store import Store
 
@@ -34,6 +36,8 @@ class RunRequest(BaseModel):
     pins: list[dict] = Field(default_factory=list, max_length=20)
     behaviour: str = ""
     description: str = ""
+    # Also ask the model for a plain code review (one extra call) to show beside the measured results.
+    compare: bool = False
 
 
 # Guessing the passcode must cost the guesser something, so failures are limited per address.
@@ -68,13 +72,45 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     runner = SandboxRunner(cfg)
     limiter = RateLimiter(cfg.rate_limit_per_hour)
     guesses = RateLimiter(PASSCODE_FAILURES_PER_HOUR)
+    review_limiter = RateLimiter(cfg.rate_limit_per_hour)
     tasks: set[asyncio.Task] = set()
+    reviews_pending: set[str] = set()
+    review_errors: dict[str, str] = {}
     trust_proxy = os.environ.get("TRUST_PROXY", "") == "1"
 
     def client_ip(request: Request) -> str:
         if trust_proxy and request.headers.get("x-real-ip"):
             return request.headers["x-real-ip"]
         return request.client.host if request.client else "unknown"
+
+    def check_passcode(request: Request, supplied: Optional[str]) -> None:
+        if cfg.demo_passcode and not hmac.compare_digest((supplied or "").encode(), cfg.demo_passcode.encode()):
+            if not guesses.allow(client_ip(request)):
+                raise HTTPException(429, "Too many wrong passcodes from this address. Try again later.")
+            raise HTTPException(401, "A valid demo passcode is required.")
+
+    def start_review(run_id: str, firmware: str, spec: DeviceSpec) -> None:
+        """One LLM call in the background. Only successes are stored, so a failed review can be retried."""
+        if run_id in reviews_pending:
+            return
+        reviews_pending.add(run_id)
+        review_errors.pop(run_id, None)
+
+        async def work() -> None:
+            try:
+                review = await review_firmware(cfg, firmware, spec)
+                await asyncio.to_thread(store.save_review, run_id, review)
+            except LLMError as exc:
+                review_errors[run_id] = str(exc)[:300]
+            except Exception as exc:  # noqa: BLE001 - the review is optional, so it must never take anything else down
+                logging.getLogger("hexorcist.review").error("review of run %s failed: %r", run_id, exc)
+                review_errors[run_id] = f"{type(exc).__name__}: {exc}"[:300]
+            finally:
+                reviews_pending.discard(run_id)
+
+        task = asyncio.create_task(work())
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
 
     @app.get("/api/health")
     async def health() -> dict:
@@ -100,10 +136,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @app.post("/api/runs", status_code=201)
     async def create_run(body: RunRequest, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
-        if cfg.demo_passcode and not hmac.compare_digest((x_demo_passcode or "").encode(), cfg.demo_passcode.encode()):
-            if not guesses.allow(client_ip(request)):
-                raise HTTPException(429, "Too many wrong passcodes from this address. Try again later.")
-            raise HTTPException(401, "A valid demo passcode is required.")
+        check_passcode(request, x_demo_passcode)
         if len(body.firmware.encode()) > cfg.max_firmware_bytes:
             raise HTTPException(413, f"Firmware is larger than {cfg.max_firmware_bytes} bytes.")
         for name, text in (("behaviour", body.behaviour), ("description", body.description)):
@@ -135,6 +168,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         store.create_run(run_id, body.mode, title, body.firmware, spec.model_dump(), dict(verdict))
         bus = registry.create(run_id)
         await bus.emit("guard", guard=dict(verdict))
+        if body.compare and body.mode == "break" and verdict["allowed"] and cfg.llm_configured and review_limiter.allow(client_ip(request)):
+            start_review(run_id, body.firmware, spec)
 
         pipeline = Pipeline(run_id, cfg, runner, store, bus)
         task = asyncio.create_task(execute_run(pipeline, body.mode, body.firmware, spec, body.description, dict(verdict)))
@@ -152,6 +187,31 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         if run is None:
             raise HTTPException(404, "No such run.")
         return run
+
+    @app.get("/api/runs/{run_id}/review")
+    async def get_review(run_id: str) -> dict:
+        if await asyncio.to_thread(store.get_run, run_id) is None:
+            raise HTTPException(404, "No such run.")
+        review = await asyncio.to_thread(store.get_review, run_id)
+        return {"review": review, "pending": run_id in reviews_pending, "error": review_errors.get(run_id, "")}
+
+    @app.post("/api/runs/{run_id}/review", status_code=202)
+    async def create_review(run_id: str, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
+        """Ask the model to review the code without running it. Cached, so asking again costs nothing."""
+        check_passcode(request, x_demo_passcode)
+        run = await asyncio.to_thread(store.get_run, run_id)
+        if run is None:
+            raise HTTPException(404, "No such run.")
+        if run["mode"] != "break" or not run["firmware"].strip() or not run["guard"].get("allowed", False):
+            raise HTTPException(409, "Only an accepted Break run has a sketch to review.")
+        if not cfg.llm_configured:
+            raise HTTPException(503, "The LLM is not configured.")
+        existing = await asyncio.to_thread(store.get_review, run_id)
+        if existing is None and run_id not in reviews_pending:
+            if not review_limiter.allow(client_ip(request)):
+                raise HTTPException(429, "Rate limit reached for reviews from this address. Try again later.")
+            start_review(run_id, run["firmware"], DeviceSpec(**run["spec"]))
+        return {"review": existing, "pending": existing is None, "error": ""}
 
     @app.get("/api/runs/{run_id}/traces/{iteration}/{scenario_id}")
     async def get_trace(run_id: str, iteration: int, scenario_id: str) -> dict:

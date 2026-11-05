@@ -221,3 +221,37 @@ def build_code_user(spec: DeviceSpec, compile_error: Optional[str] = None, previ
     if compile_error and previous:
         text += f"\n\nYour previous sketch failed to compile.\n```cpp\n{previous}\n```\nCompiler output:\n{compile_error[:4000]}\n\nFix it and return the complete sketch."
     return text
+
+
+# ---------------------------------------------------------------- review
+# The "LLM guesses" side of the comparison panel: an ordinary code review with no emulator.
+# Deliberately plain, so the comparison is fair. It is not told to hedge or to be vague.
+
+
+class ReviewConcern(BaseModel):
+    title: str = ""
+    detail: str = ""
+    lines: list[int] = Field(default_factory=list)
+    confidence: Literal["low", "medium", "high"] = "medium"
+
+
+class ReviewReply(BaseModel):
+    verdict: Literal["issues_found", "looks_correct"] = "issues_found"
+    summary: str = ""
+    concerns: list[ReviewConcern] = Field(default_factory=list)
+    suggested_fix: str = ""
+
+
+REVIEW_SYSTEM = f"""You are a senior embedded engineer doing a code review of an Arduino Uno sketch against its specification. You can only read the code: you cannot compile it or run it.
+
+{UNTRUSTED}
+
+List the bugs and risks you find, each with a short title, a plain explanation, the line numbers involved and your confidence. Then give a short suggested fix, in words or as a few lines of code.
+
+Reply with ONLY one JSON object, no commentary:
+{{"verdict":"issues_found","summary":"one or two sentences","concerns":[{{"title":"...","detail":"...","lines":[12,13],"confidence":"low"}}],"suggested_fix":"..."}}
+Use "verdict":"looks_correct" with an empty concerns list if you find nothing."""
+
+
+def review_user(firmware: str, spec: DeviceSpec) -> str:
+    return f"{spec_block(spec)}\n\nFIRMWARE (line numbers added):\n<firmware>\n{numbered(firmware)}\n</firmware>\n\nReturn the JSON object."
