@@ -246,5 +246,8 @@ data/
 *.sqlite3
 *.db
 
+# Deploy evidence, may name the VM
+smoke-results-*.txt
+
 # OS
 .DS_Store

@@ -1,0 +1,45 @@
+# Production override. Use it through deploy/compose.sh, which works out SITE_HOST.
+#
+# Caddy is the only container that publishes ports. That matters: Docker's published ports
+# bypass ufw, so a port published here would be open to the internet whatever ufw says.
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_HOST: ${SITE_HOST:?Run this through deploy/compose.sh, which sets SITE_HOST}
+      # Without an email Caddy has no ZeroSSL failover. sslip.io shares one Let's Encrypt limit.
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env, see deploy/README.md}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates survive rebuilds, so a redeploy does not spend the issuance limit again.
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    # Reached only through Caddy.
+    ports: !reset []
+    logging: *logging
+
+  backend:
+    environment:
+      # Fails at startup rather than serving a public demo that spends LLM money for anyone.
+      REQUIRE_DEMO_PASSCODE: "1"
+      DEMO_PASSCODE: ${DEMO_PASSCODE:?Set DEMO_PASSCODE in .env, see deploy/README.md}
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-20}
+      MAX_ACTIVE_RUNS: ${MAX_ACTIVE_RUNS:-3}
+    logging: *logging
+
+volumes:
+  caddy-data:
+  caddy-config:

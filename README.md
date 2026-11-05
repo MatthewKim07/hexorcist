@@ -109,7 +109,7 @@ Any OpenAI-compatible endpoint works, and switching is only an edit to `.env`. P
 | Variable | Purpose |
 | --- | --- |
 | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | The LLM endpoint |
-| `DEMO_PASSCODE` | If set, starting a run requires this passcode |
+| `DEMO_PASSCODE` | If set, starting a run requires this passcode. Wrong guesses are limited to 20 per address per hour |
 | `HEXORCIST_PORT` | Published port, default 8080 |
 | `RATE_LIMIT_PER_HOUR` | Runs per IP address, default 20 |
 | `MAX_ACTIVE_RUNS` | Concurrent runs, default 3 |
@@ -124,6 +124,8 @@ docker build -t hexorcist-sandbox:latest ../sandbox
 .venv/bin/python -m scripts.verify_sandbox        # the harness and lockdown, on real firmware
 .venv/bin/python -m scripts.check_presets         # planted bugs fail, reference fixes pass, no LLM
 .venv/bin/python -m scripts.run_presets           # all presets through a running API
+.venv/bin/python -m scripts.run_build             # Build mode tasks through a running API
+.venv/bin/python -m scripts.measure_speed         # compile time and emulation speed on this machine
 .venv/bin/python -m scripts.replay_reference RUN  # a stored run's scenarios against known-good firmware
 ```
 
@@ -142,11 +144,20 @@ A failure in `replay_reference` means a scenario, an assertion or the evaluator 
 
 ## Deploying on Vultr
 
-Placeholder, to be completed.
+[`deploy/README.md`](deploy/README.md) has the full copy-paste steps for a fresh Ubuntu 24.04 VM (4 vCPU, 8 GB). In short:
 
-1. Create a linux/amd64 Vultr VM with Docker and Compose, at least 4 vCPUs for 4 parallel sandboxes.
-2. In `.env`, set `LLM_BASE_URL=https://api.vultrinference.com/v1`, your inference API key, a model from your subscription, and a `DEMO_PASSCODE`.
-3. Run `docker compose up -d --build`, and put TLS in front of the published port.
+```bash
+# On the VM, as root
+curl -fsSL https://raw.githubusercontent.com/MatthewKim07/hexorcist/hexorcist-mvp/deploy/bootstrap.sh -o bootstrap.sh
+bash bootstrap.sh                         # Docker, ufw allowing 22, 80 and 443, repo at /opt/hexorcist
+cd /opt/hexorcist
+cp deploy/env.production.example .env && chmod 600 .env && nano .env
+deploy/list-models.sh                     # lists models for your key, never prints it
+deploy/up.sh                              # builds all images on the VM and starts the stack
+deploy/smoke-test.sh                      # health, lockdown, emulation speed, containment, all presets
+```
+
+The production override adds Caddy with automatic HTTPS on an sslip.io hostname derived from the VM's IP, so no domain is needed. The passcode is required and the backend refuses to start without one. Rate limits stay on, only Caddy publishes ports, because Docker's published ports bypass ufw, and the Docker socket stays with the backend.
 
 ## License
 
