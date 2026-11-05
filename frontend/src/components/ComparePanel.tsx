@@ -50,16 +50,33 @@ function useReview(runId: string, ready: boolean) {
   return { state, ask, asking, error: error || state.error };
 }
 
-/** Pair each measured bug with the review concerns that cite the same lines. */
+const STOP = new Set(["that", "this", "with", "from", "when", "into", "than", "have", "does", "will", "must", "code", "line", "lines", "spec", "firmware", "sensor"]);
+
+function words(text: string): Set<string> {
+  return new Set(text.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !STOP.has(w)));
+}
+
+function similarity(c: ReviewConcern, b: Bug): number {
+  const lines = new Set(c.lines);
+  const union = new Set([...c.lines, ...b.code_lines]);
+  const shared = b.code_lines.filter((n) => lines.has(n)).length;
+  const jaccard = union.size ? shared / union.size : 0;
+  const a = words(`${c.title} ${c.detail}`);
+  const w = words(`${b.title} ${b.requirement}`);
+  const common = [...a].filter((x) => w.has(x)).length;
+  return jaccard + 0.5 * (common / Math.max(1, Math.min(a.size, w.size, 6)));
+}
+
+/** Pair each measured bug with the review concerns that most resemble it: cited lines first, then shared words. */
 function pair(bugs: Bug[], concerns: ReviewConcern[]) {
   const owner = concerns.map((c) => {
     let best = -1;
-    let bestOverlap = 0;
+    let bestScore = 0.25;
     bugs.forEach((b, i) => {
-      const overlap = c.lines.filter((n) => b.code_lines.includes(n)).length;
-      if (overlap > bestOverlap) {
+      const score = similarity(c, b);
+      if (score > bestScore) {
         best = i;
-        bestOverlap = overlap;
+        bestScore = score;
       }
     });
     return best;
@@ -72,7 +89,7 @@ function pair(bugs: Bug[], concerns: ReviewConcern[]) {
 
 const CONFIDENCE_TONE = { low: "neutral", medium: "warn", high: "warn" } as const;
 
-function Concern({ c }: { c: ReviewConcern }) {
+function Concern({ c, full }: { c: ReviewConcern; full: boolean }) {
   return (
     <div className="rounded-md border border-dashed border-line bg-raised/60 p-3">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -80,7 +97,7 @@ function Concern({ c }: { c: ReviewConcern }) {
         <Badge tone={CONFIDENCE_TONE[c.confidence]}>{c.confidence} confidence</Badge>
         <Badge>not measured</Badge>
       </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-muted">{c.detail}</p>
+      <p className={`mt-1 text-[12.5px] leading-relaxed text-muted ${full ? "" : "line-clamp-2"}`}>{c.detail}</p>
       {c.lines.length > 0 && <p className="mt-1 font-mono text-[11px] text-faint">Lines {c.lines.join(", ")}</p>}
     </div>
   );
@@ -123,6 +140,7 @@ function Side({ tone, icon, title, note }: { tone: "guess" | "proof"; icon: "dot
 }
 
 function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; report: Report | null }) {
+  const [full, setFull] = useState(false);
   const { rows, unmatched } = pair(bugs, review.concerns);
   const verified = bugs.filter((b) => b.verified).length;
   const fix = report?.fix;
@@ -153,7 +171,7 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
       <div className="space-y-px bg-line">
         {rows.map(({ bug, concerns }) => (
           <div key={bug.id} className="grid gap-px md:grid-cols-2">
-            <div className="space-y-2 bg-panel p-3">{concerns.length ? concerns.map((c, i) => <Concern key={i} c={c} />) : <Empty>The review did not point at these lines.</Empty>}</div>
+            <div className="space-y-2 bg-panel p-3">{concerns.length ? concerns.map((c, i) => <Concern key={i} c={c} full={full} />) : <Empty>No concern in the review was matched to this bug.</Empty>}</div>
             <div className="bg-panel p-3">
               <Measured bug={bug} />
             </div>
@@ -163,7 +181,7 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
           <div className="grid gap-px md:grid-cols-2">
             <div className="space-y-2 bg-panel p-3">
               {unmatched.map((c, i) => (
-                <Concern key={i} c={c} />
+                <Concern key={i} c={c} full={full} />
               ))}
             </div>
             <div className="bg-panel p-3">
@@ -184,7 +202,7 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
         <div className="grid gap-px md:grid-cols-2">
           <div className="bg-panel p-3">
             <div className="panel-title mb-1">Suggested fix, never run</div>
-            <p className="whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted">{review.suggested_fix || "None given."}</p>
+            <p className={`whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted ${full ? "" : "line-clamp-4"}`}>{review.suggested_fix || "None given."}</p>
           </div>
           <div className="bg-panel p-3">
             <div className="panel-title mb-1 !text-pass">Verified fix</div>
@@ -208,8 +226,11 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
         <span className="text-pass">
           Hexorcist: {bugs.length} bug{bugs.length === 1 ? "" : "s"} measured, <b>{verified} fixes verified</b>
         </span>
+        <button className="btn-ghost py-0.5 text-[11px]" onClick={() => setFull(!full)} aria-expanded={full}>
+          {full ? "Collapse the review text" : "Show the full review text"}
+        </button>
         <span className="ml-auto text-[11px] text-faint">
-          1 extra LLM call, {(review.duration_ms / 1000).toFixed(0)} s, {review.tokens} tokens. Rows are paired by the line numbers each side cites.
+          1 extra LLM call, {(review.duration_ms / 1000).toFixed(0)} s, {review.tokens} tokens. Rows are paired by cited lines and shared wording.
         </span>
       </div>
     </div>
