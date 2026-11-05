@@ -602,14 +602,17 @@ def eval_timed_pulse(a: TimedPulse, trace: dict, scenario: Scenario, spec: Devic
             continue
         arrivals = during.get(rise, [])
         earlier_during.extend(arrivals)
-        if arrivals and a.during_pulse == "unspecified":
+        # Anything firmware could fairly have reacted to during this pulse, even a bounce.
+        noticed = [(s, e) for s, e in seen if rise + a.within_ms < s < stop]
+        if noticed and a.during_pulse == "unspecified":
             continue
 
-        if arrivals and a.during_pulse == "restart":
-            # Firmware may restart on the press edge, or keep restarting until the release.
-            last = arrivals[-1]
-            released = next((e for s, e in seen if s <= last <= e), last)
-            shortest, longest = last + a.duration_ms - tol, released + a.duration_ms + tol
+        if noticed and a.during_pulse == "restart":
+            # Strict when demanding: a trigger must have restarted the time once its deadline has passed.
+            # Lenient when excusing: firmware may restart on any trigger, and keep restarting until release.
+            required = [s for s in arrivals if s + a.within_ms <= stop]
+            shortest = (required[-1] if required else rise) + a.duration_ms - tol
+            longest = max(e for _, e in noticed) + a.duration_ms + tol
         else:
             shortest, longest = rise + a.duration_ms - tol, rise + a.duration_ms + tol
             # A trigger still held as the pulse ends may fairly fire it again, and the spec rarely settles that.

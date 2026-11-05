@@ -1,5 +1,5 @@
 """Fast engine tests on synthetic traces. No Docker, no LLM."""
-from app.agent import normalize_scenarios
+from app.agent import normalize_assertions, normalize_scenarios
 from app.assertions import evaluate_all, output_timeline
 from app.guard import screen_request
 from app.llm import extract_code
@@ -432,9 +432,9 @@ def test_guard_allows_normal_library_includes():
     assert screen_request('#include <Servo.h>\n#include "config.h"\n', "Move a servo")["allowed"]
 
 
-def pulse(tr_inp, tr_out, during="ignore", sim_ms=12000.0, **kwargs):
-    """Judge a 3 s pulse on D9 triggered by the active-LOW button on D2."""
-    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=3000, within_ms=100, during_pulse=during, **kwargs)
+def pulse(tr_inp, tr_out, during="ignore", sim_ms=12000.0, duration_ms=3000, **kwargs):
+    """Judge a pulse on D9, 3 s by default, triggered by the active-LOW button on D2."""
+    a = TimedPulse(id="p", pin="D9", trigger=Condition(pin="D2", op="==", value=0), duration_ms=duration_ms, within_ms=100, during_pulse=during, **kwargs)
     tr = trace(inp=tr_inp, out=tr_out)
     tr["sim_ms"] = sim_ms
     return evaluate_all([a], tr, BUTTON_SCENARIO, SPEC)[0]
@@ -577,3 +577,69 @@ def test_max_toggles_excuses_a_timed_pulse():
     assert evaluate_all([a, limit], tr, BUTTON_SCENARIO, SPEC)[1].status == "pass"
     chatter = trace(inp=[(100, 0), (160, 1)], out=[(105, 1), (205, 0), (305, 1), (405, 0)])
     assert evaluate_all([a, limit], chatter, BUTTON_SCENARIO, SPEC)[1].status == "fail"
+
+
+def test_timed_pulse_restart_excuses_a_press_still_debouncing_at_the_end():
+    # Measured on real firmware: the third press came 15 ms before the timer ran out, still in its
+    # 20 ms debounce, so the light went off and came straight back on. That is correct.
+    inp = [(500, 0), (1000, 1), (4497, 0), (4700, 1), (8502, 0), (8800, 1)]
+    r = pulse(inp, [(521, 1), (8517, 0), (8522, 1)], during="restart", duration_ms=4000)
+    assert r.status == "pass"
+    assert r.metrics["pulses_ms"] == [7996]
+
+
+def test_timed_pulse_restart_still_demands_a_restart_once_the_deadline_has_passed():
+    inp = [(500, 0), (1000, 1), (2000, 0), (2100, 1)]
+    assert pulse(inp, [(521, 1), (4521, 0)], during="restart", duration_ms=4000).status == "fail"
+    # The same press 50 ms before the end has no deadline yet, so either outcome is fine.
+    inp = [(500, 0), (1000, 1), (4471, 0), (4600, 1)]
+    assert pulse(inp, [(521, 1), (4521, 0), (4530, 1), (8530, 0)], during="restart", duration_ms=4000).status == "pass"
+    assert pulse(inp, [(521, 1), (8471, 0)], during="restart", duration_ms=4000).status == "pass"
+
+
+def test_timed_pulse_restart_may_react_to_a_bounce_but_need_not():
+    blip = [(500, 0), (1000, 1), (2000, 0), (2010, 1)]
+    assert pulse(blip, [(521, 1), (4521, 0)], during="restart", duration_ms=4000).status == "pass"
+    assert pulse(blip, [(521, 1), (6010, 0)], during="restart", duration_ms=4000).status == "pass"
+    assert pulse(blip, [(521, 1), (6500, 0)], during="restart", duration_ms=4000).status == "fail"
+
+
+def test_timed_pulse_unspecified_leaves_a_bounce_during_the_pulse_unjudged():
+    blip = [(500, 0), (1000, 1), (2000, 0), (2010, 1)]
+    assert pulse(blip, [(521, 1), (6010, 0)], during="unspecified", duration_ms=4000).status == "not_exercised"
+
+
+def test_timed_pulse_ignore_does_not_excuse_a_bounce_that_changes_the_length():
+    blip = [(500, 0), (1000, 1), (2000, 0), (2010, 1)]
+    assert pulse(blip, [(521, 1), (6010, 0)], during="ignore", duration_ms=4000).status == "fail"
+
+
+def _spec_for_overlaps():
+    return DeviceSpec(pins=[PinSpec(pin="D2", role="button", type="digital_input", active_low=True), PinSpec(pin="D5", role="chime", type="digital_output")])
+
+
+PRESS = {"pin": "D2", "op": "==", "value": 0}
+PULSE = {"type": "timed_pulse", "pin": "D5", "trigger": PRESS, "duration_ms": 2000, "during_pulse": "ignore"}
+
+
+def test_a_repeated_edge_check_is_folded_into_the_pulse():
+    edge = {"type": "output_follows", "pin": "D5", "high_when": PRESS, "within_ms": 100, "mode": "edge", "min_trigger_ms": 50}
+    kept, warnings = normalize_assertions([PULSE, edge], _spec_for_overlaps())
+    assert [a.type for a in kept] == ["timed_pulse", "no_crash"]
+    assert kept[0].min_trigger_ms == 50
+    assert "already checks" in warnings[0]
+
+
+def test_a_fault_that_contradicts_the_trigger_is_dropped():
+    fault = {"type": "safe_state_on_fault", "fault_when": PRESS, "output_pin": "D5", "safe_value": 0, "within_ms": 1000}
+    kept, warnings = normalize_assertions([PULSE, fault], _spec_for_overlaps())
+    assert [a.type for a in kept] == ["timed_pulse", "no_crash"]
+    assert "no firmware could pass both" in warnings[0]
+
+
+def test_unrelated_checks_stay_beside_a_pulse():
+    other_edge = {"type": "output_follows", "pin": "D5", "high_when": {"pin": "D2", "op": "==", "value": 1}, "mode": "edge"}
+    same_value_fault = {"type": "safe_state_on_fault", "fault_when": PRESS, "output_pin": "D5", "safe_value": 1, "within_ms": 1000}
+    kept, warnings = normalize_assertions([PULSE, other_edge, same_value_fault], _spec_for_overlaps())
+    assert [a.type for a in kept] == ["timed_pulse", "output_follows", "safe_state_on_fault", "no_crash"]
+    assert not warnings
