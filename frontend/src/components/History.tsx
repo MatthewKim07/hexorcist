@@ -2,6 +2,17 @@ import { useEffect, useState } from "react";
 import { api, RunSummary } from "../api";
 import { Panel, StatusBadge } from "./Common";
 
+function outcome(run: RunSummary): string {
+  const s = run.score;
+  if (!s) {
+    return "?";
+  }
+  if (s.checks_total) {
+    return `${s.checks_passed} / ${s.checks_total} checks`;
+  }
+  return `${s.bugs_verified} / ${s.bugs_found} bugs verified`;
+}
+
 export function History() {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState("");
@@ -23,7 +34,8 @@ export function History() {
                 <th className="px-4 py-2 font-medium">Firmware</th>
                 <th className="px-4 py-2 font-medium">Mode</th>
                 <th className="px-4 py-2 font-medium">Result</th>
-                <th className="px-4 py-2 text-right font-medium">Bugs verified</th>
+                <th className="px-4 py-2 text-right font-medium">Outcome</th>
+                <th className="px-4 py-2 text-right font-medium">Took</th>
               </tr>
             </thead>
             <tbody>
@@ -35,12 +47,13 @@ export function History() {
                   </td>
                   <td className="px-4 py-2 text-muted">{run.mode}</td>
                   <td className="px-4 py-2"><StatusBadge status={run.status} /></td>
-                  <td className="px-4 py-2 text-right font-mono">{run.score ? `${run.score.bugs_verified} / ${run.score.bugs_found}` : "?"}</td>
+                  <td className="px-4 py-2 text-right font-mono">{outcome(run)}</td>
+                  <td className="whitespace-nowrap px-4 py-2 text-right font-mono text-[12px] text-muted">{run.finished_at ? `${Math.round(run.finished_at - run.created_at)} s` : "?"}</td>
                 </tr>
               ))}
               {runs?.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-faint">No runs yet. Go possess something.</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-faint">No runs yet. Go possess something.</td>
                 </tr>
               )}
             </tbody>
