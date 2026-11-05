@@ -47,7 +47,7 @@ class UnderstandReply(BaseModel):
     assertions: list[dict[str, Any]] = Field(default_factory=list)
 
 
-ASSERTION_DOC = """Assertion types (a condition is {"pin": "A0", "op": ">=", "value": 30}. For analog pins "value" is in PHYSICAL units of that pin's scale, such as °C. For digital input pins it is the level, 0 or 1):
+ASSERTION_DOC = """Assertion types (a condition is {"pin": "A0", "op": ">=", "value": 30}. For analog pins "value" is in PHYSICAL units of that pin's scale, such as °C, so with a scale of "10 mV/%" 20 percent is value 20, not 0.2. For digital input pins it is the level, 0 or 1):
 - {"type":"output_follows","pin":"D9","high_when":<condition>,"low_when":<condition>,"within_ms":500,"mode":"level","description":"..."}
   "level": while the condition holds, the output must hold that state after within_ms.
   "edge": use for latching outputs with no stated on-time. When high_when begins, the output must go HIGH at some point within within_ms. Omit low_when. Add "min_trigger_ms" if the spec names a shortest pulse below 20 ms: shorter pulses count as contact bounce, not triggers.
