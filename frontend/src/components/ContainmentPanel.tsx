@@ -143,3 +143,64 @@ function ContainedDetail({ contained }: { contained: NonNullable<Report["contain
     </div>
   );
 }
+
+/** The whole containment story in six tiles, readable at a glance on a recording. */
+export function ContainedSummary({ report }: { report: Report }) {
+  const c = report.contained;
+  if (!c) {
+    return null;
+  }
+  const ok = (label: string) => c.checks.find((x) => x.label === label)?.ok ?? false;
+  const total = report.containment.total;
+  const tiles = [
+    {
+      ok: ok("Input guard flagged the upload"),
+      title: "Guard flagged it",
+      stat: `${c.guard.reasons.length} red flags`,
+      note: `Risk score ${c.guard.score.toFixed(1)}. Blocked before any model saw it.`,
+    },
+    {
+      ok: ok("LLM never contacted"),
+      title: "LLM never saw it",
+      stat: "0 LLM calls",
+      note: "The prompt injection reached no model.",
+    },
+    {
+      ok: ok("Network disabled"),
+      title: "No network",
+      stat: `connect ${c.probe.network}, DNS ${c.probe.dns}`,
+      note: `NetworkMode none on all ${total} containers.`,
+    },
+    {
+      ok: ok("No control-plane secrets in any output") && ok("No secrets in the sandbox environment"),
+      title: "No secrets",
+      stat: `${report.containment.secrets_found} found`,
+      note: `API key and passcode searched for in all ${total} outputs.`,
+    },
+    {
+      ok: ok("Runaway firmware killed by wall clock"),
+      title: "Killed at timeout",
+      stat: c.runaway.ran ? `SIGKILL at ${c.runaway.duration_s} s` : "not run",
+      note: c.runaway.ran ? `Limit ${c.runaway.timeout_s} s. A firmware that never stops cannot outlast it.` : "",
+    },
+    {
+      ok: ok("Every container removed"),
+      title: "Containers destroyed",
+      stat: `${report.containment.removed} of ${total} removed`,
+      note: "Fresh container per task, none left behind.",
+    },
+  ];
+  return (
+    <section aria-label="What was contained" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {tiles.map((t) => (
+        <div key={t.title} className={`rounded-lg border p-3 ${t.ok ? "border-pass/40 bg-pass/5" : "border-fail/50 bg-fail/10"}`}>
+          <div className={`flex items-center gap-1.5 text-[15px] font-semibold leading-tight ${t.ok ? "text-pass" : "text-fail"}`}>
+            <Icon name={t.ok ? "check" : "x"} className="h-4 w-4 shrink-0" /> {t.title}
+          </div>
+          <div className="mt-1.5 font-mono text-[13px] text-ink">{t.stat}</div>
+          <p className="mt-1 text-[11.5px] leading-snug text-muted">{t.note}</p>
+        </div>
+      ))}
+    </section>
+  );
+}

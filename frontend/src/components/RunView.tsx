@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { PinSpec, Report } from "../api";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bug, PinSpec, Report } from "../api";
 import { useRun } from "../useRun";
 import { Badge, DiffView, Icon, Panel, StatusBadge } from "./Common";
 import { BugCards } from "./BugCards";
 import { ComparePanel } from "./ComparePanel";
-import { ContainmentPanel } from "./ContainmentPanel";
+import { ContainedSummary, ContainmentPanel } from "./ContainmentPanel";
 import { Replay } from "./Replay";
 import { ScenarioGrid } from "./ScenarioGrid";
 import { Timeline } from "./Timeline";
@@ -74,6 +74,24 @@ export function RunView({ runId }: { runId: string }) {
     document.getElementById("replay")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Whether the run was already finished when this page opened. If so, nothing should look like it is running.
+  const openedLive = useRef<boolean | null>(null);
+  if (openedLive.current === null && state.run) {
+    openedLive.current = state.run.status === "running";
+  }
+  const [understoodOpen, setUnderstoodOpen] = useState<boolean | null>(null);
+
+  if (!state.run) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        <div className="panel h-[104px] p-4">
+          <div className="h-5 w-40 rounded bg-raised" />
+          <div className="mt-4 h-7 w-72 rounded bg-raised" />
+        </div>
+      </div>
+    );
+  }
+
   const { title, sub } = headline(report, status);
   const meta = status === "running" ? "border-halo/40" : ["fixed", "clean", "contained"].includes(status) ? "border-pass/40" : ["error", "unfixed", "compile_failed", "containment_failed"].includes(status) ? "border-fail/40" : "border-warn/40";
   const guard = state.guard ?? state.run?.guard;
@@ -92,6 +110,7 @@ export function RunView({ runId }: { runId: string }) {
         </div>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1>
         {sub && <p className="mt-0.5 text-muted">{sub}</p>}
+        {report && ["fixed", "partial", "unfixed"].includes(status) && bugs.length > 0 && <Glance bugs={bugs} />}
         {report?.llm && report.llm.calls > 0 && (
           <p className="mt-2 font-mono text-[11px] text-faint">
             {report.llm.model}: {report.llm.calls} calls, {report.llm.repairs} JSON repairs, {report.llm.prompt_tokens + report.llm.completion_tokens} tokens
@@ -99,18 +118,33 @@ export function RunView({ runId }: { runId: string }) {
         )}
       </div>
 
+      {report?.contained && <ContainedSummary report={report} />}
+
       <Timeline state={state} />
+
+      {state.run.mode === "break" && status !== "running" && hasBoard && <JumpNav hasBugs={bugs.length > 0} hasFix={!!report?.fix} hasCompare={comparable} />}
 
       {guard && !guard.allowed && (
         <div className="panel border-warn/40 bg-warn/5 p-4">
           <div className="flex items-center gap-2 font-medium">
             <Icon name="shield" className="text-warn" /> Input guard flagged this upload <Badge tone="warn">score {guard.score}</Badge>
+            <span className="text-[12px] font-normal text-muted">{guard.reasons.length} reasons</span>
           </div>
           <ul className="mt-2 space-y-0.5 text-[13px] text-muted">
-            {guard.reasons.map((r) => (
+            {guard.reasons.slice(0, 3).map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
+          {guard.reasons.length > 3 && (
+            <details className="mt-1 text-[13px]">
+              <summary className="cursor-pointer text-muted hover:text-ink">and {guard.reasons.length - 3} more</summary>
+              <ul className="mt-1 space-y-0.5 text-muted">
+                {guard.reasons.slice(3).map((r) => (
+                  <li key={r}>{r}</li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
@@ -132,7 +166,7 @@ export function RunView({ runId }: { runId: string }) {
       )}
 
       {(state.deviceModel || state.assertions.length > 0) && (
-        <details className="panel px-4 py-2.5" open={status === "running"}>
+        <details className="panel px-4 py-2.5" open={understoodOpen ?? !!openedLive.current} onToggle={(e) => setUnderstoodOpen((e.currentTarget as HTMLDetailsElement).open)}>
           <summary className="panel-title cursor-pointer">What the agent understood: {state.assertions.length} checks</summary>
           {state.deviceModel?.summary && <p className="mt-2 text-[13px]">{state.deviceModel.summary}</p>}
           {!!state.deviceModel?.risks?.length && (
@@ -156,17 +190,25 @@ export function RunView({ runId }: { runId: string }) {
       {scenarios.length > 0 && <ScenarioGrid state={{ ...state, scenarios }} iteration={gridIteration} onIteration={setGridIteration} selected={scenarioId} onSelect={replayTo} />}
 
       {hasBoard && (
-        <div id="replay" className="scroll-mt-4">
+        <div id="replay" className="scroll-mt-16">
           <Replay runId={runId} pins={pins} scenarios={emulated} assertions={report?.assertions ?? state.assertions} scenarioId={scenarioId} onScenario={setScenarioId} report={report} iterationReady={(n, id) => !!state.results[n]?.[id]} />
         </div>
       )}
 
-      <BugCards bugs={bugs} report={report} onReplay={replayTo} />
+      {bugs.length > 0 && (
+        <div id="bugs" className="scroll-mt-16">
+          <BugCards bugs={bugs} report={report} onReplay={replayTo} />
+        </div>
+      )}
 
-      {comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
+      {comparable && (
+        <div id="compare" className="scroll-mt-16">
+          <ComparePanel runId={runId} bugs={bugs} report={report} finished />
+        </div>
+      )}
 
       {report?.fix && (
-        <Panel title={`The patch: ${report.fix.diff.added} lines added, ${report.fix.diff.removed} removed`}>
+        <Panel id="patch" className="scroll-mt-16" title={`The patch: ${report.fix.diff.added} lines added, ${report.fix.diff.removed} removed`}>
           <div className="space-y-2 p-4">
             {report.fix.summary && <p className="text-[13px]">{report.fix.summary}</p>}
             <DiffView unified={report.fix.diff.unified} />
@@ -174,7 +216,48 @@ export function RunView({ runId }: { runId: string }) {
         </Panel>
       )}
 
-      <ContainmentPanel records={report?.containment?.records ?? state.records} report={report} />
+      <div id="containment" className="scroll-mt-16">
+        <ContainmentPanel records={report?.containment?.records ?? state.records} report={report} />
+      </div>
     </div>
+  );
+}
+
+function Glance({ bugs }: { bugs: Bug[] }) {
+  return (
+    <div className="mt-3 grid gap-2 md:grid-cols-2" aria-label="Measured evidence at a glance">
+      {bugs.slice(0, 4).map((bug) => (
+        <div key={bug.id} className="rounded-md border border-line bg-raised/60 p-3">
+          <div className="text-[13px] font-medium leading-snug">{bug.title}</div>
+          <dl className="mt-1.5 grid grid-cols-[48px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[12.5px] leading-snug">
+            <dt className="font-mono text-fail">before</dt>
+            <dd className="line-clamp-2">{bug.before?.evidence ?? bug.evidence}</dd>
+            <dt className="font-mono text-pass">after</dt>
+            <dd className="line-clamp-2 text-muted">{bug.after?.status === "pass" ? bug.after.evidence : "no verified fix"}</dd>
+          </dl>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function JumpNav({ hasBugs, hasFix, hasCompare }: { hasBugs: boolean; hasFix: boolean; hasCompare: boolean }) {
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const items = [
+    ["replay", "Board replay", true],
+    ["bugs", "Bug report", hasBugs],
+    ["compare", "LLM vs Hexorcist", hasCompare],
+    ["patch", "Patch", hasFix],
+    ["containment", "Containment", true],
+  ] as const;
+  return (
+    <nav className="flex flex-wrap items-center gap-1.5" aria-label="Jump to a section">
+      <span className="mr-1 text-[12px] text-faint">Jump to</span>
+      {items.filter(([, , show]) => show).map(([id, label]) => (
+        <button key={id} className="btn-ghost py-1 text-[12px]" onClick={() => go(id)}>
+          {label}
+        </button>
+      ))}
+    </nav>
   );
 }
