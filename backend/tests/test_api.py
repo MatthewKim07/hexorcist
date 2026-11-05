@@ -2,7 +2,7 @@
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.main import RateLimiter, create_app
+from app.main import PASSCODE_FAILURES_PER_HOUR, RateLimiter, create_app
 
 
 def settings(**overrides) -> Settings:
@@ -65,3 +65,34 @@ def test_rate_limiter():
     assert limiter.allow("a") and limiter.allow("a")
     assert not limiter.allow("a")
     assert limiter.allow("b")
+
+
+def test_required_passcode_refuses_to_start_without_one(monkeypatch):
+    monkeypatch.setenv("REQUIRE_DEMO_PASSCODE", "1")
+    try:
+        create_app(settings(demo_passcode=""))
+    except RuntimeError as exc:
+        assert "DEMO_PASSCODE" in str(exc)
+    else:
+        raise AssertionError("started with no passcode")
+    create_app(settings(demo_passcode="sesame"))
+
+
+def test_passcode_guesses_are_limited_per_address():
+    client = TestClient(create_app(settings(demo_passcode="sesame")))
+    codes = [client.post("/api/runs", json=GOOD, headers={"X-Demo-Passcode": "wrong"}).status_code for _ in range(PASSCODE_FAILURES_PER_HOUR + 1)]
+    assert codes[:-1] == [401] * PASSCODE_FAILURES_PER_HOUR
+    assert codes[-1] == 429
+
+
+def test_passcode_compares_non_ascii_without_crashing():
+    client = TestClient(create_app(settings(demo_passcode="sésame")))
+    assert client.post("/api/runs", json=GOOD, headers={"X-Demo-Passcode": "wrong"}).status_code == 401
+
+
+def test_health_reports_limits_and_no_secrets():
+    client = TestClient(create_app(settings(demo_passcode="sesame", llm_api_key="the-key")))
+    body = client.get("/api/health")
+    assert body.json()["limits"]["rate_limit_per_hour"] == 5
+    assert body.json()["passcode_required"] is True
+    assert "the-key" not in body.text and "sesame" not in body.text

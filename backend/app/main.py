@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -35,6 +36,10 @@ class RunRequest(BaseModel):
     description: str = ""
 
 
+# Guessing the passcode must cost the guesser something, so failures are limited per address.
+PASSCODE_FAILURES_PER_HOUR = 20
+
+
 class RateLimiter:
     def __init__(self, per_hour: int) -> None:
         self.per_hour = per_hour
@@ -55,11 +60,14 @@ class RateLimiter:
 
 def create_app(settings: Optional[Settings] = None) -> FastAPI:
     cfg = settings or load_settings()
+    if os.environ.get("REQUIRE_DEMO_PASSCODE", "") == "1" and not cfg.demo_passcode:
+        raise RuntimeError("REQUIRE_DEMO_PASSCODE is set but DEMO_PASSCODE is empty. Refusing to serve a public demo with no passcode.")
     app = FastAPI(title="Hexorcist", version="0.1.0")
     store = Store(cfg.db_path)
     registry = BusRegistry(store)
     runner = SandboxRunner(cfg)
     limiter = RateLimiter(cfg.rate_limit_per_hour)
+    guesses = RateLimiter(PASSCODE_FAILURES_PER_HOUR)
     tasks: set[asyncio.Task] = set()
     trust_proxy = os.environ.get("TRUST_PROXY", "") == "1"
 
@@ -78,7 +86,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             "llm_model": cfg.llm_model,
             "llm_base_url": cfg.llm_base_url,
             "passcode_required": bool(cfg.demo_passcode),
-            "limits": {"max_firmware_bytes": cfg.max_firmware_bytes, "max_text_bytes": cfg.max_text_bytes},
+            "limits": {
+                "max_firmware_bytes": cfg.max_firmware_bytes,
+                "max_text_bytes": cfg.max_text_bytes,
+                "rate_limit_per_hour": cfg.rate_limit_per_hour,
+                "max_active_runs": cfg.max_active_runs,
+            },
         }
 
     @app.get("/api/presets")
@@ -87,7 +100,9 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     @app.post("/api/runs", status_code=201)
     async def create_run(body: RunRequest, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
-        if cfg.demo_passcode and x_demo_passcode != cfg.demo_passcode:
+        if cfg.demo_passcode and not hmac.compare_digest((x_demo_passcode or "").encode(), cfg.demo_passcode.encode()):
+            if not guesses.allow(client_ip(request)):
+                raise HTTPException(429, "Too many wrong passcodes from this address. Try again later.")
             raise HTTPException(401, "A valid demo passcode is required.")
         if len(body.firmware.encode()) > cfg.max_firmware_bytes:
             raise HTTPException(413, f"Firmware is larger than {cfg.max_firmware_bytes} bytes.")
