@@ -1,6 +1,6 @@
 # Slide outline: 8 slides
 
-Plain light-on-dark slides in the app's own look (near-black background, off-white text, one amber accent, green for measured, red for failures). One idea per slide, at most three lines of text each. Screenshots come from `docs/`. Speaker notes are one or two sentences.
+Plain light-on-dark slides in the app's own look (near-black background, off-white text, one indigo accent, green for measured, red for failures). One idea per slide, at most three lines of text each. Screenshots come from `docs/`. Speaker notes are one or two sentences.
 
 ## 1. Problem: firmware bugs do not crash
 
@@ -22,7 +22,7 @@ Plain light-on-dark slides in the app's own look (near-black background, off-whi
 - Title: **The model proposes. The engine judges.**
 - Pipeline in one row: Understand, Compile, Attack plan, Execute, Diagnose, Fix, Verify, Report.
 - Three callouts: real compiler output and emulator traces feed the loop; verdicts come from deterministic Python, never from the LLM; a fix is claimed only if everything that failed now passes and nothing new broke.
-- Visual: the timeline strip from a finished run (top of `docs/run-result.png`).
+- Visual: the five-stage stepper from a live run, or the verdict and board at the top of `docs/run-result.png`.
 - Notes: up to three fix attempts, each re-run against the entire suite, and patches that go back to a disproven approach are rejected.
 
 ## 4. Live results
@@ -35,7 +35,7 @@ Plain light-on-dark slides in the app's own look (near-black background, off-whi
 ## 5. Containment: Blast Radius Zero
 
 - Title: **Hostile in, nothing out**
-- Six tiles: guard flagged it, LLM never saw it, no network, no secrets, killed at timeout, containers destroyed.
+- Six checks in one row: guard flagged it, LLM never saw it, no network, no secrets, timeout kill, containers removed.
 - Numbers: 138 containers created and 138 removed, 0 secrets found, runaway firmware killed at 30 s.
 - Visual: `docs/containment.png`.
 - Notes: the attacker's `#include "/etc/passwd"` did read a file, the sandbox's own. Say that plainly. The UI says it too, and shows what the attacker actually got.

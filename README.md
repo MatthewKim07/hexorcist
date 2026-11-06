@@ -20,7 +20,7 @@ Arduino firmware compiles to a `.hex` file. Hexorcist drives the bugs out of it.
 
 There is also a **Build** mode: describe a device, the agent writes the firmware, and it has to survive the same attack before it may call its work done.
 
-![A finished thermostat run: two bugs cast out, both verified, with measured before and after](docs/run-result.png)
+![A finished thermostat run: the verdict, the board replay with Before and After, and the measured number](docs/run-result.png)
 
 ## Results with a real model
 
@@ -42,7 +42,7 @@ Honest notes on these numbers:
 
 ### LLM guesses vs Hexorcist proves
 
-On any Break run you can switch on a side panel (off by default, one extra LLM call, no emulator) that gives the same model the same firmware and spec as a plain code review, and puts its answer next to the measured evidence.
+On any Break run, the **Compare with plain LLM** tab (or the "Add a plain LLM review" box before a run) gives the same model the same firmware and spec as a plain code review, and puts its answer next to the measured evidence. It is off by default and costs one extra LLM call, with no emulator.
 
 ![The same model reading the code (left, unmeasured) next to Hexorcist's measured evidence and verified fix (right)](docs/llm-vs-hexorcist.png)
 
@@ -52,7 +52,7 @@ A modern model reading the code does find most of these problems. What it cannot
 
 All user-supplied and AI-written code compiles and runs only inside per-task containers, never in the backend or on the host. The UI reports the limits as read back from `docker inspect`, not as requested.
 
-![The containment demo: guard flagged it, LLM never saw it, no network, no secrets, killed at timeout, containers destroyed](docs/containment.png)
+![The containment demo: Contained, with six checks in one row (guard flagged it, LLM never saw it, no network, no secrets, timeout kill, containers removed) and the Containment tab open](docs/containment.png)
 
 | Measured | Result |
 | --- | --- |
