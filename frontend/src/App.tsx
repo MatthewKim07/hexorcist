@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, getPasscode, Health, setPasscode } from "./api";
 import { BreakForm } from "./components/BreakForm";
 import { BuildForm } from "./components/BuildForm";
-import { Badge, Logo } from "./components/Common";
+import { Logo } from "./components/Common";
 import { History } from "./components/History";
 import { RunView } from "./components/RunView";
 
@@ -35,34 +35,32 @@ export default function App() {
     location.hash = `#/runs/${id}`;
   };
   const tab = (href: string, label: string, active: boolean) => (
-    <a href={href} aria-current={active ? "page" : undefined} className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${active ? "bg-raised text-ink" : "text-muted hover:text-ink"}`}>
+    <a href={href} aria-current={active ? "page" : undefined} className={`rounded-md px-3 py-1.5 text-[14px] transition-colors ${active ? "text-ink" : "text-muted hover:text-ink"}`}>
       {label}
     </a>
   );
+  const ready = health?.ok && health.llm_configured;
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2.5">
+      <header className="sticky top-0 z-20 border-b border-line bg-bg/95 backdrop-blur">
+        <div className="mx-auto flex h-[57px] max-w-[1120px] items-center gap-x-6 px-6">
           <a href="#/" className="flex items-center gap-2.5">
             <Logo />
-            <span>
-              <span className="block text-[15px] font-semibold leading-tight tracking-tight">Hexorcist</span>
-              <span className="block text-[11px] leading-tight text-faint">Cast the bugs out of your firmware.</span>
-            </span>
+            <span className="text-[15px] font-semibold tracking-tight">Hexorcist</span>
           </a>
           <nav className="flex gap-1" aria-label="Main">
             {tab("#/", "Break", route === "break")}
             {tab("#/build", "Build", route === "build")}
             {tab("#/runs", "History", route === "runs")}
           </nav>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex items-center gap-3 text-[12px] text-faint">
             {health?.passcode_required && (
               <input
                 aria-label="Demo passcode"
                 type="password"
                 className="field w-32 py-1 text-[12px]"
-                placeholder="Demo passcode"
+                placeholder="Passcode"
                 value={code}
                 onChange={(e) => {
                   setCode(e.target.value);
@@ -71,24 +69,20 @@ export default function App() {
               />
             )}
             {health && (
-              <>
-                <Badge tone={health.ok ? "pass" : "fail"} icon={health.ok ? "shield" : "x"} title={health.sandbox.error}>
-                  sandbox {health.ok ? "ready" : "down"}
-                </Badge>
-                <Badge tone={health.llm_configured ? "neutral" : "warn"} icon={health.llm_configured ? "dot" : "warn"} title={health.llm_base_url}>
-                  {health.llm_configured ? health.llm_model : "no LLM key"}
-                </Badge>
-              </>
+              <span className="flex items-center gap-2" title={health.ok ? `Sandbox ready. LLM: ${health.llm_configured ? `${health.llm_model} at ${health.llm_base_url}` : "not configured"}` : health.sandbox.error || "Sandbox down"}>
+                <span className={`h-1.5 w-1.5 rounded-full ${ready ? "bg-pass" : "bg-fail"}`} />
+                <span className="hidden sm:inline">{!health.ok ? "sandbox down" : health.llm_configured ? health.llm_model : "no LLM key"}</span>
+              </span>
             )}
-            {healthError && <Badge tone="fail" icon="x">backend unreachable</Badge>}
+            {healthError && <span className="text-fail">backend unreachable</span>}
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-5">
+      <main className="mx-auto max-w-[1120px] px-6 py-10">
         {health && !health.llm_configured && route !== "run" && route !== "runs" && (
-          <div className="mb-4 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-[13px] text-warn">
-            No LLM is configured. Set LLM_BASE_URL, LLM_API_KEY and LLM_MODEL in .env and restart. The containment demo runs without one.
+          <div className="mb-6 text-[13px] text-muted">
+            No LLM key set. Only the containment demo will run.
           </div>
         )}
         {route === "break" && <BreakForm onStarted={started} />}

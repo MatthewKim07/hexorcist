@@ -15,11 +15,11 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
 
   return (
     <div className="space-y-1.5">
-      <div className="grid grid-cols-[62px_minmax(0,1fr)_104px_minmax(0,1fr)_24px] gap-1.5 px-0.5 text-[11px] text-faint">
+      <div className="grid grid-cols-[62px_minmax(0,1fr)_104px_minmax(0,1fr)_24px] gap-1.5 px-0.5 text-[12px] text-faint">
         <span>Pin</span>
         <span>Role</span>
         <span>Type</span>
-        <span>Scale or wiring</span>
+        <span>Scale</span>
         <span />
       </div>
       {pins.map((p, i) => (
@@ -41,18 +41,18 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
             <input aria-label="Scale" className="field font-mono" placeholder="10 mV/°C" value={p.scale} onChange={(e) => update(i, { scale: e.target.value })} />
           ) : p.type === "digital_input" ? (
             <label className="flex items-center gap-1.5 text-[12px] text-muted">
-              <input type="checkbox" className="accent-[#f0c05a]" checked={p.active_low} onChange={(e) => update(i, { active_low: e.target.checked })} />
+              <input type="checkbox" className="accent-[#8b9bff]" checked={p.active_low} onChange={(e) => update(i, { active_low: e.target.checked })} />
               Active LOW
             </label>
           ) : (
             <span />
           )}
-          <button aria-label={`Remove ${p.pin}`} className="flex h-6 w-6 items-center justify-center rounded text-faint hover:bg-raised hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
+          <button aria-label={`Remove ${p.pin}`} className="flex h-6 w-6 items-center justify-center rounded text-faint hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
             <Icon name="x" className="h-3 w-3" />
           </button>
         </div>
       ))}
-      <button className="btn-ghost mt-1" onClick={() => onChange([...pins, { pin: free, role: "", type: "digital_output", scale: "", active_low: false }])}>
+      <button className="btn-ghost !px-0 mt-1" onClick={() => onChange([...pins, { pin: free, role: "", type: "digital_output", scale: "", active_low: false }])}>
         + Add pin
       </button>
     </div>

@@ -4,11 +4,11 @@ import { cpp } from "@codemirror/lang-cpp";
 import { tokyoNightInit } from "@uiw/codemirror-theme-tokyo-night";
 import { tags } from "@lezer/highlight";
 import { api, PinSpec, Preset, RunSummary } from "../api";
-import { Icon, Panel } from "./Common";
+import { Icon } from "./Common";
 import { PinTable } from "./PinTable";
 
 // The stock theme's comments are too dim to read on a screen recording.
-const editorTheme = tokyoNightInit({ styles: [{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#8b93a7" }] });
+const editorTheme = tokyoNightInit({ settings: { background: "#151518", gutterBackground: "#151518" }, styles: [{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#8b93a7" }] });
 
 export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -67,97 +67,73 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
     }
   };
 
+  const toForm = () => document.getElementById("paste")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
   return (
-    <div className="space-y-4">
-      <section className="panel grid gap-6 overflow-hidden p-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:p-8">
-        <div className="flex flex-col justify-center">
-          <div className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-halo">
-            <Icon name="shield" /> Cast the bugs out of your firmware
-          </div>
-          <h1 className="mt-2 text-4xl font-semibold leading-[1.1] tracking-tight">Is your firmware possessed?</h1>
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
-            Hexorcist is an AI QA engineer. It runs your Arduino firmware on an emulated chip inside a sealed sandbox, shows measured proof of what breaks, then proves its own fix.
-          </p>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <button className="btn-primary px-6 py-3 text-base" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
-              <Icon name="play" /> {busy ? "Starting…" : "Try the thermostat"}
-            </button>
-            {finished && (
-              <a href={`#/runs/${finished.id}`} className="btn-ghost px-4 py-3 text-[13px]">
-                Open a finished run
-              </a>
-            )}
-          </div>
-          <p className="mt-2 text-[12px] text-faint">One click, nothing to paste. A full run takes about a minute and a half.</p>
-          {error && <div className="mt-3 max-w-xl rounded-md border border-fail/40 bg-fail/10 px-3 py-2 text-[13px] text-fail">{error}</div>}
-        </div>
-
-        <div className="flex flex-col justify-center gap-3" aria-label="Why measured evidence beats reading code">
-          <div className="rounded-lg border border-dashed border-line bg-raised/50 p-4">
-            <div className="panel-title">An LLM reading the code</div>
-            <p className="mt-1 text-[17px] italic leading-snug text-muted">“This might chatter.”</p>
-          </div>
-          <div className="rounded-lg border border-pass/40 bg-pass/5 p-4">
-            <div className="panel-title !text-pass">Hexorcist running it</div>
-            <p className="mt-1 font-mono text-[15px] leading-snug text-ink">D9 toggled 23 times in 5000 ms (limit 2)</p>
-            <p className="mt-1 text-[13px] text-pass">Then it patches the sketch and re-runs everything: 1 toggle, all checks pass.</p>
-          </div>
-        </div>
-      </section>
-
-      <div className="flex items-baseline justify-between">
-        <h2 className="panel-title">Or pick another example, or paste your own sketch</h2>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-        {presets.map((p) => {
-          const hostile = p.id === "containment";
-          return (
-            <button
-              key={p.id}
-              onClick={() => load(p)}
-              className={`rounded-lg border p-3 text-left transition-colors ${active === p.id ? "border-halo/70 bg-halo/5" : "border-line bg-panel hover:border-faint"}`}
-            >
-              <div className="flex items-center gap-1.5 text-[13px] font-medium">
-                {hostile && <Icon name="shield" className="text-halo" />}
-                {p.title}
-              </div>
-              <div className="mt-1 text-[12px] leading-snug text-muted">{p.summary}</div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <Panel title="Sketch (.ino)" className="overflow-hidden">
-          <div className="h-[470px] overflow-hidden">
-            <CodeMirror value={firmware} onChange={setFirmware} theme={editorTheme} extensions={[cpp()]} height="470px" aria-label="Arduino sketch" />
-          </div>
-        </Panel>
-
-        <div className="space-y-4">
-          <Panel title="Pin map, Arduino Uno">
-            <div className="p-3">
-              <PinTable pins={pins} onChange={setPins} />
-            </div>
-          </Panel>
-          <Panel title="Intended behaviour">
-            <div className="p-3">
-              <textarea aria-label="Intended behaviour" rows={7} className="field resize-y leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="Describe what the firmware must do, with numbers." />
-            </div>
-          </Panel>
-          {error && <div className="rounded-md border border-fail/40 bg-fail/10 px-3 py-2 text-[13px] text-fail">{error}</div>}
-          <label className="flex cursor-pointer items-start gap-2 rounded-md border border-line bg-panel px-3 py-2 text-[12.5px] text-muted">
-            <input type="checkbox" className="mt-0.5 accent-[#f0c05a]" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
-            <span>
-              <span className="text-ink">Also ask the LLM for a plain code review</span>, to show beside the measured results. One extra call, no emulator. Off by default.
-            </span>
-          </label>
-          <button className="btn-primary w-full py-2.5" disabled={busy} onClick={() => start()}>
-            {busy ? "Starting…" : "Cast the bugs out"}
+    <div>
+      <section className="flex min-h-[calc(100svh-57px-80px)] flex-col items-center justify-center py-12 text-center">
+        <h1 className="text-[48px] font-semibold leading-none tracking-tight">Hexorcist</h1>
+        <p className="mt-5 max-w-md text-[18px] text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <button className="btn-primary" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
+            {busy ? "Starting…" : "Try the thermostat"}
+          </button>
+          <button className="btn-outline" onClick={toForm}>
+            Paste your own firmware
           </button>
         </div>
-      </div>
+        {error && <p className="mt-6 text-fail">{error}</p>}
+        <p className="mt-10 flex items-center gap-3 text-[13px] text-faint">
+          Attack <Icon name="arrow" className="h-3 w-3" /> Measure <Icon name="arrow" className="h-3 w-3" /> Fix
+        </p>
+      </section>
+
+      <section id="paste" className="scroll-mt-20 border-t border-line pt-10">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="flex flex-wrap gap-x-5 gap-y-2" role="tablist" aria-label="Examples">
+            {presets.map((p) => (
+              <button key={p.id} role="tab" aria-selected={active === p.id} title={p.summary} onClick={() => load(p)} className={`-mb-px border-b-2 pb-1 text-[14px] transition-colors ${active === p.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}>
+                {p.title}
+              </button>
+            ))}
+          </div>
+          {finished && (
+            <a href={`#/runs/${finished.id}`} className="flex items-center gap-1.5 text-[14px] text-muted hover:text-ink">
+              Open a finished run <Icon name="arrow" className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+          <div>
+            <div className="label mb-2">Sketch</div>
+            <div className="h-[420px] overflow-hidden rounded-md bg-raised">
+              <CodeMirror value={firmware} onChange={setFirmware} theme={editorTheme} extensions={[cpp()]} height="420px" aria-label="Arduino sketch" />
+            </div>
+          </div>
+          <div className="space-y-8">
+            <div>
+              <div className="label mb-2">Pins</div>
+              <PinTable pins={pins} onChange={setPins} />
+            </div>
+            <div>
+              <div className="label mb-2">Behaviour</div>
+              <textarea aria-label="Intended behaviour" rows={6} className="field resize-y leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="What it must do, with numbers" />
+            </div>
+          </div>
+        </div>
+
+        {error && <p className="mt-6 text-fail">{error}</p>}
+        <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
+          <button className="btn-primary" disabled={busy} onClick={() => start()}>
+            {busy ? "Starting…" : "Run"}
+          </button>
+          <label className="flex cursor-pointer items-center gap-2 text-[14px] text-muted" title="One extra LLM call, no emulator, shown beside the measured results">
+            <input type="checkbox" className="accent-[#8b9bff]" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
+            Add a plain LLM review
+          </label>
+        </div>
+      </section>
     </div>
   );
 }

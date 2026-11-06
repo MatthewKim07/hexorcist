@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, Bug, Report, Review, ReviewConcern, ReviewState } from "../api";
-import { Badge, Icon, Panel } from "./Common";
+import { keyFact } from "../format";
+import { Icon } from "./Common";
 
 const EMPTY: ReviewState = { review: null, pending: false, error: "" };
 
@@ -87,151 +88,98 @@ function pair(bugs: Bug[], concerns: ReviewConcern[]) {
   };
 }
 
-const CONFIDENCE_TONE = { low: "neutral", medium: "warn", high: "warn" } as const;
-
-function Concern({ c, full }: { c: ReviewConcern; full: boolean }) {
-  return (
-    <div className="rounded-md border border-dashed border-line bg-raised/60 p-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[13px] font-medium">{c.title}</span>
-        <Badge tone={CONFIDENCE_TONE[c.confidence]}>{c.confidence} confidence</Badge>
-        <Badge>not measured</Badge>
-      </div>
-      <p className={`mt-1 text-[12.5px] leading-relaxed text-muted ${full ? "" : "line-clamp-2"}`}>{c.detail}</p>
-      {c.lines.length > 0 && <p className="mt-1 font-mono text-[11px] text-faint">Lines {c.lines.join(", ")}</p>}
-    </div>
-  );
+interface Row {
+  key: string;
+  left: ReviewConcern[];
+  bug: Bug | null;
 }
 
-function Measured({ bug }: { bug: Bug }) {
-  const verified = bug.verified;
-  return (
-    <div className="rounded-md border border-fail/30 bg-fail/5 p-3">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[13px] font-medium">{bug.title}</span>
-        <Badge tone="fail" icon="x">
-          measured
-        </Badge>
-        {verified && (
-          <Badge tone="pass" icon="check">
-            fix verified
-          </Badge>
-        )}
-      </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed">{bug.evidence}</p>
-      {bug.after?.status === "pass" && <p className="mt-1.5 text-[12.5px] leading-relaxed text-pass">After the fix: {bug.after.evidence}</p>}
-    </div>
-  );
-}
-
-function Empty({ children }: { children: string }) {
-  return <div className="rounded-md border border-line/60 px-3 py-2.5 text-[12.5px] text-faint">{children}</div>;
-}
-
-function Side({ tone, icon, title, note }: { tone: "guess" | "proof"; icon: "dot" | "check"; title: string; note: string }) {
-  return (
-    <div className={`border-b px-4 py-2.5 ${tone === "proof" ? "border-pass/30 bg-pass/5" : "border-line bg-raised/50"}`}>
-      <div className={`flex items-center gap-1.5 text-[13px] font-semibold ${tone === "proof" ? "text-pass" : "text-muted"}`}>
-        <Icon name={icon} /> {title}
-      </div>
-      <div className="text-[11.5px] text-faint">{note}</div>
-    </div>
-  );
-}
+const VISIBLE = 4;
 
 function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; report: Report | null }) {
-  const [full, setFull] = useState(false);
-  const { rows, unmatched } = pair(bugs, review.concerns);
+  const [more, setMore] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
+  const { rows: paired, unmatched } = pair(bugs, review.concerns);
   const verified = bugs.filter((b) => b.verified).length;
   const fix = report?.fix;
-  const scenarios = report?.score?.scenarios ?? 0;
-  const checks = report?.score?.assertions ?? 0;
+
+  const rows: Row[] = [
+    ...paired.map(({ bug, concerns }) => ({ key: bug.id, left: concerns, bug })),
+    ...unmatched.map((c, i) => ({ key: `u${i}`, left: [c], bug: null as Bug | null })),
+  ];
+  const shown = more ? rows : rows.slice(0, VISIBLE);
 
   return (
     <div>
-      <div className="grid gap-px bg-line md:grid-cols-2">
-        <div className="bg-panel">
-          <Side tone="guess" icon="dot" title="LLM code review: guesses" note={`${review.model} read the code and spec. No compiler, no emulator.`} />
-          <div className="space-y-2 p-3">
-            {review.summary && <p className="text-[12.5px] italic leading-relaxed text-muted">“{review.summary}”</p>}
-          </div>
-        </div>
-        <div className="bg-panel">
-          <Side tone="proof" icon="check" title="Hexorcist: proves" note="Compiled the sketch and ran it on an emulated ATmega328P in a sealed sandbox." />
-          <div className="space-y-2 p-3">
-            <p className="text-[12.5px] leading-relaxed text-muted">
-              {bugs.length
-                ? `${bugs.length} failure${bugs.length === 1 ? "" : "s"} measured across ${scenarios} scenarios and ${checks} checks.`
-                : `${checks} checks passed across ${scenarios} scenarios.`}
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-8 border-b border-line pb-3 text-[14px]">
+        <div className="text-muted">Plain LLM review</div>
+        <div>Hexorcist measured</div>
       </div>
-
-      <div className="space-y-px bg-line">
-        {rows.map(({ bug, concerns }) => (
-          <div key={bug.id} className="grid gap-px md:grid-cols-2">
-            <div className="space-y-2 bg-panel p-3">{concerns.length ? concerns.map((c, i) => <Concern key={i} c={c} full={full} />) : <Empty>No concern in the review was matched to this bug.</Empty>}</div>
-            <div className="bg-panel p-3">
-              <Measured bug={bug} />
-            </div>
-          </div>
-        ))}
-        {unmatched.length > 0 && (
-          <div className="grid gap-px md:grid-cols-2">
-            <div className="space-y-2 bg-panel p-3">
-              {unmatched.map((c, i) => (
-                <Concern key={i} c={c} full={full} />
-              ))}
-            </div>
-            <div className="bg-panel p-3">
-              <Empty>No measured failure on these lines. Either it is not a bug, or no scenario exercised it. A guess stays a guess until it is run.</Empty>
-            </div>
-          </div>
+      <ul>
+        {shown.map((row) => {
+          const isOpen = open === row.key;
+          const first = row.left[0];
+          return (
+            <li key={row.key} className="border-b border-line">
+              <button aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : row.key)} className="grid w-full grid-cols-2 gap-8 py-3.5 text-left hover:bg-raised/60">
+                <span className="min-w-0 text-muted">
+                  {first ? first.title : <span className="text-faint">Nothing matched</span>}
+                  {row.left.length > 1 && <span className="ml-2 text-faint">+{row.left.length - 1}</span>}
+                </span>
+                <span className="min-w-0">
+                  {row.bug ? (
+                    <>
+                      <span className="block">{row.bug.title}</span>
+                      <span className="mt-0.5 flex items-center gap-3">
+                        <span className="num text-fail">{keyFact(row.bug.before?.evidence ?? row.bug.evidence)}</span>
+                        {row.bug.verified && (
+                          <span className="flex items-center gap-1 text-pass">
+                            <Icon name="check" /> fixed
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-faint">Not measured</span>
+                  )}
+                </span>
+              </button>
+              {isOpen && (
+                <div className="grid grid-cols-2 gap-8 pb-4 text-[13px] text-muted">
+                  <div className="space-y-2">
+                    {row.left.map((c, i) => (
+                      <p key={i}>
+                        {c.detail}
+                        {c.lines.length > 0 && <span className="num ml-2 text-faint">line {c.lines.join(", ")}</span>}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="space-y-2">{row.bug ? <p>{row.bug.evidence}</p> : <p className="text-faint">No scenario measured this. A guess stays a guess until it is run.</p>}</div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+        {rows.length === 0 && (
+          <li className="grid grid-cols-2 gap-8 border-b border-line py-3.5 text-faint">
+            <span>{review.verdict === "looks_correct" ? "Nothing flagged" : "No concerns"}</span>
+            <span>No check failed</span>
+          </li>
         )}
-        {!rows.length && !unmatched.length && (
-          <div className="grid gap-px md:grid-cols-2">
-            <div className="bg-panel p-3">
-              <Empty>{review.verdict === "looks_correct" ? "The review found nothing to flag." : "No concerns listed."}</Empty>
-            </div>
-            <div className="bg-panel p-3">
-              <Empty>No check failed.</Empty>
-            </div>
-          </div>
-        )}
-        <div className="grid gap-px md:grid-cols-2">
-          <div className="bg-panel p-3">
-            <div className="panel-title mb-1">Suggested fix, never run</div>
-            <p className={`whitespace-pre-wrap text-[12.5px] leading-relaxed text-muted ${full ? "" : "line-clamp-4"}`}>{review.suggested_fix || "None given."}</p>
-          </div>
-          <div className="bg-panel p-3">
-            <div className="panel-title mb-1 !text-pass">Verified fix</div>
-            {fix ? (
-              <p className="text-[12.5px] leading-relaxed">
-                {fix.all_passing
-                  ? `Patch ${fix.iteration} (+${fix.diff.added} −${fix.diff.removed} lines) was recompiled and re-run against all ${scenarios} scenarios and ${checks} checks: every one passes, nothing regressed.`
-                  : `The best patch (+${fix.diff.added} −${fix.diff.removed} lines) still fails some checks, so it is not claimed as a fix.`}
-              </p>
-            ) : (
-              <p className="text-[12.5px] text-faint">{bugs.length ? "No patch was produced." : "Nothing needed fixing."}</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line bg-raised/50 px-4 py-2.5 font-mono text-[12px]">
-        <span className="text-muted">
-          LLM review: {review.concerns.length} concern{review.concerns.length === 1 ? "" : "s"}, <b className="text-ink">0 measured</b>, 0 fixes tested
-        </span>
-        <span className="text-pass">
-          Hexorcist: {bugs.length} bug{bugs.length === 1 ? "" : "s"} measured, <b>{verified} fixes verified</b>
-        </span>
-        <button className="btn-ghost py-0.5 text-[11px]" onClick={() => setFull(!full)} aria-expanded={full}>
-          {full ? "Collapse the review text" : "Show the full review text"}
+      </ul>
+      {rows.length > VISIBLE && (
+        <button className="mt-3 text-[13px] text-muted hover:text-ink" onClick={() => setMore(!more)} aria-expanded={more}>
+          {more ? "Show fewer" : `Show ${rows.length - VISIBLE} more`}
         </button>
-        <span className="ml-auto text-[11px] text-faint">
-          1 extra LLM call, {(review.duration_ms / 1000).toFixed(0)} s, {review.tokens} tokens. Rows are paired by cited lines and shared wording.
-        </span>
+      )}
+
+      <div className="mt-6 grid grid-cols-2 gap-8 text-[14px]">
+        <p className="text-muted">
+          {review.concerns.length} concern{review.concerns.length === 1 ? "" : "s"} · <span className="num text-ink">0</span> measured · <span className="num text-ink">0</span> fixes tested
+        </p>
+        <p>
+          <span className="num">{bugs.length}</span> measured · <span className="num text-pass">{verified}</span> fixes verified{fix ? <span className="num ml-2 text-faint">+{fix.diff.added} −{fix.diff.removed}</span> : null}
+        </p>
       </div>
     </div>
   );
@@ -242,30 +190,18 @@ export function ComparePanel({ runId, bugs, report, finished }: { runId: string;
   const waiting = asking || state.pending;
 
   return (
-    <Panel
-      title="LLM guesses vs Hexorcist proves"
-      right={
-        <div className="flex items-center gap-2">
-          <Badge>optional</Badge>
-          {!state.review && (
-            <button className="btn-ghost" onClick={ask} disabled={waiting}>
-              {waiting ? "Asking the model…" : "Compare with a plain LLM code review"}
-            </button>
-          )}
-        </div>
-      }
-    >
+    <div id="compare" className="py-6">
       {state.review ? (
         <Comparison review={state.review} bugs={bugs} report={report} />
       ) : (
-        <div className="space-y-1 p-4 text-[13px] text-muted">
-          <p>
-            What does the same model say if it only reads the code? One extra LLM call, same firmware and spec, no emulator. It is shown beside the measured evidence above, clearly labelled as unverified.
-          </p>
-          {waiting && <p className="pulse-soft text-halo">Waiting for the model…</p>}
+        <div className="space-y-3">
+          <button className="btn-outline" onClick={ask} disabled={waiting}>
+            {waiting ? "Asking the model…" : "Run a plain LLM review"}
+          </button>
+          <p className="label">One extra LLM call. No compiler, no emulator.</p>
           {error && <p className="text-fail">{error}</p>}
         </div>
       )}
-    </Panel>
+    </div>
   );
 }

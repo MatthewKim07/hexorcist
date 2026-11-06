@@ -1,45 +1,58 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bug, PinSpec, Report } from "../api";
+import { duration, keyFact, rankBugs } from "../format";
 import { useRun } from "../useRun";
-import { Badge, DiffView, Icon, Panel, StatusBadge } from "./Common";
-import { BugCards } from "./BugCards";
+import { useTrace } from "../useTrace";
+import { BugList } from "./BugList";
 import { ComparePanel } from "./ComparePanel";
-import { ContainedSummary, ContainmentPanel } from "./ContainmentPanel";
+import { Icon, STATUS_META, Tabs, TONE_TEXT } from "./Common";
+import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
+import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
 import { Replay } from "./Replay";
-import { ScenarioGrid } from "./ScenarioGrid";
-import { Timeline } from "./Timeline";
+import { Stepper } from "./Stepper";
 
-function headline(report: Report | null, status: string): { title: string; sub: string } {
+type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
+
+function headline(report: Report | null, status: string, firstWarning: string): { title: string; sub: string } {
   const s = report?.score;
   const n = s?.bugs_found ?? 0;
   const v = s?.bugs_verified ?? 0;
-  const bugs = `${n} bug${n === 1 ? "" : "s"}`;
+  const bugs = `${n} bug${n === 1 ? "" : "s"} found`;
   switch (status) {
     case "fixed":
-      return { title: `${bugs} cast out, ${v} verified`, sub: `Patch ${report?.fix?.iteration} passes all ${s?.scenarios} scenarios and ${s?.assertions} checks on the emulator, with no regressions.` };
+      return { title: `${bugs} · ${v} fixed and verified`, sub: "" };
     case "clean":
-      return { title: "No possession detected", sub: `All ${s?.assertions} checks passed across ${s?.scenarios} attack scenarios.` };
+      return { title: "No bugs found", sub: `${s?.assertions} checks passed in ${s?.scenarios} scenarios` };
     case "partial":
-      return { title: `${bugs} found, ${v} verified`, sub: "The best patch still fails some checks or broke something else, so it is not claimed as a fix." };
+      return { title: `${bugs} · ${v} fixed and verified`, sub: "The best patch still fails a check, so it is not claimed as a fix" };
     case "unfixed":
-      return { title: `${bugs} found, no working fix`, sub: "The bugs below are real and measured. No patch passed verification." };
+      return { title: `${bugs} · no working fix`, sub: "" };
     case "inconclusive":
-      return { title: "Inconclusive: the spec was not fully checked", sub: "Nothing failed, but this is not an all-clear. See the warnings below." };
+      return { title: "Inconclusive", sub: firstWarning || "Not everything could be checked" };
     case "compile_failed":
-      return { title: "It does not compile", sub: "These are the real compiler errors from the sandbox." };
+      return { title: "Does not compile", sub: "" };
     case "contained":
-      return { title: `Contained: ${s?.checks_passed} of ${s?.checks_total} checks passed`, sub: "Guard flagged it, the LLM never saw it, and the sandbox held anyway." };
+      return { title: "Contained", sub: `${s?.checks_passed} of ${s?.checks_total} checks passed` };
     case "containment_failed":
-      return { title: "A containment check failed", sub: "Review the failed checks below." };
+      return { title: "Not contained", sub: "A containment check failed" };
     case "blocked":
-      return { title: "Blocked by the input guard", sub: "The LLM was not contacted." };
+      return { title: "Blocked by the input guard", sub: "No LLM call was made" };
     case "interrupted":
-      return { title: "This run was interrupted", sub: "The backend restarted while it was running." };
+      return { title: "Interrupted", sub: "The backend restarted during the run" };
     case "error":
       return { title: "The run failed", sub: report?.error ?? "" };
     default:
-      return { title: "Attacking the firmware…", sub: "Every result below comes from the real binary running on an emulated chip." };
+      return { title: "", sub: "" };
   }
+}
+
+function Skeleton() {
+  return (
+    <div aria-busy="true" className="space-y-6">
+      <div className="h-3 w-40 rounded bg-raised" />
+      <div className="h-8 w-80 rounded bg-raised" />
+    </div>
+  );
 }
 
 export function RunView({ runId }: { runId: string }) {
@@ -47,217 +60,159 @@ export function RunView({ runId }: { runId: string }) {
   const report = state.run?.report ?? null;
   const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
   const pins: PinSpec[] = report?.spec?.pins ?? state.spec?.pins ?? state.run?.spec?.pins ?? [];
-  const [gridIteration, setGridIteration] = useState(0);
   const [scenarioId, setScenarioId] = useState<string | null>(null);
+  const [side, setSide] = useState<"before" | "after">("before");
+  const [tab, setTab] = useState<TabId | null>(null);
 
   const scenarios = report?.scenarios?.length ? report.scenarios : state.scenarios;
   const emulated = useMemo(() => scenarios.filter((s) => !s.id.startsWith("containment-")), [scenarios]);
-  const bugs = report?.bugs?.length ? report.bugs : state.bugs;
+  const bugs = useMemo(() => rankBugs(report?.bugs?.length ? report.bugs : state.bugs), [report, state.bugs]);
+  const afterIteration = report?.fix?.iteration ?? null;
+  const iteration = side === "after" && afterIteration !== null ? afterIteration : 0;
 
   useEffect(() => {
-    if (report?.bugs?.length) {
-      setScenarioId((cur) => cur ?? report.bugs[0].scenario_id);
+    // Wait for the report on a finished run, so the board opens on the worst bug and not on the first scenario.
+    if (!report) {
+      return;
+    }
+    if (bugs.length) {
+      setScenarioId((cur) => cur ?? bugs[0].scenario_id);
     } else if (emulated.length) {
       setScenarioId((cur) => cur ?? emulated[0].id);
     }
-  }, [report, emulated]);
+  }, [report, bugs, emulated]);
 
-  useEffect(() => {
-    const iterations = Object.keys(state.results).map(Number);
-    if (iterations.length) {
-      setGridIteration(report?.fix?.iteration ?? Math.max(...iterations));
+  const ready = !!scenarioId && !!state.results[iteration]?.[scenarioId];
+  const { trace, error: traceError } = useTrace(runId, iteration, scenarioId, ready);
+  const results = useMemo(() => report?.matrix?.[String(iteration)]?.[scenarioId ?? ""] ?? [], [report, iteration, scenarioId]);
+  const violations = useMemo(() => results.filter((r) => r.status === "fail").flatMap((r) => r.violations), [results]);
+
+  const showReplay = () => {
+    const el = document.getElementById("replay");
+    if (el && el.getBoundingClientRect().top < 56) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [state.results, report]);
-
+  };
   const replayTo = (id: string) => {
     setScenarioId(id);
-    document.getElementById("replay")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showReplay();
   };
 
-  // Whether the run was already finished when this page opened. If so, nothing should look like it is running.
-  const openedLive = useRef<boolean | null>(null);
-  if (openedLive.current === null && state.run) {
-    openedLive.current = state.run.status === "running";
-  }
-  const [understoodOpen, setUnderstoodOpen] = useState<boolean | null>(null);
-
   if (!state.run) {
-    return (
-      <div className="space-y-4" aria-busy="true">
-        <div className="panel h-[104px] p-4">
-          <div className="h-5 w-40 rounded bg-raised" />
-          <div className="mt-4 h-7 w-72 rounded bg-raised" />
-        </div>
-      </div>
-    );
+    return <Skeleton />;
   }
 
-  const { title, sub } = headline(report, status);
-  const meta = status === "running" ? "border-halo/40" : ["fixed", "clean", "contained"].includes(status) ? "border-pass/40" : ["error", "unfixed", "compile_failed", "containment_failed"].includes(status) ? "border-fail/40" : "border-warn/40";
-  const guard = state.guard ?? state.run?.guard;
+  const running = status === "running";
+  const guard = state.guard ?? state.run.guard;
   const warnings = report?.warnings ?? state.warnings;
-  const hasBoard = emulated.length > 0 && pins.length > 0;
-  const comparable = state.run?.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
+  const { title, sub } = headline(report, status, warnings[0] ?? "");
+  const meta = STATUS_META[status] ?? { tone: "neutral" as const };
+  const hasBoard = !running && emulated.length > 0 && pins.length > 0;
+  const comparable = state.run.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
+  const records = report?.containment?.records ?? state.records;
+  const focus = bugs.find((b) => b.scenario_id === scenarioId) ?? null;
+  const scenario = scenarios.find((s) => s.id === scenarioId);
+  const evidence = focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
+  const emulatedResults = state.results[iteration] ?? {};
+
+  const tabs: { id: TabId; label: string }[] = [];
+  if (!running) {
+    if (hasBoard) {
+      tabs.push({ id: "scenarios", label: "Scenarios" }, { id: "checks", label: "Checks" });
+    }
+    if (records.length) {
+      tabs.push({ id: "containment", label: "Containment" });
+    }
+    if (comparable) {
+      tabs.push({ id: "compare", label: "Compare with plain LLM" });
+    }
+    if (report && !report.contained) {
+      tabs.push({ id: "logs", label: "Logs" });
+    }
+  }
+
+  const onFocus = (bug: Bug) => {
+    setScenarioId(bug.scenario_id);
+    showReplay();
+  };
 
   return (
-    <div className="space-y-4">
-      <div className={`panel ${meta} p-4`}>
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-muted">
-          <StatusBadge status={status} />
-          <span className="font-mono">{state.run?.mode === "build" ? "build" : "break"} / {runId}</span>
-          <span>{state.run?.title}</span>
-          {state.connectionLost && status === "running" && <Badge tone="warn" icon="warn">Reconnecting…</Badge>}
-        </div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1>
-        {sub && <p className="mt-0.5 text-muted">{sub}</p>}
-        {report && ["fixed", "partial", "unfixed"].includes(status) && bugs.length > 0 && <Glance bugs={bugs} />}
-        {report?.llm && report.llm.calls > 0 && (
-          <p className="mt-2 font-mono text-[11px] text-faint">
-            {report.llm.model}: {report.llm.calls} calls, {report.llm.repairs} JSON repairs, {report.llm.prompt_tokens + report.llm.completion_tokens} tokens
-          </p>
-        )}
-      </div>
-
-      {report?.contained && <ContainedSummary report={report} />}
-
-      <Timeline state={state} />
-
-      {state.run.mode === "break" && status !== "running" && hasBoard && <JumpNav hasBugs={bugs.length > 0} hasFix={!!report?.fix} hasCompare={comparable} />}
-
-      {guard && !guard.allowed && (
-        <div className="panel border-warn/40 bg-warn/5 p-4">
-          <div className="flex items-center gap-2 font-medium">
-            <Icon name="shield" className="text-warn" /> Input guard flagged this upload <Badge tone="warn">score {guard.score}</Badge>
-            <span className="text-[12px] font-normal text-muted">{guard.reasons.length} reasons</span>
+    <div className="space-y-8">
+      <header>
+        <p className="label flex flex-wrap items-center gap-x-3">
+          <span>{state.run.title}</span>
+          {report && state.run.mode === "build" && <span>Build</span>}
+          {state.run.finished_at && <span className="num">{duration(state.run.created_at, state.run.finished_at)}</span>}
+          {state.connectionLost && running && <span>Reconnecting…</span>}
+        </p>
+        {running ? (
+          <div className="mt-6">
+            <Stepper state={state} total={emulated.length} />
           </div>
-          <ul className="mt-2 space-y-0.5 text-[13px] text-muted">
+        ) : (
+          <>
+            <h1 className="headline mt-3 flex items-center gap-3">
+              {meta.tone !== "neutral" && <Icon name={meta.tone === "pass" ? "check" : "x"} className={`h-6 w-6 shrink-0 ${TONE_TEXT[meta.tone]}`} />}
+              {title}
+            </h1>
+            {sub && <p className="mt-2 text-[16px] text-muted">{sub}</p>}
+          </>
+        )}
+      </header>
+
+      {report?.contained && <ContainedRow report={report} />}
+
+      {status === "blocked" && guard && !guard.allowed && (
+        <section aria-label="Guard reasons">
+          <ul className="space-y-2 text-muted">
             {guard.reasons.slice(0, 3).map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
           {guard.reasons.length > 3 && (
-            <details className="mt-1 text-[13px]">
-              <summary className="cursor-pointer text-muted hover:text-ink">and {guard.reasons.length - 3} more</summary>
-              <ul className="mt-1 space-y-0.5 text-muted">
+            <details className="mt-2">
+              <summary className="cursor-pointer text-[13px] text-faint hover:text-ink">{guard.reasons.length - 3} more</summary>
+              <ul className="mt-2 space-y-2 text-muted">
                 {guard.reasons.slice(3).map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>
             </details>
           )}
-        </div>
+        </section>
       )}
 
-      {warnings.length > 0 && (
-        <details className="panel px-4 py-2.5 text-[13px]" open={status === "inconclusive"}>
-          <summary className="cursor-pointer text-warn">{warnings.length} warning{warnings.length === 1 ? "" : "s"} from this run</summary>
-          <ul className="mt-2 space-y-1 text-muted">
-            {warnings.map((w, i) => (
-              <li key={i}>{w}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {report?.compile_log && status === "compile_failed" && (
-        <Panel title="Compiler output">
-          <pre className="max-h-96 overflow-auto p-4 font-mono text-[12px] text-muted">{report.compile_log}</pre>
-        </Panel>
-      )}
-
-      {(state.deviceModel || state.assertions.length > 0) && (
-        <details className="panel px-4 py-2.5" open={understoodOpen ?? !!openedLive.current} onToggle={(e) => setUnderstoodOpen((e.currentTarget as HTMLDetailsElement).open)}>
-          <summary className="panel-title cursor-pointer">What the agent understood: {state.assertions.length} checks</summary>
-          {state.deviceModel?.summary && <p className="mt-2 text-[13px]">{state.deviceModel.summary}</p>}
-          {!!state.deviceModel?.risks?.length && (
-            <ul className="mt-1 list-disc pl-4 text-[13px] text-muted">
-              {state.deviceModel.risks.map((r) => (
-                <li key={r}>{r}</li>
-              ))}
-            </ul>
-          )}
-          <ul className="mt-2 grid gap-1 md:grid-cols-2">
-            {state.assertions.map((a) => (
-              <li key={a.id} className="flex gap-2 text-[12.5px]">
-                <span className="shrink-0"><Badge>{a.type}</Badge></span>
-                <span className="text-muted">{a.description}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
-
-      {scenarios.length > 0 && <ScenarioGrid state={{ ...state, scenarios }} iteration={gridIteration} onIteration={setGridIteration} selected={scenarioId} onSelect={replayTo} />}
+      {status === "compile_failed" && report?.compile_log && <pre className="max-h-96 overflow-auto rounded-md bg-raised p-4 font-mono text-[12px] text-muted">{report.compile_log}</pre>}
 
       {hasBoard && (
-        <div id="replay" className="scroll-mt-16">
-          <Replay runId={runId} pins={pins} scenarios={emulated} assertions={report?.assertions ?? state.assertions} scenarioId={scenarioId} onScenario={setScenarioId} report={report} iterationReady={(n, id) => !!state.results[n]?.[id]} />
-        </div>
+        <Replay
+          pins={pins}
+          scenarios={emulated}
+          scenarioId={scenarioId}
+          onScenario={setScenarioId}
+          trace={trace}
+          error={traceError}
+          ready={ready}
+          side={side}
+          onSide={setSide}
+          hasAfter={afterIteration !== null}
+          violations={violations}
+          evidence={evidence}
+        />
       )}
 
-      {bugs.length > 0 && (
-        <div id="bugs" className="scroll-mt-16">
-          <BugCards bugs={bugs} report={report} onReplay={replayTo} />
-        </div>
-      )}
+      {!running && bugs.length > 0 && <BugList bugs={bugs} report={report} focusId={focus?.id ?? null} onFocus={onFocus} />}
 
-      {comparable && (
-        <div id="compare" className="scroll-mt-16">
-          <ComparePanel runId={runId} bugs={bugs} report={report} finished />
-        </div>
+      {tabs.length > 0 && (
+        <section>
+          <Tabs tabs={tabs} value={tab} onChange={setTab} />
+          {tab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
+          {tab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
+          {tab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
+          {tab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
+          {tab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
+        </section>
       )}
-
-      {report?.fix && (
-        <Panel id="patch" className="scroll-mt-16" title={`The patch: ${report.fix.diff.added} lines added, ${report.fix.diff.removed} removed`}>
-          <div className="space-y-2 p-4">
-            {report.fix.summary && <p className="text-[13px]">{report.fix.summary}</p>}
-            <DiffView unified={report.fix.diff.unified} />
-          </div>
-        </Panel>
-      )}
-
-      <div id="containment" className="scroll-mt-16">
-        <ContainmentPanel records={report?.containment?.records ?? state.records} report={report} />
-      </div>
     </div>
-  );
-}
-
-function Glance({ bugs }: { bugs: Bug[] }) {
-  return (
-    <div className="mt-3 grid gap-2 md:grid-cols-2" aria-label="Measured evidence at a glance">
-      {bugs.slice(0, 4).map((bug) => (
-        <div key={bug.id} className="rounded-md border border-line bg-raised/60 p-3">
-          <div className="text-[13px] font-medium leading-snug">{bug.title}</div>
-          <dl className="mt-1.5 grid grid-cols-[48px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[12.5px] leading-snug">
-            <dt className="font-mono text-fail">before</dt>
-            <dd className="line-clamp-2">{bug.before?.evidence ?? bug.evidence}</dd>
-            <dt className="font-mono text-pass">after</dt>
-            <dd className="line-clamp-2 text-muted">{bug.after?.status === "pass" ? bug.after.evidence : "no verified fix"}</dd>
-          </dl>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function JumpNav({ hasBugs, hasFix, hasCompare }: { hasBugs: boolean; hasFix: boolean; hasCompare: boolean }) {
-  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  const items = [
-    ["replay", "Board replay", true],
-    ["bugs", "Bug report", hasBugs],
-    ["compare", "LLM vs Hexorcist", hasCompare],
-    ["patch", "Patch", hasFix],
-    ["containment", "Containment", true],
-  ] as const;
-  return (
-    <nav className="flex flex-wrap items-center gap-1.5" aria-label="Jump to a section">
-      <span className="mr-1 text-[12px] text-faint">Jump to</span>
-      {items.filter(([, , show]) => show).map(([id, label]) => (
-        <button key={id} className="btn-ghost py-1 text-[12px]" onClick={() => go(id)}>
-          {label}
-        </button>
-      ))}
-    </nav>
   );
 }

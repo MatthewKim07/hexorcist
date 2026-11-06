@@ -1,87 +1,155 @@
 import { useState } from "react";
-import { ContainmentRecord, Report } from "../api";
-import { Badge, Icon, Panel } from "./Common";
+import { ContainmentRecord, Guard, Report } from "../api";
+import { Icon } from "./Common";
 
 function mb(bytes?: number): string {
   return bytes ? `${Math.round(bytes / 1048576)} MiB` : "?";
 }
 
-export function ContainmentPanel({ records, report }: { records: ContainmentRecord[]; report: Report | null }) {
-  const [open, setOpen] = useState(false);
-  if (!records.length) {
+/** The six containment checks as one compact row. A click shows the measured detail for one of them. */
+export function ContainedRow({ report }: { report: Report }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const c = report.contained;
+  if (!c) {
     return null;
+  }
+  const ok = (label: string) => c.checks.find((x) => x.label === label)?.ok ?? false;
+  const total = report.containment.total;
+  const items = [
+    { label: "Guard flagged it", ok: ok("Input guard flagged the upload"), detail: `${c.guard.reasons.length} red flags, risk score ${c.guard.score.toFixed(1)}. Blocked before any model saw it.` },
+    { label: "LLM never saw it", ok: ok("LLM never contacted"), detail: "0 LLM calls. The prompt injection reached no model." },
+    { label: "No network", ok: ok("Network disabled"), detail: `Connect ${c.probe.network}, DNS ${c.probe.dns}. NetworkMode none on all ${total} containers.` },
+    { label: "No secrets", ok: ok("No control-plane secrets in any output") && ok("No secrets in the sandbox environment"), detail: `${report.containment.secrets_found} found. The API key and passcode were searched for in all ${total} outputs.` },
+    { label: "Timeout kill", ok: ok("Runaway firmware killed by wall clock"), detail: c.runaway.ran ? `SIGKILL at ${c.runaway.duration_s} s, limit ${c.runaway.timeout_s} s.` : "Not run." },
+    { label: "Containers removed", ok: ok("Every container removed"), detail: `${report.containment.removed} of ${total} removed. A fresh container per task, none left behind.` },
+  ];
+  const shown = items.find((i) => i.label === open);
+  return (
+    <section aria-label="What was contained">
+      <ul className="flex flex-wrap gap-x-6 gap-y-3">
+        {items.map((i) => (
+          <li key={i.label}>
+            <button aria-expanded={open === i.label} onClick={() => setOpen(open === i.label ? null : i.label)} className={`flex items-center gap-2 text-[14px] transition-colors ${open === i.label ? "text-ink" : "text-muted hover:text-ink"}`}>
+              <Icon name={i.ok ? "check" : "x"} className={i.ok ? "text-pass" : "text-fail"} />
+              {i.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {shown && <p className="mt-4 text-[14px] text-muted">{shown.detail}</p>}
+    </section>
+  );
+}
+
+function Row({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
+      <dt className="text-muted">{label}</dt>
+      <dd className={`num ${ok ? "text-ink" : "text-fail"}`}>{value}</dd>
+    </div>
+  );
+}
+
+/** Everything behind the Containment tab: what the sandbox enforced, read back from docker inspect. */
+export function ContainmentDetails({ records, report, guard }: { records: ContainmentRecord[]; report: Report | null; guard?: Guard | null }) {
+  const [all, setAll] = useState(false);
+  const contained = report?.contained;
+  if (!records.length) {
+    return <p className="py-8 text-faint">No sandbox records.</p>;
   }
   const limits = records[0].limits ?? {};
   const secrets = records.reduce((n, r) => n + r.secrets_found, 0);
   const killed = records.filter((r) => r.timed_out);
   const removed = records.filter((r) => r.removed).length;
   const allNone = records.every((r) => r.limits?.network === "none");
-  const reads = [...new Set(records.flatMap((r) => r.violations.filter((v) => v.type === "file_read_attempt").map((v) => v.detail)))];
-  const contained = report?.contained;
+  const mounts = (limits.binds?.length ?? 0) + (limits.mounts?.length ?? 0);
+  const reasons = guard && !guard.allowed ? guard.reasons : [];
 
   return (
-    <Panel title="Containment" right={<span className="font-mono text-[11px] text-faint">read back from docker inspect</span>}>
-      <div className="space-y-3 p-4">
-        <div className="flex flex-wrap gap-1.5">
-          <Badge tone={allNone ? "pass" : "fail"} icon="shield">network: {allNone ? "none" : "NOT none"}</Badge>
-          <Badge tone={secrets === 0 ? "pass" : "fail"} icon={secrets === 0 ? "check" : "x"}>secrets: {secrets}</Badge>
-          <Badge tone={limits.read_only_rootfs ? "pass" : "fail"} icon="check">rootfs: read-only</Badge>
-          <Badge tone={limits.cap_drop?.includes("ALL") ? "pass" : "fail"} icon="check">caps: dropped ALL</Badge>
-          <Badge tone={limits.no_new_privileges ? "pass" : "fail"} icon="check">no-new-privileges</Badge>
-          <Badge tone="pass" icon="check">user: {limits.user}</Badge>
-          <Badge tone={!limits.binds?.length && !limits.mounts?.length ? "pass" : "fail"} icon="check">host mounts: {(limits.binds?.length ?? 0) + (limits.mounts?.length ?? 0)}</Badge>
-          <Badge>memory: {mb(limits.memory_bytes)}</Badge>
-          <Badge>cpu: {(limits.nano_cpus ?? 0) / 1e9}</Badge>
-          <Badge>pids: {limits.pids_limit}</Badge>
-          <Badge tone={removed === records.length ? "pass" : "warn"} icon="check">containers removed: {removed}/{records.length}</Badge>
+    <div className="space-y-8 py-6">
+      <dl className="grid gap-x-12 md:grid-cols-2">
+        <div>
+          <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
+          <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
+          <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
+          <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
+          <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
+        </div>
+        <div>
+          <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
+          <Row label="User" value={String(limits.user ?? "?")} />
+          <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
+          <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
           {killed.map((r) => (
-            <Badge key={r.container_id} tone="warn" icon="warn">killed at {r.timeout_s}s timeout</Badge>
+            <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
           ))}
         </div>
+      </dl>
 
-        {contained && <ContainedDetail contained={contained} />}
+      {contained && (
+        <div className="space-y-4">
+          <h3 className="label">What the attacker got</h3>
+          <p>{contained.what_the_attacker_got.note}</p>
+          <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-[13px]">
+            <dt className="num text-faint">/etc/passwd</dt>
+            <dd className="num break-words text-muted">{contained.what_the_attacker_got.etc_passwd_users.join(" ")}</dd>
+            <dt className="num text-faint">/proc/self/environ</dt>
+            <dd className="num break-words text-muted">{contained.what_the_attacker_got.environ_names.join(" ")} (names only)</dd>
+            <dt className="num text-faint">~/.ssh/id_rsa</dt>
+            <dd className="num break-words text-muted">{contained.what_the_attacker_got.ssh_key}</dd>
+          </dl>
+          {contained.runaway.ran && <p className="text-muted">{contained.runaway.note}</p>}
+        </div>
+      )}
 
-        {!contained && reads.length > 0 && (
-          <ul className="space-y-1 text-[13px] text-muted">
-            {reads.map((r) => (
-              <li key={r} className="flex items-center gap-1.5">
-                <Icon name="warn" className="text-warn" /> {r}
-              </li>
+      {reasons.length > 0 && (
+        <details className="group">
+          <summary className="flex cursor-pointer items-center gap-2 text-muted hover:text-ink">
+            <Icon name="chevron" className="h-3 w-3 transition-transform group-open:rotate-90" /> Guard reasons ({reasons.length})
+          </summary>
+          <ul className="mt-3 space-y-1.5 pl-5 text-[13px] text-muted">
+            {reasons.map((r) => (
+              <li key={r}>{r}</li>
             ))}
           </ul>
-        )}
+        </details>
+      )}
 
-        <button className="btn-ghost" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "Hide" : "Show"} all {records.length} sandbox records
+      {contained && (
+        <details className="group">
+          <summary className="flex cursor-pointer items-center gap-2 text-muted hover:text-ink">
+            <Icon name="chevron" className="h-3 w-3 transition-transform group-open:rotate-90" /> Compiler output from the attack
+          </summary>
+          <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-raised p-3 font-mono text-[12px] text-muted">{contained.hostile_compile_log}</pre>
+          <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-raised p-3 font-mono text-[12px] text-muted">{contained.exfil_compile_log}</pre>
+        </details>
+      )}
+
+      <div>
+        <button className="flex items-center gap-2 text-muted hover:text-ink" aria-expanded={all} onClick={() => setAll(!all)}>
+          <Icon name="chevron" className={`h-3 w-3 transition-transform ${all ? "rotate-90" : ""}`} /> Sandbox records ({records.length})
         </button>
-        {open && (
-          <div className="overflow-x-auto rounded-md border border-line">
-            <table className="w-full min-w-[640px] text-left text-[12px]">
-              <thead className="border-b border-line text-faint">
+        {all && (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-[13px]">
+              <thead className="text-faint">
                 <tr>
-                  <th className="px-2.5 py-1.5 font-medium">Task</th>
-                  <th className="px-2.5 py-1.5 font-medium">Container</th>
-                  <th className="px-2.5 py-1.5 text-right font-medium">Wall time</th>
-                  <th className="px-2.5 py-1.5 text-right font-medium">Exit</th>
-                  <th className="px-2.5 py-1.5 font-medium">Events</th>
+                  <th className="py-2 pr-4 font-normal">Task</th>
+                  <th className="py-2 pr-4 font-normal">Container</th>
+                  <th className="py-2 pr-4 text-right font-normal">Time</th>
+                  <th className="py-2 pr-4 text-right font-normal">Exit</th>
+                  <th className="py-2 font-normal">Events</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map((r, i) => (
-                  <tr key={`${r.container_id}-${i}`} className="border-b border-line/60 last:border-0">
-                    <td className="px-2.5 py-1.5 text-ink">{r.label}</td>
-                    <td className="px-2.5 py-1.5 font-mono text-faint">{r.container_id}</td>
-                    <td className="px-2.5 py-1.5 text-right font-mono">{(r.duration_ms / 1000).toFixed(1)} s</td>
-                    <td className="px-2.5 py-1.5 text-right font-mono">{r.exit_code ?? "?"}</td>
-                    <td className="px-2.5 py-1.5">
-                      <div className="flex flex-wrap gap-1">
-                        {r.timed_out && <Badge tone="warn">timeout kill</Badge>}
-                        {r.oom_killed && <Badge tone="warn">OOM kill</Badge>}
-                        {r.violations.filter((v) => v.type !== "timeout_kill" && v.type !== "oom_kill").map((v, j) => (
-                          <Badge key={j} tone="warn" title={v.detail}>{v.type}</Badge>
-                        ))}
-                        {!r.violations.length && !r.timed_out && <span className="text-faint">none</span>}
-                      </div>
+                  <tr key={`${r.container_id}-${i}`} className="border-t border-line">
+                    <td className="py-2 pr-4">{r.label}</td>
+                    <td className="num py-2 pr-4 text-faint">{r.container_id}</td>
+                    <td className="num py-2 pr-4 text-right">{(r.duration_ms / 1000).toFixed(1)} s</td>
+                    <td className="num py-2 pr-4 text-right">{r.exit_code ?? "?"}</td>
+                    <td className="py-2 text-muted">
+                      {[r.timed_out && "timeout kill", r.oom_killed && "OOM kill", ...r.violations.filter((v) => v.type !== "timeout_kill" && v.type !== "oom_kill").map((v) => v.type)].filter(Boolean).join(", ") || "none"}
                     </td>
                   </tr>
                 ))}
@@ -90,117 +158,6 @@ export function ContainmentPanel({ records, report }: { records: ContainmentReco
           </div>
         )}
       </div>
-    </Panel>
-  );
-}
-
-function ContainedDetail({ contained }: { contained: NonNullable<Report["contained"]> }) {
-  const got = contained.what_the_attacker_got;
-  return (
-    <div className="space-y-3">
-      <ul className="grid gap-1.5 md:grid-cols-2">
-        {contained.checks.map((c) => (
-          <li key={c.label} className={`rounded-md border p-2.5 text-[13px] ${c.ok ? "border-pass/30 bg-pass/5" : "border-fail/40 bg-fail/10"}`}>
-            <div className="flex items-center gap-1.5 font-medium">
-              {c.ok ? <Icon name="check" className="text-pass" /> : <Icon name="x" className="text-fail" />}
-              {c.label}
-            </div>
-            <p className="mt-0.5 text-[12px] leading-snug text-muted">{c.detail}</p>
-          </li>
-        ))}
-      </ul>
-
-      <div className="rounded-md border border-line bg-raised p-3">
-        <h3 className="panel-title mb-1">What the attacker actually got</h3>
-        <p className="text-[13px] leading-relaxed">{got.note}</p>
-        <dl className="mt-2 grid gap-x-3 gap-y-1 text-[12px] sm:grid-cols-[150px_minmax(0,1fr)]">
-          <dt className="font-mono text-faint">/etc/passwd users</dt>
-          <dd className="font-mono text-muted">{got.etc_passwd_users.join(" ")}</dd>
-          <dt className="font-mono text-faint">/proc/self/environ</dt>
-          <dd className="font-mono text-muted">{got.environ_names.join(" ")} (names only)</dd>
-          <dt className="font-mono text-faint">~/.ssh/id_rsa</dt>
-          <dd className="font-mono text-muted">{got.ssh_key}</dd>
-        </dl>
-      </div>
-
-      {contained.runaway.ran && (
-        <div className="rounded-md border border-warn/30 bg-warn/5 p-3 text-[13px]">
-          <div className="flex items-center gap-1.5 font-medium">
-            <Icon name="warn" className="text-warn" />
-            Runaway firmware: killed at {contained.runaway.duration_s} s
-          </div>
-          <p className="mt-1 text-muted">{contained.runaway.note}</p>
-        </div>
-      )}
-
-      <details className="text-[12px]">
-        <summary className="cursor-pointer text-muted hover:text-ink">Compiler output from the attack</summary>
-        <h4 className="mt-2 text-faint">As uploaded</h4>
-        <pre className="mt-1 max-h-48 overflow-auto rounded-md border border-line bg-bg p-2 font-mono text-[11.5px] text-muted">{contained.hostile_compile_log}</pre>
-        <h4 className="mt-2 text-faint">Trying to read files back through compiler errors</h4>
-        <pre className="mt-1 max-h-64 overflow-auto rounded-md border border-line bg-bg p-2 font-mono text-[11.5px] text-muted">{contained.exfil_compile_log}</pre>
-      </details>
     </div>
-  );
-}
-
-/** The whole containment story in six tiles, readable at a glance on a recording. */
-export function ContainedSummary({ report }: { report: Report }) {
-  const c = report.contained;
-  if (!c) {
-    return null;
-  }
-  const ok = (label: string) => c.checks.find((x) => x.label === label)?.ok ?? false;
-  const total = report.containment.total;
-  const tiles = [
-    {
-      ok: ok("Input guard flagged the upload"),
-      title: "Guard flagged it",
-      stat: `${c.guard.reasons.length} red flags`,
-      note: `Risk score ${c.guard.score.toFixed(1)}. Blocked before any model saw it.`,
-    },
-    {
-      ok: ok("LLM never contacted"),
-      title: "LLM never saw it",
-      stat: "0 LLM calls",
-      note: "The prompt injection reached no model.",
-    },
-    {
-      ok: ok("Network disabled"),
-      title: "No network",
-      stat: `connect ${c.probe.network}, DNS ${c.probe.dns}`,
-      note: `NetworkMode none on all ${total} containers.`,
-    },
-    {
-      ok: ok("No control-plane secrets in any output") && ok("No secrets in the sandbox environment"),
-      title: "No secrets",
-      stat: `${report.containment.secrets_found} found`,
-      note: `API key and passcode searched for in all ${total} outputs.`,
-    },
-    {
-      ok: ok("Runaway firmware killed by wall clock"),
-      title: "Killed at timeout",
-      stat: c.runaway.ran ? `SIGKILL at ${c.runaway.duration_s} s` : "not run",
-      note: c.runaway.ran ? `Limit ${c.runaway.timeout_s} s. A firmware that never stops cannot outlast it.` : "",
-    },
-    {
-      ok: ok("Every container removed"),
-      title: "Containers destroyed",
-      stat: `${report.containment.removed} of ${total} removed`,
-      note: "Fresh container per task, none left behind.",
-    },
-  ];
-  return (
-    <section aria-label="What was contained" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      {tiles.map((t) => (
-        <div key={t.title} className={`rounded-lg border p-3 ${t.ok ? "border-pass/40 bg-pass/5" : "border-fail/50 bg-fail/10"}`}>
-          <div className={`flex items-center gap-1.5 text-[15px] font-semibold leading-tight ${t.ok ? "text-pass" : "text-fail"}`}>
-            <Icon name={t.ok ? "check" : "x"} className="h-4 w-4 shrink-0" /> {t.title}
-          </div>
-          <div className="mt-1.5 font-mono text-[13px] text-ink">{t.stat}</div>
-          <p className="mt-1 text-[11.5px] leading-snug text-muted">{t.note}</p>
-        </div>
-      ))}
-    </section>
   );
 }

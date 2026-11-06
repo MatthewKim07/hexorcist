@@ -13,35 +13,42 @@ html {
 }
 
 body {
-  background: #0b0d12;
-  color: #e7e9ee;
+  background: #0b0b0d;
+  color: #ececee;
   font-family: "IBM Plex Sans", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
+/* Type scale: 12 for labels, 14 for body, 28 for the one headline on a screen. */
 @layer components {
-  .panel {
-    @apply rounded-lg border border-line bg-panel;
+  .label {
+    @apply text-[12px] text-faint;
   }
-  .panel-title {
-    @apply text-[11px] font-semibold uppercase tracking-[0.09em] text-faint;
+  .headline {
+    @apply text-[28px] font-semibold leading-tight tracking-tight;
   }
   .field {
-    @apply w-full rounded-md border border-line bg-raised px-2.5 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-faint focus:border-halo/60;
+    @apply w-full rounded-md border border-line bg-raised px-3 py-2 text-[14px] text-ink outline-none transition-colors placeholder:text-faint focus:border-accent/70;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-halo px-4 py-2 text-sm font-semibold text-[#14110a] shadow-halo transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none;
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-accent px-5 py-2.5 text-[14px] font-medium text-[#0b0b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-raised px-2.5 py-1.5 text-[13px] text-muted transition-colors hover:border-faint hover:text-ink;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[14px] text-muted transition-colors hover:bg-raised hover:text-ink disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line px-5 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-raised;
+  }
+  .num {
+    @apply font-mono text-[13px];
   }
 }
 
 .cm-editor {
   height: 100%;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .cm-editor .cm-scroller {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -52,7 +59,7 @@ body {
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
+  50% { opacity: 0.4; }
 }
 .pulse-soft {
   animation: pulse-soft 1.4s ease-in-out infinite;
@@ -71,11 +78,18 @@ body {
   }
 }
 
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+
 input[type="range"].scrub {
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: #262b36;
+  background: #2a2a30;
   outline-offset: 4px;
 }
 input[type="range"].scrub::-webkit-slider-thumb {
@@ -83,8 +97,7 @@ input[type="range"].scrub::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #f0c05a;
-  box-shadow: 0 0 10px rgba(240, 192, 90, 0.6);
+  background: #8b9bff;
   cursor: grab;
 }
 input[type="range"].scrub::-moz-range-thumb {
@@ -92,6 +105,6 @@ input[type="range"].scrub::-moz-range-thumb {
   height: 14px;
   border: 0;
   border-radius: 50%;
-  background: #f0c05a;
+  background: #8b9bff;
   cursor: grab;
 }
