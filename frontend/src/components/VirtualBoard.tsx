@@ -102,7 +102,7 @@ export function VirtualBoard({ pins, trace, t, scenario, tag }: { pins: PinSpec[
   const d13 = live.find((l) => l.pin.pin === "D13");
 
   return (
-    <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className="mx-auto block max-h-[520px] w-full" role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
+    <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className="mx-auto block max-h-[420px] w-full" role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
       <defs>
         <linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#0f4c5c" />
@@ -221,7 +221,6 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
       </g>
 
       <g transform="translate(476, 196)">
-        <ellipse cx="0" cy="-12" rx="11" ry="3.6" fill="none" stroke="#f0c05a" strokeWidth="1.6" />
         <text x="18" y="-6" fontSize="15" fontWeight="600" fontFamily="IBM Plex Sans" fill="#cfe6ec" letterSpacing="1.5">HEXORCIST</text>
         <text x="18" y="9" fontSize="9" fontFamily="IBM Plex Mono" fill="#7fb3bf">UNO, EMULATED AT 16 MHZ</text>
         <rect x="-9" y="-6" width="18" height="16" rx="1.5" fill="none" stroke="#cfe6ec" strokeWidth="1.2" />

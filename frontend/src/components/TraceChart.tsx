@@ -158,7 +158,7 @@ export function TraceChart({ trace, pins, scenario, violations, t, end, onScrub 
           }}
           onPointerLeave={() => setHover(null)}
         >
-          <div className="pointer-events-none absolute bottom-5 top-0 w-px bg-halo shadow-[0_0_8px_rgba(240,192,90,0.9)]" style={{ left: `${(t / end) * 100}%` }} />
+          <div className="pointer-events-none absolute bottom-5 top-0 w-px bg-accent" style={{ left: `${(t / end) * 100}%` }} />
           {hover && (
             <>
               <div className="pointer-events-none absolute bottom-5 top-0 w-px bg-faint/70" style={{ left: `${hover.x}%` }} />
@@ -181,9 +181,8 @@ export function TraceChart({ trace, pins, scenario, violations, t, end, onScrub 
       <div className="mt-2 flex items-center gap-4 pl-[52px] text-[11px] text-muted">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-4 rounded-sm bg-fail/40" />
-          Assertion violated ({violations.length})
+          Check failed
         </span>
-        <span>Click or drag to scrub. Lane bands show the min and max injected in each bucket.</span>
       </div>
     </div>
   );
