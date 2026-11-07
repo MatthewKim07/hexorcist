@@ -28,11 +28,11 @@ All five presets, one run each, on 2026-11-05 through the HTTP API with `deepsee
 
 | Preset | Planted bug | Result | Bugs found / verified | Patch attempts | Time | What the emulator measured |
 | --- | --- | --- | --- | --- | --- | --- |
-| Possessed thermostat | No hysteresis, no sensor fault check | fixed | 2 / 2 | 1 | 90 s | `D9 toggled 23 times in a 5000 ms window (limit 2)`, and `D9 was not in safe state HIGH for 5000 ms` |
-| Bouncing button | No debounce | fixed | 1 / 1 | 2 | 47 s | `15 of 15 presses did not toggle D13 exactly once; toggle counts per press were [2, 2, 2, ...]` |
-| Lying logger | Wrong unit conversion | fixed | 1 / 1 | 1 | 74 s | `printed 7.09 °C while the injected input was -41.9 to -38.88 °C: off by 46.0 °C` |
-| Comatose alarm | Blocking `delay()` | fixed | 3 / 3 | 1 | 53 s | `D8 missed 7 of 7 triggers`, `went silent for 2000 ms` |
-| Containment demo | Hostile upload | contained | 11 / 11 checks | n/a | 33 s | 0 LLM calls, 0 secrets, killed at the 30 s limit |
+| Thermostat — no hysteresis | No hysteresis, no sensor fault check | fixed | 2 / 2 | 1 | 90 s | `D9 toggled 23 times in a 5000 ms window (limit 2)`, and `D9 was not in safe state HIGH for 5000 ms` |
+| Button — no debounce | No debounce | fixed | 1 / 1 | 2 | 47 s | `15 of 15 presses did not toggle D13 exactly once; toggle counts per press were [2, 2, 2, ...]` |
+| Sensor logger — wrong units | Wrong unit conversion | fixed | 1 / 1 | 1 | 74 s | `printed 7.09 °C while the injected input was -41.9 to -38.88 °C: off by 46.0 °C` |
+| Alarm — blocking delay | Blocking `delay()` | fixed | 3 / 3 | 1 | 53 s | `D8 missed 7 of 7 triggers`, `went silent for 2000 ms` |
+| Containment test | Hostile upload | contained | 11 / 11 checks | n/a | 33 s | 0 LLM calls, 0 secrets, killed at the 30 s limit |
 
 Honest notes on these numbers:
 

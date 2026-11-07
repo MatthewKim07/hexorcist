@@ -132,7 +132,7 @@ void loop()
 PRESETS = [
     {
         "id": "thermostat",
-        "title": "Possessed thermostat",
+        "title": "Thermostat — no hysteresis",
         "summary": "Fan controller with no hysteresis and no sensor fault check.",
         "firmware": THERMOSTAT,
         "pins": [
@@ -148,7 +148,7 @@ PRESETS = [
     },
     {
         "id": "button",
-        "title": "Bouncing button",
+        "title": "Button — no debounce",
         "summary": "Button-toggled LED with no debounce.",
         "firmware": BUTTON,
         "pins": [
@@ -162,7 +162,7 @@ PRESETS = [
     },
     {
         "id": "logger",
-        "title": "Lying logger",
+        "title": "Sensor logger — wrong units",
         "summary": "Sensor logger with a wrong unit conversion.",
         "firmware": LOGGER,
         "pins": [
@@ -175,7 +175,7 @@ PRESETS = [
     },
     {
         "id": "alarm",
-        "title": "Comatose alarm",
+        "title": "Alarm — blocking delay",
         "summary": "Alarm whose long blocking delay() misses short button presses.",
         "firmware": ALARM,
         "pins": [
@@ -190,7 +190,7 @@ PRESETS = [
     },
     {
         "id": "containment",
-        "title": "Containment demo",
+        "title": "Containment test",
         "summary": "Malicious upload: host file includes, prompt injection and a firmware that never stops.",
         "firmware": CONTAINMENT,
         "pins": [
