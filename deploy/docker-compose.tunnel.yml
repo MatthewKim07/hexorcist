@@ -1,0 +1,17 @@
+# Public demo from this machine through a Cloudflare Quick Tunnel. Use it through deploy/tunnel.sh.
+#
+# Only a process on this machine can reach the web port, and that process is cloudflared. The backend
+# refuses to start without a passcode, and takes each visitor's address from the header Cloudflare sets,
+# so rate limits are per visitor and not shared by everyone behind the tunnel.
+services:
+  frontend:
+    ports: !override
+      - "127.0.0.1:${HEXORCIST_PORT:-8080}:80"
+
+  backend:
+    environment:
+      REQUIRE_DEMO_PASSCODE: "1"
+      DEMO_PASSCODE: ${DEMO_PASSCODE:?Run this through deploy/tunnel.sh, which sets DEMO_PASSCODE}
+      TRUST_CLOUDFLARE: "1"
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-20}
+      MAX_ACTIVE_RUNS: ${MAX_ACTIVE_RUNS:-3}

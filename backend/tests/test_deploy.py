@@ -105,3 +105,15 @@ def test_production_compose_publishes_only_caddy_and_keeps_the_socket_on_the_bac
     assert prod.count("ports:") == 2
     for required in ("DEMO_PASSCODE: ${DEMO_PASSCODE:?", "ACME_EMAIL: ${ACME_EMAIL:?", 'REQUIRE_DEMO_PASSCODE: "1"'):
         assert required in prod
+
+
+def test_tunnel_compose_binds_loopback_only_and_requires_a_passcode():
+    tunnel = (ROOT / "deploy" / "docker-compose.tunnel.yml").read_text()
+    script = (ROOT / "deploy" / "tunnel.sh").read_text()
+    assert '"127.0.0.1:${HEXORCIST_PORT:-8080}:80"' in tunnel
+    assert "docker.sock" not in tunnel
+    for required in ("DEMO_PASSCODE: ${DEMO_PASSCODE:?", 'REQUIRE_DEMO_PASSCODE: "1"', 'TRUST_CLOUDFLARE: "1"'):
+        assert required in tunnel
+    # The script must never read .env, and must keep its generated passcode out of git.
+    assert not any(("cat .env" in line or "source .env" in line or ". .env" in line) for line in script.splitlines())
+    assert "deploy/.tunnel-passcode" in (ROOT / ".gitignore").read_text()

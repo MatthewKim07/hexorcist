@@ -254,3 +254,6 @@ smoke-results-*.txt
 
 # Editor ignore config
 .cursorignore
+
+# Generated demo passcode for deploy/tunnel.sh
+deploy/.tunnel-passcode
