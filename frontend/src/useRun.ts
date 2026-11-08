@@ -143,16 +143,24 @@ export function useRun(runId: string): RunState {
         .catch(() => undefined);
     load();
 
+    let last = 0;
+    let finished = false;
     const source = new EventSource(`/api/runs/${runId}/events`);
-    const onEvent = (msg: MessageEvent) => dispatch({ kind: "event", event: JSON.parse(msg.data) });
+    const onEvent = (msg: MessageEvent) => {
+      const event = JSON.parse(msg.data);
+      last = Math.max(last, event.seq ?? 0);
+      dispatch({ kind: "event", event });
+    };
     for (const name of ["guard", "step", "device_model", "assertions", "scenarios", "scenario_result", "compile_log", "bug", "iteration", "containment", "warning", "spec", "firmware"]) {
       source.addEventListener(name, onEvent);
     }
     source.addEventListener("done", (msg) => {
       onEvent(msg as MessageEvent);
+      finished = true;
       load();
     });
     source.addEventListener("end", () => {
+      finished = true;
       source.close();
       load();
     });
@@ -161,8 +169,37 @@ export function useRun(runId: string): RunState {
         dispatch({ kind: "lost" });
       }
     };
+
+    // Some proxies hold server-sent events back until the stream ends. Polling keeps the live view moving there.
+    // The reducer ignores events it has already seen, so both paths can run together.
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try {
+        const body = await api.events(runId, last);
+        if (closed || finished) {
+          return;
+        }
+        for (const event of body.events) {
+          last = Math.max(last, event.seq);
+          dispatch({ kind: "event", event });
+        }
+        if (body.done) {
+          finished = true;
+          load();
+          return;
+        }
+      } catch {
+        // Try again on the next tick.
+      }
+      if (!closed && !finished) {
+        timer = setTimeout(poll, 1500);
+      }
+    };
+    timer = setTimeout(poll, 1200);
+
     return () => {
       closed = true;
+      clearTimeout(timer);
       source.close();
     };
   }, [runId]);

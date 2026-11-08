@@ -233,6 +233,7 @@ export const api = {
   presets: () => getJson<Preset[]>("/api/presets"),
   runs: () => getJson<RunSummary[]>("/api/runs"),
   run: (id: string) => getJson<RunDetail>(`/api/runs/${id}`),
+  events: (id: string, after: number) => getJson<{ events: any[]; done: boolean }>(`/api/runs/${id}/events.json?after=${after}`),
   trace: (id: string, iteration: number, scenario: string) => getJson<Trace>(`/api/runs/${id}/traces/${iteration}/${scenario}`),
   review: (id: string) => getJson<ReviewState>(`/api/runs/${id}/review`),
   requestReview: (id: string) => postJson<ReviewState>(`/api/runs/${id}/review`),
