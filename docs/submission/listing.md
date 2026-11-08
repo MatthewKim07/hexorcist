@@ -28,7 +28,7 @@ Hexorcist is an AI QA engineer for firmware. It compiles your Arduino sketch, at
 
 **Results.** On the five presets with a real model, every one reached its expected state: thermostat 2 of 2 bugs verified, button 1 of 1, logger 1 of 1, alarm 3 of 3, and the containment demo 11 of 11 checks, in 33 to 90 seconds each. The exact numbers vary between runs because the model designs part of the attack; the verdicts do not.
 
-**Architecture.** A React front end with an animated virtual board, a FastAPI control layer, per-task sandbox containers (arduino-cli, simavr, and a small C harness that injects voltages, bounce and floating pins), SQLite for runs and traces, and server-sent events for every agent step. The LLM is any OpenAI-compatible endpoint chosen only by environment variables, so the agent calls go through Vultr Serverless Inference by changing `.env`. A deploy kit for a Vultr VM is included: Docker, ufw, Caddy with automatic HTTPS, a required demo passcode and rate limits.
+**Architecture.** A React front end with an animated virtual board, a FastAPI control layer, per-task sandbox containers (arduino-cli, simavr, and a small C harness that injects voltages, bounce and floating pins), SQLite for runs and traces, and server-sent events for every agent step. The LLM is any OpenAI-compatible endpoint chosen only by environment variables, so the agent calls can go through Vultr Serverless Inference by changing `.env`; the live demo uses DeepSeek. A deploy kit for a Vultr VM is included (Docker, ufw, Caddy with automatic HTTPS, a required demo passcode and rate limits), and the live demo runs from one machine through a Cloudflare tunnel with the same passcode and limits.
 
 **Known limits.** Arduino Uno only, sensors modelled as pin voltages, no I2C or SPI. Prompts were tuned on one model. Emulation is about 1.5x realtime on one core. The guard catches under half of hostile uploads. These are listed in the README.
 
@@ -36,18 +36,22 @@ Hexorcist is an AI QA engineer for firmware. It compiles your Arduino sketch, at
 
 AI agents, firmware, embedded systems, Arduino, QA, testing, emulation, simavr, sandboxing, containers, security, Vultr, Vultr Serverless Inference, Blast Radius Zero, FastAPI, React, LLM, prompt injection, hardware-in-the-loop, developer tools
 
+## Note on the deployment (include in the form)
+
+Built to deploy on Vultr (deploy kit in deploy/, Vultr Serverless Inference supported via .env). My Vultr account was closed during the event over a duplicate-account issue that support couldn't resolve before the deadline, so the live demo runs from my own machine through a Cloudflare tunnel with DeepSeek as the model.
+
 ## Links to fill in
 
 - Public repository: https://github.com/MatthewKim07/hexorcist (branch `hexorcist-mvp`, you push it)
-- Live demo: [Vultr URL, plus the demo passcode in the "how to try it" field]
+- Live demo: [Cloudflare tunnel URL from `deploy/tunnel.sh`, plus the demo passcode in the "how to try it" field. The URL changes if the tunnel restarts.]
 - Video: [YouTube or Loom link]
 - Slides: built from `docs/submission/slides.md`
 
 ## Before you submit (only you can do these)
 
-- [ ] Push `hexorcist-mvp` to GitHub and make the repository public.
-- [ ] Deploy on a Vultr VM and point `.env` at Vultr Serverless Inference. Then rerun `run_presets --repeat 2` on the VM, since the prompts were tuned on DeepSeek. Update the results table in the README with those numbers.
+- [x] Merged into `main` on GitHub.
+- [ ] (Blocked: Vultr account closed, see the note above.) Deploy on a Vultr VM and point `.env` at Vultr Serverless Inference. Then rerun `run_presets --repeat 2` on the VM, since the prompts were tuned on DeepSeek. Update the results table in the README with those numbers.
 - [ ] Until that is done, the sentences "agent calls go through Vultr Serverless Inference" and "deployed on Vultr" are not yet true. Keep them out of the form and the video, or word them as "ready to deploy".
 - [ ] Record the video from `video-script.md`, upload it, paste the link.
-- [ ] Set `DEMO_PASSCODE` on the public demo, and put it in the submission's testing instructions. The LLM review panel is also passcode-protected there.
+- [ ] Run `deploy/tunnel.sh` and keep it running while judges test. Put the URL and the passcode (`deploy/.tunnel-passcode`) in the submission's testing instructions, and put it in the submission's testing instructions. The LLM review panel is also passcode-protected there.
 - [ ] Re-check the numbers in the long description against the README after the Vultr run.

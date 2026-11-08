@@ -1,5 +1,7 @@
 # Deploying on a Vultr VM
 
+No VM? `deploy/tunnel.sh` serves the same stack from your own machine through a Cloudflare Quick Tunnel with the passcode and rate limits on. See the README section "Live demo from a Cloudflare tunnel".
+
 Tested assumption: a fresh Ubuntu 24.04 VM with 4 vCPU and 8 GB RAM. All images build on the VM itself, which takes several minutes the first time because the sandbox image compiles simavr and downloads the AVR toolchain.
 
 ## Before you start

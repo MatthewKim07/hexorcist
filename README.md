@@ -4,6 +4,8 @@
 
 An AI QA engineer that tries to break your firmware on an emulated chip, inside a sealed sandbox, and proves its own fix. Built for the lablab.ai *Vultr: Agent Rush* hackathon, track **Blast Radius Zero**.
 
+> Built to deploy on Vultr (deploy kit in deploy/, Vultr Serverless Inference supported via .env). My Vultr account was closed during the event over a duplicate-account issue that support couldn't resolve before the deadline, so the live demo runs from my own machine through a Cloudflare tunnel with DeepSeek as the model.
+
 ![The thermostat fan chattering before the fix and holding steady after it, replayed on the virtual Arduino Uno](docs/hexorcist-replay.gif)
 
 > An LLM reading your code says *"this might chatter."* Hexorcist runs it and measures: **`D9 toggled 23 times in a 5000 ms window (limit 2)`**. Then it patches the sketch, re-runs everything, and shows one toggle.
@@ -124,6 +126,18 @@ flowchart LR
 - `deploy/`: scripts and docs for a fresh Vultr VM.
 
 The LLM is any OpenAI-compatible endpoint, chosen only by `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL`, so moving to Vultr Serverless Inference is an edit to `.env`. Prompts treat firmware and spec as untrusted data, use strict schemas, and make one automatic repair retry on malformed JSON.
+
+## Live demo from a Cloudflare tunnel
+
+The public demo runs on one machine through a Cloudflare Quick Tunnel, with the passcode and rate limits on. You need Docker, `cloudflared` (`brew install cloudflared`) and a `.env` (see Setup).
+
+```bash
+deploy/tunnel.sh
+```
+
+It rebuilds the stack with a loopback-only port, a required demo passcode and per-visitor rate limits, starts the tunnel, and prints the public URL and the passcode. The passcode is generated once and kept in `deploy/.tunnel-passcode` (ignored by git); set `DEMO_PASSCODE` to use your own. The URL is random and changes every time you start the tunnel, so run the script again after a restart and share the new one. Ctrl-C stops the tunnel but leaves the stack running, and the script keeps the Mac awake while it runs.
+
+Only starting a run needs the passcode. Wrong guesses are limited per visitor, and the real visitor address comes from the header Cloudflare sets (`TRUST_CLOUDFLARE=1`), so one visitor cannot use up everyone's limit. Quick Tunnels hold back server-sent events until a stream ends, so the live view also polls `GET /api/runs/{id}/events.json` and still updates step by step.
 
 ## Deploying on Vultr
 
