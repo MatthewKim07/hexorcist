@@ -77,8 +77,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     reviews_pending: set[str] = set()
     review_errors: dict[str, str] = {}
     trust_proxy = os.environ.get("TRUST_PROXY", "") == "1"
+    # Only when every request arrives through a Cloudflare tunnel, which sets this header itself.
+    trust_cloudflare = os.environ.get("TRUST_CLOUDFLARE", "") == "1"
 
     def client_ip(request: Request) -> str:
+        if trust_cloudflare and request.headers.get("cf-connecting-ip"):
+            return request.headers["cf-connecting-ip"].strip()
         if trust_proxy and request.headers.get("x-real-ip"):
             return request.headers["x-real-ip"]
         return request.client.host if request.client else "unknown"
@@ -240,6 +244,17 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
         return StreamingResponse(generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
+    @app.get("/api/runs/{run_id}/events.json")
+    async def poll_events(run_id: str, after: int = 0) -> dict:
+        """Plain JSON version of the event stream, for networks that buffer server-sent events."""
+        if await asyncio.to_thread(store.get_run, run_id) is None:
+            raise HTTPException(404, "No such run.")
+        bus = registry._buses.get(run_id)
+        closed = bus is None or bus.closed
+        events = await asyncio.to_thread(store.events, run_id, after)
+        return {"events": events, "done": closed}
+
+    app.state.store = store
     return app
 
 

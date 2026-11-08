@@ -96,3 +96,34 @@ def test_health_reports_limits_and_no_secrets():
     assert body.json()["limits"]["rate_limit_per_hour"] == 5
     assert body.json()["passcode_required"] is True
     assert "the-key" not in body.text and "sesame" not in body.text
+
+
+def test_cloudflare_address_is_used_only_when_trusted(monkeypatch):
+    def wrong_codes(client, ip):
+        return [client.post("/api/runs", json=GOOD, headers={"X-Demo-Passcode": "wrong", "CF-Connecting-IP": ip}).status_code for _ in range(PASSCODE_FAILURES_PER_HOUR + 1)]
+
+    # Not trusted: the header is ignored, so two visitors share one bucket.
+    client = TestClient(create_app(settings(demo_passcode="sesame")))
+    assert wrong_codes(client, "203.0.113.1")[-1] == 429
+    assert wrong_codes(client, "203.0.113.2")[-1] == 429
+
+    # Trusted: each visitor address has its own bucket.
+    monkeypatch.setenv("TRUST_CLOUDFLARE", "1")
+    client = TestClient(create_app(settings(demo_passcode="sesame")))
+    assert wrong_codes(client, "203.0.113.1")[-1] == 429
+    second = wrong_codes(client, "203.0.113.2")
+    assert second[:-1] == [401] * PASSCODE_FAILURES_PER_HOUR
+    assert second[-1] == 429
+
+
+def test_events_can_be_polled_as_json():
+    app = create_app(settings())
+    client = TestClient(app)
+    assert client.get("/api/runs/nope/events.json").status_code == 404
+    app.state.store.create_run("r1", "break", "t", "void setup(){}", {}, {})
+    app.state.store.add_event("r1", 1, {"seq": 1, "type": "step"})
+    app.state.store.add_event("r1", 2, {"seq": 2, "type": "done"})
+    body = client.get("/api/runs/r1/events.json").json()
+    assert [e["seq"] for e in body["events"]] == [1, 2]
+    assert body["done"] is True
+    assert [e["seq"] for e in client.get("/api/runs/r1/events.json?after=1").json()["events"]] == [2]
