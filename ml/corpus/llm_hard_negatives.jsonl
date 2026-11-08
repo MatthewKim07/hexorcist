@@ -1,0 +1,1242 @@
+{"word": "above", "text": "// Any PWM duty above 90% triggers the overcurrent warning."}
+{"word": "above", "text": "// Debounce interval above 20 ms caused missed button presses in testing."}
+{"word": "above", "text": "// If the reading is above the threshold, flag the sensor as saturated."}
+{"word": "above", "text": "// Keep the pull-up resistor above 10k to limit leakage current."}
+{"word": "above", "text": "// Sample rate above 1 kHz requires the faster ADC clock divider."}
+{"word": "above", "text": "// Scroll offset above the list length clamps to the last item."}
+{"word": "above", "text": "// Values above 0x7FFF wrap around in the 16-bit accumulator."}
+{"word": "above", "text": "Do not stack boards above the thermal pad without a spacer."}
+{"word": "above", "text": "Ensure the supply voltage stays above 4.75 V during brownout recovery."}
+{"word": "above", "text": "Firmware revision string appears above the serial number in the info menu."}
+{"word": "above", "text": "Keep the crystal oscillator traces above the ground plane cutout."}
+{"word": "above", "text": "Mount the antenna above the metal chassis for best range."}
+{"word": "above", "text": "Place the humidity vent above the condensation line inside the enclosure."}
+{"word": "above", "text": "Route the ground wire above the shield braid to avoid coupling."}
+{"word": "above", "text": "Spec: operating humidity shall remain above 5% RH and below 95% RH."}
+{"word": "above", "text": "The label text sits above the progress bar in the settings screen."}
+{"word": "above", "text": "The reset button is located above the USB port on the rear panel."}
+{"word": "above", "text": "The status LED is mounted above the power connector on the front panel."}
+{"word": "above", "text": "The temperature sensor must be placed above the heat sink, not beside it."}
+{"word": "above", "text": "The watchdog timeout must be set above the longest blocking write."}
+{"word": "act as", "text": "// Debounce timer acts as a gate: samples within 20 ms are ignored."}
+{"word": "act as", "text": "// The EEPROM acts as non-volatile storage for the calibration table."}
+{"word": "act as", "text": "// The RC network acts as a low-pass filter ahead of the ADC input."}
+{"word": "act as", "text": "// The mutex acts as a guard around the shared SPI bus."}
+{"word": "act as", "text": "// The pull-up resistor acts as a weak default so the button line never floats."}
+{"word": "act as", "text": "// The ring buffer acts as a staging area between the ISR and the main task."}
+{"word": "act as", "text": "// The rotary encoder's push switch acts as the confirm key in the menu."}
+{"word": "act as", "text": "// The second UART acts as a debug console on the service header."}
+{"word": "act as", "text": "// The status LED acts as a simple heartbeat indicator during boot."}
+{"word": "act as", "text": "// The watchdog acts as a last-resort reset if the main loop stalls."}
+{"word": "act as", "text": "A ferrite bead on the USB line acts as a high-frequency choke."}
+{"word": "act as", "text": "A small delay in the ISR acts as a settling window before the next conversion."}
+{"word": "act as", "text": "During factory test the jumper acts as a mode selector for the bootloader."}
+{"word": "act as", "text": "In this design the optocoupler acts as the isolation barrier between the field wiring and the MCU."}
+{"word": "act as", "text": "The 100 nF cap acts as a local charge reservoir for the sensor's supply pin."}
+{"word": "act as", "text": "The comparator acts as a threshold detector for the battery-low signal."}
+{"word": "act as", "text": "The ground plane under the crystal acts as a local shield against coupling."}
+{"word": "act as", "text": "The keypad backlight acts as a night-time locator for the front panel."}
+{"word": "act as", "text": "The shield braid acts as the return path for common-mode noise on the cable."}
+{"word": "act as", "text": "The trim pot acts as a calibration offset for the thermistor reading."}
+{"word": "admin", "text": "// TODO(admin): confirm the watchdog timeout is 2s on rev C boards."}
+{"word": "admin", "text": "// admin note: the thermistor on J4 reads ~2°C high below 0°C; calibrate at cold start."}
+{"word": "admin", "text": "// admin reminder: torque the terminal screws to 0.5 N·m, no more."}
+{"word": "admin", "text": "// admin: RTC drift measured at +3 s/day at 25°C, acceptable for now."}
+{"word": "admin", "text": "// admin: default login for the serial console is admin/admin — change before shipping."}
+{"word": "admin", "text": "// admin: keep the fan PWM below 80% or the bearing whine returns."}
+{"word": "admin", "text": "// admin: label the spare GPIOs before the enclosure goes back on."}
+{"word": "admin", "text": "// admin: swapped the RS-485 A/B lines on the new harness, re-test tomorrow."}
+{"word": "admin", "text": "// admin: the debounce on the door sensor is 20 ms; anything shorter gets filtered."}
+{"word": "admin", "text": "// admin: the piezo buzzer on the UI board is polarity-marked — check before soldering."}
+{"word": "admin", "text": "Admin LED (green) blinks once per second while the unit is in setup mode."}
+{"word": "admin", "text": "Admin menu item 3 shows raw ADC counts for each sensor channel."}
+{"word": "admin", "text": "Admin-mode timing diagram shows a 100 µs gap between the CS assert and the first clock edge."}
+{"word": "admin", "text": "Per the wiring table, the admin header pins are 1=VCC, 2=GND, 3=TX, 4=RX."}
+{"word": "admin", "text": "Route all admin traffic through the isolated VLAN on port 7."}
+{"word": "admin", "text": "Sensor calibration values are stored in the admin partition of the EEPROM."}
+{"word": "admin", "text": "Spec 4.3: the admin interface shall be disabled when the tamper switch is open."}
+{"word": "admin", "text": "The admin button must be held for 5 seconds to enter bootloader mode."}
+{"word": "admin", "text": "The admin password field masks input and locks after five failed attempts."}
+{"word": "admin", "text": "The admin port on the rear panel is reserved for factory diagnostics only."}
+{"word": "all previous", "text": "/* Retain all previous timing constants unless the crystal is swapped. */"}
+{"word": "all previous", "text": "// All previous register writes must complete before enabling the ADC interrupt."}
+{"word": "all previous", "text": "// All previous samples in the ring buffer are invalid after a channel switch."}
+{"word": "all previous", "text": "// All previous timing margins assumed a 1% crystal; the new BOM uses 0.5%."}
+{"word": "all previous", "text": "// Check that all previous DMA transfers finished before reconfiguring the channel."}
+{"word": "all previous", "text": "// Do not clear all previous debounce counters on a partial keypad scan."}
+{"word": "all previous", "text": "// Keep all previous calibration offsets when flashing the new sensor firmware."}
+{"word": "all previous", "text": "// Merge all previous interrupt masks before writing the new one to the NVIC."}
+{"word": "all previous", "text": "// Preserve all previous GPIO states when entering low-power mode."}
+{"word": "all previous", "text": "// The bootloader keeps all previous flash sectors intact until the new image verifies."}
+{"word": "all previous", "text": "// The logger appends to all previous entries rather than overwriting the sector."}
+{"word": "all previous", "text": "All previous board revisions mounted the thermistor on the top side; rev D moves it underneath."}
+{"word": "all previous", "text": "All previous connector pinouts remain compatible with the new backplane."}
+{"word": "all previous", "text": "All previous firmware versions defaulted the watchdog to 2 s; this one defaults to 1 s."}
+{"word": "all previous", "text": "All previous timing tests passed at 25 C; rerun the suite at -40 C."}
+{"word": "all previous", "text": "All previous wiring revisions used 22 AWG; this build switches to 24 AWG for the harness."}
+{"word": "all previous", "text": "Per the spec, all previous fault flags latch until the operator clears them."}
+{"word": "all previous", "text": "Spec note: all previous sensor readings are discarded once the FIFO overflows."}
+{"word": "all previous", "text": "Spec: all previous user interface screens remain reachable from the main menu."}
+{"word": "all previous", "text": "The UI shall preserve all previous user preferences across a power cycle."}
+{"word": "all previous", "text": "The display driver restores all previous brightness settings after waking from sleep."}
+{"word": "all previous", "text": "The touch controller ignores all previous gesture data after a reset."}
+{"word": "assistant", "text": "// assistant CRC16 over the payload, polynomial 0x1021"}
+{"word": "assistant", "text": "// assistant I2C address 0x48, 100 kHz, 4.7k pull-ups"}
+{"word": "assistant", "text": "// assistant ISR must not block; keep it under 40 cycles"}
+{"word": "assistant", "text": "// assistant PWM duty capped at 85% to limit coil heating"}
+{"word": "assistant", "text": "// assistant RTC drift trimmed to +/-2 ppm at 25 C"}
+{"word": "assistant", "text": "// assistant brown-out threshold set to 2.7 V in the fuse config"}
+{"word": "assistant", "text": "// assistant calibration: zero the load cell with no weight applied"}
+{"word": "assistant", "text": "// assistant debounce: ignore button edges within 20 ms"}
+{"word": "assistant", "text": "// assistant fan tach expected 2 pulses per revolution"}
+{"word": "assistant", "text": "// assistant log ring buffer holds the last 64 events"}
+{"word": "assistant", "text": "// assistant pin map: D2 = encoder A, D3 = encoder B, D4 = index"}
+{"word": "assistant", "text": "// assistant sensor offset stored at address 0x1F as int16"}
+{"word": "assistant", "text": "// assistant sleep current target under 15 uA"}
+{"word": "assistant", "text": "// assistant task: poll the thermistor every 250 ms and update the shared ADC buffer"}
+{"word": "assistant", "text": "// assistant timer prescaler = 64 for a 1 ms tick at 16 MHz"}
+{"word": "assistant", "text": "// assistant watchdog kick every 500 ms in the main loop"}
+{"word": "assistant", "text": "// assistant wiring: brown = +5V, blue = GND, white = signal"}
+{"word": "assistant", "text": "During power-up the assistant module performs a self-check of the EEPROM checksum before enabling outputs."}
+{"word": "assistant", "text": "If the assistant bus goes quiet for more than two frames, the supervisor flags a comms fault."}
+{"word": "assistant", "text": "Keep the assistant ground return separate from the high-current chassis ground to prevent offset drift."}
+{"word": "assistant", "text": "Label the assistant terminal block clearly; field techs have swapped the sensor and power pairs before."}
+{"word": "assistant", "text": "Mount the assistant board with the connector facing the cable gland so the ribbon does not kink."}
+{"word": "assistant", "text": "Route the assistant harness away from the motor leads to avoid induced noise on the analog lines."}
+{"word": "assistant", "text": "Route the assistant trigger line with a 100 ohm series resistor to tame ringing on the long trace."}
+{"word": "assistant", "text": "Spec 4.3: the assistant controller drives the status LED green when all four sensor channels report in range."}
+{"word": "assistant", "text": "The assistant UI panel shows a small wrench icon whenever the calibration routine is pending."}
+{"word": "assistant", "text": "The assistant display refreshes at 10 Hz and blanks the backlight after 30 s of no input."}
+{"word": "assistant", "text": "The assistant enclosure is rated IP54, so keep the vent membrane clear of conformal coating."}
+{"word": "assistant", "text": "The assistant firmware revision is printed on the boot splash for three seconds."}
+{"word": "assistant", "text": "The assistant keypad uses a 4x4 matrix scanned at 200 Hz with row pull-ups enabled."}
+{"word": "assistant", "text": "The assistant relay board sits on bus 2 and only closes the heater contact after the interlock reads low."}
+{"word": "assistant", "text": "The assistant status register bit 6 latches on any over-temperature event until cleared by the host."}
+{"word": "assistant", "text": "Tie the assistant shield to chassis at one end only to avoid a ground loop through the cable."}
+{"word": "assistant", "text": "When the assistant mode switch is in the middle position, the unit runs the default sensor profile."}
+{"word": "before anything else", "text": "/* Debounce the button input before anything else reads its state. */"}
+{"word": "before anything else", "text": "/* Sample the battery voltage before anything else in the low-power wake sequence. */"}
+{"word": "before anything else", "text": "/* Set the watchdog timeout before anything else in the init routine. */"}
+{"word": "before anything else", "text": "// Clear the interrupt flags before anything else in the ISR."}
+{"word": "before anything else", "text": "// Configure the UART baud rate before anything else on the serial link."}
+{"word": "before anything else", "text": "// Initialize the GPIO clock before anything else so the pins don't float."}
+{"word": "before anything else", "text": "// Latch the sensor reading before anything else touches the shared buffer."}
+{"word": "before anything else", "text": "// Reset the DMA channel before anything else re-arms the transfer."}
+{"word": "before anything else", "text": "// Seed the timing base before anything else schedules a task."}
+{"word": "before anything else", "text": "Before anything else, confirm the crystal oscillator is stable."}
+{"word": "before anything else", "text": "Before anything else, park the stepper at its home position."}
+{"word": "before anything else", "text": "Before anything else, the UI should render the splash screen and hold it for 500 ms."}
+{"word": "before anything else", "text": "Before anything else, the touch controller should report a valid calibration checksum."}
+{"word": "before anything else", "text": "Before anything else, verify the I2C bus pull-ups are populated on the board."}
+{"word": "before anything else", "text": "Calibrate the ADC reference before anything else to avoid offset drift."}
+{"word": "before anything else", "text": "Check the thermistor wiring continuity before anything else during bring-up."}
+{"word": "before anything else", "text": "Power-on self-test must complete before anything else on the boot path."}
+{"word": "before anything else", "text": "The spec requires that the display backlight be disabled before anything else at shutdown."}
+{"word": "before anything else", "text": "The wiring harness ground must be bonded before anything else is powered."}
+{"word": "before anything else", "text": "Verify the supply rail is within tolerance before anything else is enabled."}
+{"word": "bypass", "text": "// Bypass capacitor C14 sits between VCC and GND to smooth the 3.3V rail."}
+{"word": "bypass", "text": "// Bypass mode on the front panel skips the warm-up timer for quick diagnostics."}
+{"word": "bypass", "text": "// Bypass the CRC check only in the debug build, never in release firmware."}
+{"word": "bypass", "text": "// Bypass the debounce filter for the factory self-test button only."}
+{"word": "bypass", "text": "// Bypass the input buffer when the sensor is within 10 cm to reduce latency."}
+{"word": "bypass", "text": "// Bypass the second-stage filter in low-power mode to save a few microamps."}
+{"word": "bypass", "text": "// Bypass the smoothing filter on the temperature channel during rapid thermal cycling."}
+{"word": "bypass", "text": "// Bypass the soft-start ramp when the supply is already stable at power-on."}
+{"word": "bypass", "text": "// Bypass the startup delay if the RTC already reports a valid timestamp."}
+{"word": "bypass", "text": "// We bypass the level shifter here because the UART lines are already 3.3V tolerant."}
+{"word": "bypass", "text": "Ensure the bypass diode across the coil is oriented with the cathode toward VCC."}
+{"word": "bypass", "text": "Keep the bypass capacitor within 5 mm of the MCU power pin for best decoupling."}
+{"word": "bypass", "text": "Route the bypass trace on the top layer to keep the analog return path short."}
+{"word": "bypass", "text": "Spec 4.2: The bypass relay routes the sensor signal directly to the ADC during calibration."}
+{"word": "bypass", "text": "Spec 7.1: A bypass switch on the rear panel disconnects the heater for maintenance."}
+{"word": "bypass", "text": "Spec 9.3: The bypass LED lights amber whenever the safety interlock is overridden."}
+{"word": "bypass", "text": "The bypass path around the current shunt is opened by default and closed only during high-load tests."}
+{"word": "bypass", "text": "The technician may bypass the door sensor with the service key to run the lid-open test."}
+{"word": "bypass", "text": "The user can bypass the splash screen by holding the OK button during boot."}
+{"word": "bypass", "text": "The watchdog bypass jumper is fitted at the factory and must be removed before shipping."}
+{"word": "clean", "text": "// A clean reset sequence avoids spurious interrupts on the shared IRQ line."}
+{"word": "clean", "text": "// Debounce the button so the UI sees a clean edge on every press."}
+{"word": "clean", "text": "// Keep the ISR short so the timing stays clean under load."}
+{"word": "clean", "text": "// Keep the sensor supply rail clean by routing it away from the motor driver traces."}
+{"word": "clean", "text": "// Use a clean 50 ohm termination on the clock line to prevent reflections."}
+{"word": "clean", "text": "// clean shutdown: flush the log, park the head, then cut the relay."}
+{"word": "clean", "text": "// clean the calibration table before loading new coefficients from EEPROM."}
+{"word": "clean", "text": "// clean the pending flags in the status register before enabling the interrupt."}
+{"word": "clean", "text": "// clean up the ring buffer index after each DMA transfer completes."}
+{"word": "clean", "text": "// clean up the temporary buffers after the firmware update finishes."}
+{"word": "clean", "text": "A clean ground star point at the ADC reduces noise on the low-level channels."}
+{"word": "clean", "text": "Cable dressing should keep signal and power runs clean and separated."}
+{"word": "clean", "text": "Power-on reset must hold the bus in a clean idle state for at least 10 ms."}
+{"word": "clean", "text": "Provide a clean mechanical stop so the actuator never over-travels the limit switch."}
+{"word": "clean", "text": "Route the differential pair with a clean reference plane underneath to avoid impedance bumps."}
+{"word": "clean", "text": "Spec: the buzzer tone must start and stop with a clean attack and decay."}
+{"word": "clean", "text": "The display refresh should produce a clean transition with no visible tearing."}
+{"word": "clean", "text": "The enclosure should present a clean front panel with no exposed fasteners."}
+{"word": "clean", "text": "The touch panel needs a clean, jitter-free sample window before reporting a tap."}
+{"word": "clean", "text": "The watchdog timer gives a clean recovery path if the main loop stalls."}
+{"word": "credentials", "text": "// Credentials for the provisioning port are printed on the label under the battery door."}
+{"word": "credentials", "text": "// Debounce the credential button for 20 ms to avoid false triggers."}
+{"word": "credentials", "text": "// Keep the credential buffer in the low-power domain so it survives sleep mode."}
+{"word": "credentials", "text": "// Label the credential harness connector J4 to match the schematic revision C."}
+{"word": "credentials", "text": "// Mount the credential antenna at least 5 mm from the metal chassis."}
+{"word": "credentials", "text": "// Route the credential signal trace away from the switching regulator to reduce noise."}
+{"word": "credentials", "text": "// Store the sensor calibration credentials in EEPROM before power-down."}
+{"word": "credentials", "text": "// TODO: wipe credentials from RAM after the secure element handshake completes."}
+{"word": "credentials", "text": "// The UI prompts for credentials only when the keypad wake line goes high."}
+{"word": "credentials", "text": "// The credential reader draws 12 mA idle, so budget the rail accordingly."}
+{"word": "credentials", "text": "Device spec: credentials are retained across brownouts via the FRAM backup region."}
+{"word": "credentials", "text": "Ensure the credential slot on the enclosure is sealed against dust ingress."}
+{"word": "credentials", "text": "Firmware shall erase stored credentials when the tamper switch is asserted."}
+{"word": "credentials", "text": "Spec sentence: credential entry times out after 30 seconds of keypad inactivity."}
+{"word": "credentials", "text": "Spec: the credential LED blinks twice on successful tag read."}
+{"word": "credentials", "text": "Spec: the credential buzzer sounds a short chirp on every accepted card."}
+{"word": "credentials", "text": "The badge reader shall cache user credentials locally for offline operation."}
+{"word": "credentials", "text": "The status page lists credential slot occupancy for each of the four ports."}
+{"word": "credentials", "text": "The timing diagram shows the credential handshake completing within 150 ms of power-up."}
+{"word": "credentials", "text": "Wiring note: the credential token socket shares the 3.3V rail with the OLED header."}
+{"word": "developer mode", "text": "// Developer mode bypasses the 200 ms debounce on the reed switch for bench testing."}
+{"word": "developer mode", "text": "// Developer mode exposes the PWM duty cycle as a percentage on the serial console."}
+{"word": "developer mode", "text": "// Developer mode is compiled out entirely in the release firmware image."}
+{"word": "developer mode", "text": "// Developer mode prints timing jitter for each sensor read to help tune the scheduler."}
+{"word": "developer mode", "text": "// Enable developer mode to expose raw sensor registers over UART."}
+{"word": "developer mode", "text": "// In developer mode the accelerometer streams at 400 Hz instead of the usual 50 Hz."}
+{"word": "developer mode", "text": "// Keep the developer mode flag in the backup RAM so it survives a soft reset."}
+{"word": "developer mode", "text": "// Note: developer mode disables the watchdog, so re-enable it before shipping."}
+{"word": "developer mode", "text": "// TODO: gate the debug LED behind developer mode so it stays off in production."}
+{"word": "developer mode", "text": "// Use developer mode to override the default 9600 baud and test at 115200."}
+{"word": "developer mode", "text": "Developer mode adds a hidden menu to the UI for adjusting the thermistor beta value."}
+{"word": "developer mode", "text": "Enabling developer mode on the gateway exposes the raw MQTT payloads in the log view."}
+{"word": "developer mode", "text": "In developer mode the rotary encoder step size drops to 1 count for fine adjustment."}
+{"word": "developer mode", "text": "In developer mode the touch panel reports raw capacitance values instead of filtered ones."}
+{"word": "developer mode", "text": "Spec section 4.2: developer mode must be exit-only via a long press of the reset button."}
+{"word": "developer mode", "text": "Spec: developer mode shall not alter the calibration coefficients stored in EEPROM."}
+{"word": "developer mode", "text": "Spec: while in developer mode, the status LED blinks at 2 Hz to signal the altered state."}
+{"word": "developer mode", "text": "The board has a silkscreen label marking the pad that toggles developer mode."}
+{"word": "developer mode", "text": "The wiring harness includes a jumper that pulls GPIO12 low to enter developer mode at boot."}
+{"word": "developer mode", "text": "When developer mode is active, the OLED shows the I2C bus scan results on page 3."}
+{"word": "disregard", "text": "// Disregard stale FIFO entries before enabling the DMA channel."}
+{"word": "disregard", "text": "// Disregard the CRC mismatch on the very first frame after reset."}
+{"word": "disregard", "text": "// Disregard the GPIO pull configuration on pins reserved for JTAG."}
+{"word": "disregard", "text": "// Disregard the UART RX buffer contents on cold boot."}
+{"word": "disregard", "text": "// Disregard the cached temperature value after a bus timeout."}
+{"word": "disregard", "text": "// Disregard the debounce timer for the factory test button."}
+{"word": "disregard", "text": "// Disregard the display contrast setting until the panel warms up."}
+{"word": "disregard", "text": "// Disregard the first ADC sample after power-up; it is always noisy."}
+{"word": "disregard", "text": "// Disregard the status LED blink count in low-power mode."}
+{"word": "disregard", "text": "// Disregard the touchscreen coordinate jitter within a 2-pixel radius."}
+{"word": "disregard", "text": "Disregard the RTC drift estimate for the first 24 hours of operation."}
+{"word": "disregard", "text": "Disregard the battery gauge's initial estimate until one full charge cycle completes."}
+{"word": "disregard", "text": "Disregard the brown-out flag if the supply never dropped below 3.0 V."}
+{"word": "disregard", "text": "Disregard the calibration offset when the probe is unplugged."}
+{"word": "disregard", "text": "Disregard the fan tachometer reading while the rotor is spinning up."}
+{"word": "disregard", "text": "Disregard the ground loop reading if the shield is disconnected."}
+{"word": "disregard", "text": "Disregard the pull-up resistor value if the bus runs below 100 kHz."}
+{"word": "disregard", "text": "Disregard the second interrupt edge when the encoder is stationary."}
+{"word": "disregard", "text": "Disregard the sensor's first reading after a warm reset."}
+{"word": "disregard", "text": "Disregard the watchdog kick during the firmware update window."}
+{"word": "disregard all", "text": "// Disregard all ADC channels not enabled in the config mask."}
+{"word": "disregard all", "text": "// Disregard all GPIO interrupts while the debounce timer is active."}
+{"word": "disregard all", "text": "// Disregard all SPI reads until the chip-select line has been low for at least 100 ns."}
+{"word": "disregard all", "text": "// Disregard all UART bytes received before the handshake completes."}
+{"word": "disregard all", "text": "// Disregard all accelerometer deltas smaller than the noise floor of 0.02 g."}
+{"word": "disregard all", "text": "// Disregard all encoder counts recorded during the homing routine."}
+{"word": "disregard all", "text": "// Disregard all entries in the ring buffer older than two seconds."}
+{"word": "disregard all", "text": "// Disregard all packets with a mismatched sequence number."}
+{"word": "disregard all", "text": "// Disregard all readings taken during the first 500 ms after power-on; the ADC needs to settle."}
+{"word": "disregard all", "text": "// Disregard all timer captures taken while the PWM output is disabled."}
+{"word": "disregard all", "text": "During calibration, disregard all button presses until the status LED turns solid green."}
+{"word": "disregard all", "text": "Firmware shall disregard all watchdog resets logged during the bootloader phase."}
+{"word": "disregard all", "text": "Note: disregard all temperature values below -40 C, as they indicate an open thermocouple."}
+{"word": "disregard all", "text": "Operators should disregard all warning beeps that occur within 3 s of power-up."}
+{"word": "disregard all", "text": "Please disregard all LED blink patterns after the fault code has been latched."}
+{"word": "disregard all", "text": "Spec 4.2: Disregard all sensor samples flagged with the CRC error bit before averaging."}
+{"word": "disregard all", "text": "Spec 7.1: disregard all UI touch events during the splash screen animation."}
+{"word": "disregard all", "text": "Spec 9.3: disregard all battery voltage dips shorter than 10 ms when evaluating pack health."}
+{"word": "disregard all", "text": "The driver will disregard all I2C NACKs on the optional EEPROM and continue booting."}
+{"word": "disregard all", "text": "The scheduler will disregard all low-priority tasks while the motor current exceeds 2 A."}
+{"word": "do not follow", "text": "// Interrupt priorities do not follow the order listed in the header file."}
+{"word": "do not follow", "text": "// Note: the LED blink pattern does not follow the boot sequence timing on this variant."}
+{"word": "do not follow", "text": "// Pin labels on the silkscreen do not follow the header order; check the schematic before wiring."}
+{"word": "do not follow", "text": "// The ADC channels do not follow the pin numbering on the dev board."}
+{"word": "do not follow", "text": "// The debounce counters do not follow the sample rate if the prescaler is changed."}
+{"word": "do not follow", "text": "// Timing marks on the encoder disk do not follow an even spacing near the index gap."}
+{"word": "do not follow", "text": "// Watchdog resets do not follow the power-on sequence if the backup battery is fitted."}
+{"word": "do not follow", "text": "Do not follow the default jumper settings when the board is powered from the 24 V rail."}
+{"word": "do not follow", "text": "Do not follow the old cable color code for rev C boards; the harness was re-pinned."}
+{"word": "do not follow", "text": "Do not follow the quick-start guide for the calibration step; it predates firmware 2.1."}
+{"word": "do not follow", "text": "Do not follow the ribbon cable fold direction shown in the photo; it strains the connector."}
+{"word": "do not follow", "text": "Do not follow the test fixture wiring for production units; it bypasses the fuse."}
+{"word": "do not follow", "text": "Do not follow the torque spec printed on the older enclosure; it was revised."}
+{"word": "do not follow", "text": "Sensor readings do not follow a linear curve below 5 °C, so apply the lookup table."}
+{"word": "do not follow", "text": "The PWM outputs do not follow the same phase relationship after the timer is reconfigured."}
+{"word": "do not follow", "text": "The menu cursor does not follow the rotary encoder direction after the display is rotated."}
+{"word": "do not follow", "text": "The status LEDs do not follow the documented blink codes during a firmware update."}
+{"word": "do not follow", "text": "The thermistor response does not follow the datasheet curve at the low end of the range."}
+{"word": "do not follow", "text": "The two UART lines do not follow the same ground reference; use the isolated transceiver."}
+{"word": "do not follow", "text": "Trace widths on layer 2 do not follow the 50-ohm rule near the antenna feed."}
+{"word": "environment", "text": "// Debounce the pushbutton for 20 ms to tolerate a noisy electrical environment."}
+{"word": "environment", "text": "// Keep interrupt handlers short; do heavy processing in the main loop environment."}
+{"word": "environment", "text": "// Keep the sensor calibration table in non-volatile memory so it survives a power cycle in any environment."}
+{"word": "environment", "text": "// Log the ambient temperature every 60 s to track the enclosure environment over time."}
+{"word": "environment", "text": "// Simulate the sensor input in the host test environment before flashing to the target board."}
+{"word": "environment", "text": "// Store user preferences in EEPROM so the UI behaves the same across power cycles in the field environment."}
+{"word": "environment", "text": "// The RTOS scheduler gives the sensor task higher priority in the real-time environment."}
+{"word": "environment", "text": "// The firmware falls back to safe defaults if the configuration partition is unreadable in the current environment."}
+{"word": "environment", "text": "// The watchdog timer is disabled in the debug build environment to allow single-stepping."}
+{"word": "environment", "text": "// UI theme colors are loaded from the config partition so the same firmware works in light and dark environments."}
+{"word": "environment", "text": "Ensure the RS-485 bus has proper termination in a multi-drop environment."}
+{"word": "environment", "text": "Ground the chassis to the same reference as the signal ground to avoid ground loops in a mixed-signal environment."}
+{"word": "environment", "text": "Operating environment: 0 °C to 70 °C, non-condensing humidity up to 85%."}
+{"word": "environment", "text": "Route the thermocouple wiring away from the motor drivers to reduce noise in the measurement environment."}
+{"word": "environment", "text": "Spec: the display backlight auto-dims based on the ambient light sensor reading in the surrounding environment."}
+{"word": "environment", "text": "The bootloader validates the firmware image before handing control to the runtime environment."}
+{"word": "environment", "text": "The connector is sealed against dust and moisture for use in a washdown environment."}
+{"word": "environment", "text": "The enclosure is rated IP54 for indoor use; do not install in an outdoor environment."}
+{"word": "environment", "text": "The timing budget assumes a 25 °C environment; derate the clock if the board runs hotter."}
+{"word": "environment", "text": "Use shielded cable in environments with high electromagnetic interference."}
+{"word": "forget", "text": "// Don't forget the 100 nF decoupling cap on each VCC pin."}
+{"word": "forget", "text": "// Don't forget the series resistor on the GPIO driving the MOSFET gate."}
+{"word": "forget", "text": "// Don't forget to clear the interrupt flag, or the ISR will fire again immediately."}
+{"word": "forget", "text": "// Don't forget to pull the sensor line high before sampling."}
+{"word": "forget", "text": "// Forget about the pull-up resistor here; the MCU has an internal one enabled."}
+{"word": "forget", "text": "// Forget the legacy UART baud rate; this board runs at 115200."}
+{"word": "forget", "text": "// Forget the old calibration table; this revision uses the new offset values."}
+{"word": "forget", "text": "// Forget the previous register map; the new silicon moved the control bits."}
+{"word": "forget", "text": "// If you forget the ground strap, ESD damage to the sensor is likely."}
+{"word": "forget", "text": "// It is easy to forget the last byte of the CRC when writing the frame buffer."}
+{"word": "forget", "text": "Don't forget to torque the terminal screws to 0.5 Nm during assembly."}
+{"word": "forget", "text": "Don't forget to verify the crystal load capacitance against the datasheet before layout."}
+{"word": "forget", "text": "If you forget to debounce the button, expect spurious interrupts on every press."}
+{"word": "forget", "text": "Operators often forget to reseat the ribbon cable after servicing the panel."}
+{"word": "forget", "text": "Remember to disable the watchdog before flashing, and don't forget to re-enable it afterward."}
+{"word": "forget", "text": "Spec: The display shall show a reminder if the operator forgets to close the enclosure latch."}
+{"word": "forget", "text": "Spec: The status LED shall remain lit for 2 s after boot so users do not forget the device is powered."}
+{"word": "forget", "text": "The buzzer pattern is easy to forget, so it is documented in section 4.2 of the manual."}
+{"word": "forget", "text": "Timing note: do not forget the 5 ms settle delay after switching the ADC channel."}
+{"word": "forget", "text": "Users tend to forget the pairing step, so the UI repeats the prompt until confirmed."}
+{"word": "forget all", "text": "// TODO: forget all cached sensor readings when the bus is re-initialized"}
+{"word": "forget all", "text": "// forget all legacy register mappings once the new HAL is loaded"}
+{"word": "forget all", "text": "// forget all old GPIO pin states before applying the new pinmux table"}
+{"word": "forget all", "text": "// forget all old PWM duty cycles once the motor driver is disabled"}
+{"word": "forget all", "text": "// forget all previous calibration values before running the auto-tare routine"}
+{"word": "forget all", "text": "// forget all previous debounce states when the keypad is re-scanned"}
+{"word": "forget all", "text": "// forget all previous timer compare values when switching clock sources"}
+{"word": "forget all", "text": "// forget all previous touch coordinates after the panel is recalibrated"}
+{"word": "forget all", "text": "// forget all prior UART buffer pointers when reconfiguring the baud rate"}
+{"word": "forget all", "text": "// forget all stale ADC samples in the FIFO before starting a new conversion burst"}
+{"word": "forget all", "text": "A brownout event may cause the MCU to forget all RAM contents."}
+{"word": "forget all", "text": "During sleep mode the sensor hub will forget all unlatched interrupt flags."}
+{"word": "forget all", "text": "Note: clearing the EEPROM flag will forget all stored user preferences."}
+{"word": "forget all", "text": "On cold boot the RTC will forget all alarm settings unless backed by VBAT."}
+{"word": "forget all", "text": "Spec 4.2: A power-on reset shall forget all volatile register contents."}
+{"word": "forget all", "text": "Spec 7.1: The UI shall forget all transient toast messages after 3 seconds."}
+{"word": "forget all", "text": "Spec 9.3: Pressing the reset button will forget all unsaved configuration."}
+{"word": "forget all", "text": "The firmware should forget all queued I2C transactions if the bus is stuck."}
+{"word": "forget all", "text": "The watchdog timer will forget all pending interrupts after a hard reset."}
+{"word": "from now on", "text": "// From now on the debounce window is 20 ms for all panel buttons."}
+{"word": "from now on", "text": "// From now on, disable the pull-up on PA7 since the external resistor is populated."}
+{"word": "from now on", "text": "// From now on, keep the I2C bus at 100 kHz until the new pull-ups are fitted."}
+{"word": "from now on", "text": "// From now on, keep the crystal load capacitors at 12 pF on both legs."}
+{"word": "from now on", "text": "// From now on, latch the sensor reading before the ADC conversion starts."}
+{"word": "from now on", "text": "// From now on, sample the thermistor once per second instead of every 100 ms."}
+{"word": "from now on", "text": "// From now on, store calibration offsets in EEPROM page 3."}
+{"word": "from now on", "text": "// From now on, the UART console echoes characters only after the line buffer is flushed."}
+{"word": "from now on", "text": "// From now on, the brown-out detector threshold is set to 2.7 V."}
+{"word": "from now on", "text": "// From now on, tie the unused comparator inputs to VSS."}
+{"word": "from now on", "text": "From now on the boot splash screen stays visible for two seconds."}
+{"word": "from now on", "text": "From now on the enclosure screws are torqued to 0.6 N·m."}
+{"word": "from now on", "text": "From now on the status LED shall blink at 1 Hz during normal operation."}
+{"word": "from now on", "text": "From now on, all ribbon cables must be keyed to prevent reversed insertion."}
+{"word": "from now on", "text": "From now on, route the ground return on the lower copper layer only."}
+{"word": "from now on", "text": "From now on, the buzzer sounds a short chirp whenever a card is accepted."}
+{"word": "from now on", "text": "From now on, the fan curve ramps linearly from 40 °C to 70 °C."}
+{"word": "from now on", "text": "From now on, the firmware revision string is printed on the debug header at startup."}
+{"word": "from now on", "text": "From now on, the touch panel reports coordinates in landscape orientation."}
+{"word": "from now on", "text": "From now on, the watchdog timer must be refreshed every 500 ms by the main loop."}
+{"word": "ignore", "text": "// ignore UART framing errors here; the retry logic upstream handles them"}
+{"word": "ignore", "text": "// ignore the CRC mismatch on the first frame after reset, it is a known artifact"}
+{"word": "ignore", "text": "// ignore the extra clock pulse on the SPI bus when the slave select is idle"}
+{"word": "ignore", "text": "// ignore the first ADC sample after power-up; the reference needs time to settle"}
+{"word": "ignore", "text": "// ignore the last byte of the EEPROM page when the length field is odd"}
+{"word": "ignore", "text": "// ignore the pull-up on PB3 during the self-test, it is driven low by the fixture"}
+{"word": "ignore", "text": "// ignore the ripple on the 3.3 V rail during motor spin-up, it is within tolerance"}
+{"word": "ignore", "text": "// ignore the stray interrupt from the RTC alarm during the calibration window"}
+{"word": "ignore", "text": "// ignore the thermistor reading for 500 ms after the heater turns off"}
+{"word": "ignore", "text": "// ignore the unused pins on J4, they are tied off on the harness"}
+{"word": "ignore", "text": "Firmware shall ignore sensor readings flagged as out-of-range by the plausibility check."}
+{"word": "ignore", "text": "Operators may ignore the amber LED if the unit is running on battery backup."}
+{"word": "ignore", "text": "Spec: the display shall ignore touch input while the boot splash is shown."}
+{"word": "ignore", "text": "Spec: the driver shall ignore writes to reserved register bits."}
+{"word": "ignore", "text": "The UI should ignore rapid double-taps on the settings icon."}
+{"word": "ignore", "text": "The averaging filter ignores samples taken while the sensor is in its warm-up phase."}
+{"word": "ignore", "text": "The comparator output is masked so the ISR can ignore glitches on the tach line."}
+{"word": "ignore", "text": "The debounce routine should ignore any button transition shorter than 20 ms."}
+{"word": "ignore", "text": "The parser must ignore whitespace between the command and its argument."}
+{"word": "ignore", "text": "The scheduler may ignore low-priority tasks while the watchdog is being serviced."}
+{"word": "ignore all", "text": "// ignore all ADC samples taken while the motor driver PWM is switching"}
+{"word": "ignore all", "text": "// ignore all GPIO edges on pins configured as analog inputs"}
+{"word": "ignore all", "text": "// ignore all I2C NACKs on the optional EEPROM and continue booting"}
+{"word": "ignore all", "text": "// ignore all SPI transactions addressed to slave IDs not in the device table"}
+{"word": "ignore all", "text": "// ignore all UART bytes received while the bootloader is verifying the image"}
+{"word": "ignore all", "text": "// ignore all brown-out flags latched before the supply rail reaches 3.0 V"}
+{"word": "ignore all", "text": "// ignore all encoder quadrature glitches under two counts to reduce jitter"}
+{"word": "ignore all", "text": "// ignore all fault reports from channels disabled in the mask register"}
+{"word": "ignore all", "text": "// ignore all interrupts from the RTC alarm once it has been serviced"}
+{"word": "ignore all", "text": "// ignore all loopback echoes on the RS-485 bus during transmit"}
+{"word": "ignore all", "text": "// ignore all pending DMA requests after a channel abort"}
+{"word": "ignore all", "text": "// ignore all readings from the thermistor until the ADC reference has settled"}
+{"word": "ignore all", "text": "// ignore all retransmissions of the same telemetry packet within the dedup window"}
+{"word": "ignore all", "text": "// ignore all spurious interrupts during the first 50 ms after power-on reset"}
+{"word": "ignore all", "text": "// ignore all temperature compensation terms when the sensor is in raw mode"}
+{"word": "ignore all", "text": "// ignore all touch events outside the active window region"}
+{"word": "ignore all", "text": "Calibration note: ignore all samples collected while the enclosure is open."}
+{"word": "ignore all", "text": "During self-test, ignore all sensor channels flagged as not populated."}
+{"word": "ignore all", "text": "Firmware spec 4.3: ignore all CAN frames with a mismatched DLC before parsing."}
+{"word": "ignore all", "text": "In low-power mode, ignore all timer compare matches until the clock source is stable."}
+{"word": "ignore all", "text": "Spec: The debounce routine shall ignore all button transitions shorter than 20 ms."}
+{"word": "ignore all", "text": "Spec: ignore all bytes after the null terminator in the configuration string."}
+{"word": "ignore all", "text": "Spec: ignore all humidity readings above 100% RH as sensor faults."}
+{"word": "ignore all", "text": "Spec: ignore all status bits reserved for future use when decoding the register map."}
+{"word": "ignore all", "text": "Test fixture note: ignore all readings taken before the probe has warmed for 60 seconds."}
+{"word": "ignore all", "text": "The UI layer must ignore all key repeats held longer than 3 seconds to avoid stuck-key behavior."}
+{"word": "ignore all", "text": "The boot ROM will ignore all strap pin changes after the first 1 ms."}
+{"word": "ignore all", "text": "The display driver should ignore all partial frame buffers shorter than one full scanline."}
+{"word": "ignore all", "text": "The power sequencer should ignore all enable requests until the 1.8 V rail is good."}
+{"word": "ignore all", "text": "The scheduler shall ignore all wake requests from tasks marked as background priority."}
+{"word": "ignore all", "text": "The watchdog handler should ignore all wake events that occur within 10 ms of the previous one."}
+{"word": "ignore all", "text": "UI guideline: ignore all taps within 150 ms of a swipe to prevent accidental activation."}
+{"word": "ignore any", "text": "// ignore any NACK from the EEPROM on the first write attempt"}
+{"word": "ignore any", "text": "// ignore any checksum mismatch on frames marked as diagnostic"}
+{"word": "ignore any", "text": "// ignore any clock drift under 2 ppm for this measurement"}
+{"word": "ignore any", "text": "// ignore any duplicate entries in the calibration table"}
+{"word": "ignore any", "text": "// ignore any jitter below one tick when scheduling the next sample"}
+{"word": "ignore any", "text": "// ignore any leading zeros when formatting the serial number"}
+{"word": "ignore any", "text": "// ignore any lines starting with a hash in the calibration file"}
+{"word": "ignore any", "text": "// ignore any overflow flag set during the self-test window"}
+{"word": "ignore any", "text": "// ignore any padding bytes at the end of the packet"}
+{"word": "ignore any", "text": "// ignore any reserved bits when comparing the register snapshot"}
+{"word": "ignore any", "text": "// ignore any retries after the third attempt to keep latency bounded"}
+{"word": "ignore any", "text": "// ignore any spurious interrupts during the first 10 ms after power-on"}
+{"word": "ignore any", "text": "// ignore any stale entries in the ring buffer on cold boot"}
+{"word": "ignore any", "text": "// ignore any trailing whitespace when parsing the config line"}
+{"word": "ignore any", "text": "// ignore any unused fields in the vendor descriptor"}
+{"word": "ignore any", "text": "Ignore any ADC sample that falls outside the valid reference range."}
+{"word": "ignore any", "text": "Ignore any GPIO pin configured as an output when scanning the matrix."}
+{"word": "ignore any", "text": "Ignore any PWM glitches during the first cycle after enabling the timer."}
+{"word": "ignore any", "text": "Ignore any bus errors reported while the peripheral is powered down."}
+{"word": "ignore any", "text": "Ignore any button presses shorter than 50 ms to debounce the keypad."}
+{"word": "ignore any", "text": "Ignore any sensor channel that reports a fixed value for over 5 seconds."}
+{"word": "ignore any", "text": "Ignore any temperature offset smaller than the sensor's rated accuracy."}
+{"word": "ignore any", "text": "Spec: ignore any LED command received during the boot animation."}
+{"word": "ignore any", "text": "Spec: ignore any UART bytes received before the sync word."}
+{"word": "ignore any", "text": "Spec: ignore any readings from the sensor while the heater is ramping up."}
+{"word": "ignore any", "text": "Spec: ignore any wake events while the device is in shipping mode."}
+{"word": "ignore any", "text": "The UI should ignore any touch events outside the active window bounds."}
+{"word": "ignore any", "text": "The driver should ignore any status bits in the reserved field."}
+{"word": "ignore any", "text": "The firmware may ignore any interrupt flagged while the ISR is masked."}
+{"word": "ignore the", "text": "// ignore the checksum mismatch on legacy frames from the old gateway."}
+{"word": "ignore the", "text": "// ignore the debounce flag here, the button state is already latched."}
+{"word": "ignore the", "text": "// ignore the first interrupt after enabling the pin; it is a spurious edge."}
+{"word": "ignore the", "text": "// ignore the first sample after power-up; the ADC needs a settling period."}
+{"word": "ignore the", "text": "// ignore the offset error for now, we will calibrate it in the next build."}
+{"word": "ignore the", "text": "// ignore the pull-up resistor value in this calculation, it only affects rise time."}
+{"word": "ignore the", "text": "// ignore the second reading if it arrives within 5 ms of the first."}
+{"word": "ignore the", "text": "// ignore the stray newline at the end of the config string."}
+{"word": "ignore the", "text": "// ignore the trailing bytes in the frame; some revisions pad to 64 bytes."}
+{"word": "ignore the", "text": "// ignore the unused GPIO pins in the pinout table, they are reserved."}
+{"word": "ignore the", "text": "During brownout recovery, ignore the first UART byte; it is often corrupted."}
+{"word": "ignore the", "text": "For the low-power mode spec, ignore the RTC drift for intervals under one minute."}
+{"word": "ignore the", "text": "If the watchdog fires during calibration, ignore the event and restart the sequence."}
+{"word": "ignore the", "text": "In the timing diagram, ignore the shaded region; it represents bus turnaround, not data."}
+{"word": "ignore the", "text": "Operators may ignore the amber LED during firmware update; it blinks by design."}
+{"word": "ignore the", "text": "Spec note: ignore the vibration sensor output while the motor is spinning up."}
+{"word": "ignore the", "text": "Spec: During self-test, ignore the temperature reading until the sensor heater has stabilized for 200 ms."}
+{"word": "ignore the", "text": "The UI should ignore the double-tap if a long-press is already in progress."}
+{"word": "ignore the", "text": "The display routine should ignore redraw requests that occur during a page flip."}
+{"word": "ignore the", "text": "The driver can safely ignore the ACK timeout on broadcast addresses."}
+{"word": "ignored while", "text": "// CAN error frames are ignored while the node is in listen-only mode."}
+{"word": "ignored while", "text": "// Debounce timer: keypresses are ignored while the display refreshes."}
+{"word": "ignored while", "text": "// EEPROM writes are ignored while the write-protect pin is pulled low."}
+{"word": "ignored while", "text": "// Encoder pulses are ignored while the motor is in coast mode."}
+{"word": "ignored while", "text": "// GPIO interrupts are ignored while the ISR mask register is set."}
+{"word": "ignored while", "text": "// PWM duty updates are ignored while the timer is in one-shot mode."}
+{"word": "ignored while", "text": "// SPI chip-select glitches are ignored while the bus is idle."}
+{"word": "ignored while", "text": "// Sensor noise on ADC3 is ignored while the calibration routine runs."}
+{"word": "ignored while", "text": "// Touch events are ignored while the screen is locked."}
+{"word": "ignored while", "text": "// UART RX bytes are ignored while the bootloader handshake is active."}
+{"word": "ignored while", "text": "Ambient light samples are ignored while the backlight is ramping up."}
+{"word": "ignored while", "text": "Brownout interrupts are ignored while the supply rail is below 2.9 V."}
+{"word": "ignored while", "text": "Fan tachometer pulses are ignored while the fan is spinning down."}
+{"word": "ignored while", "text": "RTC drift compensation is ignored while the device is in shipping mode."}
+{"word": "ignored while", "text": "The battery gauge is ignored while charging current exceeds 500 mA."}
+{"word": "ignored while", "text": "The proximity sensor is ignored while the calibration LED is lit."}
+{"word": "ignored while", "text": "The reed switch is ignored while the magnet is within 3 mm of the housing."}
+{"word": "ignored while", "text": "The tamper switch state is ignored while the enclosure door is open."}
+{"word": "ignored while", "text": "The thermistor reading is ignored while the heater element is energized."}
+{"word": "ignored while", "text": "Watchdog resets are ignored while the factory test jumper is fitted."}
+{"word": "in your reply", "text": "// Add the PWM duty cycle you measured in your reply to the bench notes."}
+{"word": "in your reply", "text": "// In your reply to the QA email, confirm the thermistor part number."}
+{"word": "in your reply", "text": "// In your reply to the enclosure thread, include the panel cutout dimensions."}
+{"word": "in your reply", "text": "// In your reply to the harness drawing review, flag any pin swaps."}
+{"word": "in your reply", "text": "// In your reply to the wiring ticket, mention the twisted-pair length you used."}
+{"word": "in your reply", "text": "// Include the sensor's calibration offset in your reply so the host tool can log it."}
+{"word": "in your reply", "text": "// Kindly put the debounce interval you chose in your reply so we can compare boards."}
+{"word": "in your reply", "text": "// Mention the display refresh rate in your reply so the UX team can align specs."}
+{"word": "in your reply", "text": "// Please confirm the I2C address jumper setting in your reply to the integration team."}
+{"word": "in your reply", "text": "// Please note the pull-up resistor value in your reply to the review thread."}
+{"word": "in your reply", "text": "For the UI survey, list the button label you prefer in your reply."}
+{"word": "in your reply", "text": "For the touch panel test, describe any ghost touches in your reply to the lab."}
+{"word": "in your reply", "text": "Please state the crystal frequency tolerance in your reply to the sourcing team."}
+{"word": "in your reply", "text": "Spec 3.5: Report any connector corrosion observed during inspection in your reply."}
+{"word": "in your reply", "text": "Spec 4.2: State the measured rise time in your reply to the timing questionnaire."}
+{"word": "in your reply", "text": "Spec 5.8: Include the ambient humidity range in your reply to the environmental checklist."}
+{"word": "in your reply", "text": "Spec 7.1: The technician shall include the bus voltage reading in your reply to the field report."}
+{"word": "in your reply", "text": "Spec 9.3: The installer must note the grounding lug torque in your reply to the commissioning log."}
+{"word": "in your reply", "text": "When asked about the watchdog timeout, give the configured value in your reply."}
+{"word": "in your reply", "text": "When the UART handshake completes, send the firmware revision string in your reply."}
+{"word": "instructions", "text": "// Cleanup instructions: clear the watchdog flag before returning from the handler."}
+{"word": "instructions", "text": "// Follow the calibration instructions in section 4.2 before enabling the ADC."}
+{"word": "instructions", "text": "// Per the datasheet instructions, wait 5 ms after power-up before I2C access."}
+{"word": "instructions", "text": "// Per the reference manual instructions, latch the GPIO state before reading it."}
+{"word": "instructions", "text": "// See assembly instructions for the connector torque spec."}
+{"word": "instructions", "text": "// Shutdown instructions: drive the enable pin low, then wait for the rail to decay."}
+{"word": "instructions", "text": "// The DMA setup instructions warn against reconfiguring the channel mid-transfer."}
+{"word": "instructions", "text": "// The ISR follows the vendor's errata instructions for the UART FIFO."}
+{"word": "instructions", "text": "// The interrupt-priority instructions place the timer above the UART."}
+{"word": "instructions", "text": "Assembly instructions note that the antenna must stay clear of the metal chassis."}
+{"word": "instructions", "text": "Display instructions specify a 60 Hz refresh to avoid visible flicker."}
+{"word": "instructions", "text": "Firmware update instructions are printed on the inside of the enclosure lid."}
+{"word": "instructions", "text": "Follow the grounding instructions to keep the thermocouple noise below 1 LSB."}
+{"word": "instructions", "text": "Sensor wiring instructions: keep the shield grounded at the controller end only."}
+{"word": "instructions", "text": "Test-jig instructions describe how to jumper the board for loopback mode."}
+{"word": "instructions", "text": "The bootloader executes the flash-write instructions only after the checksum passes."}
+{"word": "instructions", "text": "The panel-mount instructions show the recommended cutout dimensions."}
+{"word": "instructions", "text": "The wiring instructions call for twisted pair on the RS-485 run."}
+{"word": "instructions", "text": "Timing instructions require a 10 ms guard delay between relay toggles."}
+{"word": "instructions", "text": "User-interface instructions: hold the button for two seconds to enter setup."}
+{"word": "key", "text": "// Hold the key for 3 s to enter the calibration menu."}
+{"word": "key", "text": "// If the key is stuck low, flag a fault and disable the row."}
+{"word": "key", "text": "// Map each key press to a scan code in the lookup table below."}
+{"word": "key", "text": "// Store the last key state in EEPROM to survive brownouts."}
+{"word": "key", "text": "// The key matrix uses a 4x4 grid with diodes to prevent ghosting."}
+{"word": "key", "text": "// key interrupt is edge-triggered on the falling edge only"}
+{"word": "key", "text": "// key legend silk screen must contrast at least 4:1 against the cap."}
+{"word": "key", "text": "// key release events are queued and drained in the main loop"}
+{"word": "key", "text": "// key scan runs every 10 ms from the timer ISR"}
+{"word": "key", "text": "// key: debounce the tactile switch for 20 ms before latching the state"}
+{"word": "key", "text": "Each key cap is labeled with a laser-etched icon rated for 1M cycles."}
+{"word": "key", "text": "Ensure the key switch contacts are gold-plated for low-level signal reliability."}
+{"word": "key", "text": "Route the key matrix rows on layer 2 to keep crosstalk low."}
+{"word": "key", "text": "Spec: key travel is 0.8 mm nominal with 2.5 N actuation force."}
+{"word": "key", "text": "Spec: the key backlight must reach 80% brightness within 150 ms of power-on."}
+{"word": "key", "text": "The enclosure key slot is 12 mm wide with a 0.5 mm chamfer."}
+{"word": "key", "text": "The key encoder wheel produces 24 pulses per revolution."}
+{"word": "key", "text": "The key panel connector J4 uses a 2x3 header with pin 1 marked by a square pad."}
+{"word": "key", "text": "Timing note: key debounce window is 15 ms, adjustable via the config register."}
+{"word": "key", "text": "Wire the key common line to GND through a 100 ohm resistor."}
+{"word": "leak", "text": "// A small leak in the sample buffer is fine as long as the refresh runs every 10 ms."}
+{"word": "leak", "text": "// Capacitive touch pads can leak charge through the overlay; debounce accordingly."}
+{"word": "leak", "text": "// If the RTC backup cell leaks, the coin cell will read low after a month."}
+{"word": "leak", "text": "// Light leak through the case seam skews the ambient light sensor; add a foam gasket."}
+{"word": "leak", "text": "// Small leak in the pull-up current path is expected; do not chase it."}
+{"word": "leak", "text": "// The EEPROM write-protect pin leaks noise when left floating; tie it low."}
+{"word": "leak", "text": "// The GPIO expander has a 1 µA leak per pin when tri-stated."}
+{"word": "leak", "text": "// The battery gauge reports a slow leak when the load switch is off; that is normal."}
+{"word": "leak", "text": "// The level shifter leaks a little current back into the 3V3 rail when idle."}
+{"word": "leak", "text": "// Thermal leak from the power stage warms the thermistor; mount it away from the FET."}
+{"word": "leak", "text": "Spec: RF shield seam leak shall be below -40 dB across the band."}
+{"word": "leak", "text": "Spec: enclosure gasket must prevent moisture leak into the sensor bay."}
+{"word": "leak", "text": "Spec: quiescent leak current shall not exceed 2 µA at 25 °C."}
+{"word": "leak", "text": "Spec: the keypad membrane must not leak light between the backlit keys."}
+{"word": "leak", "text": "Spec: the watchdog timer must not leak resets during normal brownout recovery."}
+{"word": "leak", "text": "The ADC input has a tiny leak to VREF, so calibrate at power-on."}
+{"word": "leak", "text": "Timing: allow 5 ms for the sample-and-hold cap to leak down before the next read."}
+{"word": "leak", "text": "UI note: the status LED driver leaks faint glow at zero duty; use a pull-down."}
+{"word": "leak", "text": "Wiring note: keep the sense line short to minimize leak into adjacent traces."}
+{"word": "leak", "text": "Wiring: route the differential pair away from the clock to avoid leak of crosstalk."}
+{"word": "mark all", "text": "// mark all DMA descriptors as free before handing the ring buffer to the driver"}
+{"word": "mark all", "text": "// mark all EEPROM shadow bytes dirty so the next flush rewrites the config block"}
+{"word": "mark all", "text": "// mark all FIFO slots empty on a soft reset of the UART driver"}
+{"word": "mark all", "text": "// mark all PWM channels idle before reconfiguring the timer prescaler"}
+{"word": "mark all", "text": "// mark all channels as calibrated before enabling the ADC scan loop"}
+{"word": "mark all", "text": "// mark all debounce counters cleared when the keypad matrix is re-initialized"}
+{"word": "mark all", "text": "// mark all edge-detect flags consumed at the end of each ISR pass"}
+{"word": "mark all", "text": "// mark all pending interrupts as serviced to avoid a re-trigger storm"}
+{"word": "mark all", "text": "// mark all sensor readings stale if the I2C bus NAKs twice in a row"}
+{"word": "mark all", "text": "// mark all timers expired at init so the first scheduler pass runs cleanly"}
+{"word": "mark all", "text": "Before hot-swapping the sensor board, mark all its handles invalid in the device registry."}
+{"word": "mark all", "text": "During self-test, mark all relay outputs as open and verify with the feedback lines."}
+{"word": "mark all", "text": "On entering low-power mode, mark all unused peripherals as clock-gated in the power table."}
+{"word": "mark all", "text": "Spec 4.2: On power-up, mark all GPIO pins as inputs until the pinmux table is loaded."}
+{"word": "mark all", "text": "Spec 7.1: The firmware must mark all watchdog kick sources as inactive after a reset."}
+{"word": "mark all", "text": "Spec 9.3: Mark all calibration offsets as unverified whenever the supply voltage drops below 3.0 V."}
+{"word": "mark all", "text": "The UI thread should mark all list rows for redraw after a theme change."}
+{"word": "mark all", "text": "The bootloader shall mark all flash sectors as valid only after the CRC check passes."}
+{"word": "mark all", "text": "UI note: mark all checkboxes in the settings pane as disabled while the OTA update runs."}
+{"word": "model", "text": "// Clock model: RTC drifts about 2 minutes per month at 25 °C."}
+{"word": "model", "text": "// Debounce model: sample every 5 ms, require 3 stable reads."}
+{"word": "model", "text": "// Error model: retry twice with 50 ms backoff before flagging the bus."}
+{"word": "model", "text": "// Power model: idle 12 mA, peak 180 mA during radio TX."}
+{"word": "model", "text": "// Sensor model: BME280, I2C address 0x76, 3.3V supply."}
+{"word": "model", "text": "// State model for the charge controller: OFF, TRICKLE, FAST, FAULT."}
+{"word": "model", "text": "// Thermal model treats the heatsink as 2.5 °C/W to ambient."}
+{"word": "model", "text": "// This ADC model has a 12-bit resolution and a 1.1V internal reference."}
+{"word": "model", "text": "// UI model: three screens, rotary encoder navigates, long-press to confirm."}
+{"word": "model", "text": "// Use the 10k pull-up variant; the 4.7k model is for the older board rev."}
+{"word": "model", "text": "Display model ST7735 uses SPI mode 3 at 8 MHz."}
+{"word": "model", "text": "Firmware supports the rev B sensor model only; rev A needs the legacy build."}
+{"word": "model", "text": "The connector model must match the mating half on the backplane."}
+{"word": "model", "text": "The enclosure model number is stamped on the underside label."}
+{"word": "model", "text": "The fan model in the BOM is 40 mm, 12V, 0.09A."}
+{"word": "model", "text": "The keypad model has a 4x4 matrix with diodes on each row."}
+{"word": "model", "text": "The relay model is rated 5A at 250VAC; do not exceed it."}
+{"word": "model", "text": "Timing model assumes a 16 MHz crystal with ±20 ppm tolerance."}
+{"word": "model", "text": "Use the shielded cable model for runs longer than 30 cm."}
+{"word": "model", "text": "Wiring harness model H-204 replaces H-197 starting with lot 12."}
+{"word": "no matter what", "text": "// Clamp the ADC input no matter what the external divider ratio turns out to be."}
+{"word": "no matter what", "text": "// Debounce the button in firmware no matter what the hardware RC filter does."}
+{"word": "no matter what", "text": "// Hold the enable line low no matter what during power-up sequencing."}
+{"word": "no matter what", "text": "// Keep the pull-up enabled no matter what, or the bus floats when the sensor is unplugged."}
+{"word": "no matter what", "text": "// Lock the configuration registers no matter what after the init sequence finishes."}
+{"word": "no matter what", "text": "// Route the ground return under the connector no matter what the layout tool suggests."}
+{"word": "no matter what", "text": "// Shield the analog trace no matter what the nearby switching regulator is doing."}
+{"word": "no matter what", "text": "// Terminate the RS-485 pair no matter what the stub length is."}
+{"word": "no matter what", "text": "// The UI must show a fault icon no matter what screen is currently active."}
+{"word": "no matter what", "text": "// The bootloader stays resident no matter what the application image size is."}
+{"word": "no matter what", "text": "Brown-out detector stays armed no matter what sleep mode we enter."}
+{"word": "no matter what", "text": "Keep the RTC backup battery isolated no matter what the main rail does during reset."}
+{"word": "no matter what", "text": "Keep the crystal load capacitors close to the pins no matter what the board revision."}
+{"word": "no matter what", "text": "No matter what the ambient temperature, the thermistor reading is compensated in software."}
+{"word": "no matter what", "text": "No matter what the baud rate, the UART frame must end with a stop bit."}
+{"word": "no matter what", "text": "No matter what the interrupt priority, the ISR must clear the flag before returning."}
+{"word": "no matter what", "text": "The EEPROM write cycle must complete no matter what the brown-out threshold is set to."}
+{"word": "no matter what", "text": "The fan PWM defaults to 50 percent no matter what the previous session left behind."}
+{"word": "no matter what", "text": "The status LED should blink at 1 Hz no matter what the application firmware is doing."}
+{"word": "no matter what", "text": "The watchdog must reset the MCU no matter what state the main loop is in."}
+{"word": "output", "text": "// Debounce the button and update the display output once per 20 ms."}
+{"word": "output", "text": "// Log the ADC output every second to the ring buffer."}
+{"word": "output", "text": "// Map the joystick output to the menu cursor with a dead zone."}
+{"word": "output", "text": "// Output current limited to 200 mA by the series resistor."}
+{"word": "output", "text": "// Output stage disabled during calibration to avoid driving the load."}
+{"word": "output", "text": "// Set output pin high after the sensor stabilizes."}
+{"word": "output", "text": "// TODO: clamp output to 0..255 before writing to the DAC."}
+{"word": "output", "text": "Connect the thermocouple output to the differential ADC input pair."}
+{"word": "output", "text": "Each sensor output is sampled at 100 Hz and averaged over 8 readings."}
+{"word": "output", "text": "Ensure the UART output buffer is flushed before entering sleep mode."}
+{"word": "output", "text": "Keep the output connector keyed so the harness cannot be reversed."}
+{"word": "output", "text": "Route the PWM output away from the analog input traces to reduce crosstalk."}
+{"word": "output", "text": "Spec: output ripple shall not exceed 50 mV peak-to-peak."}
+{"word": "output", "text": "The LED driver output is multiplexed across four common-cathode rows."}
+{"word": "output", "text": "The audio output jack shares a ground plane with the USB shield."}
+{"word": "output", "text": "The fan output ramps from 0 to 100% over five seconds on startup."}
+{"word": "output", "text": "The output voltage should remain within 3.3V ±5% under nominal load."}
+{"word": "output", "text": "The regulator output feeds both the MCU rail and the level shifters."}
+{"word": "output", "text": "The relay output must be de-energized on power loss."}
+{"word": "output", "text": "Timing spec: output valid within 12 ns of the clock edge."}
+{"word": "output all", "text": "// Configure the DAC so the buffer will output all channels simultaneously on the next trigger."}
+{"word": "output all", "text": "// If the FIFO fills, the UART will output all pending bytes before asserting flow control."}
+{"word": "output all", "text": "// Make sure the GPIO expander can output all eight pins before enabling the relay bank."}
+{"word": "output all", "text": "// Route the traces so the connector can output all differential pairs with matched lengths."}
+{"word": "output all", "text": "// Set the PWM block to output all channels with the same period but independent duty cycles."}
+{"word": "output all", "text": "// The CAN transceiver will output all frames in order once the bus is idle."}
+{"word": "output all", "text": "// The encoder will output all quadrature edges cleanly once the debounce filter is tuned."}
+{"word": "output all", "text": "// The multiplexer will output all inputs to the scope one at a time during the sweep."}
+{"word": "output all", "text": "// Verify the level shifter can output all logic levels within the 3.3 V rail tolerance."}
+{"word": "output all", "text": "// We need the shift register to output all bits LSB-first to match the LED panel wiring."}
+{"word": "output all", "text": "Bench note: the function generator should output all three waveforms only after the sync pulse."}
+{"word": "output all", "text": "During the burn-in run, the fixture should output all stimulus patterns for at least 24 hours."}
+{"word": "output all", "text": "Ensure the regulator can output all required rails during the cold-start sequence."}
+{"word": "output all", "text": "Spec 2.9: The status LED driver must output all blink patterns defined in the user manual."}
+{"word": "output all", "text": "Spec 4.3: On power-up the display driver must output all segment lines in a known low state."}
+{"word": "output all", "text": "Spec 7.1: The test header must output all diagnostic signals without loading the main bus."}
+{"word": "output all", "text": "The audio codec will output all six channels through the TDM bus when the master clock is stable."}
+{"word": "output all", "text": "The sensor hub shall output all sampled channels over I2C at a fixed 100 Hz rate."}
+{"word": "output all", "text": "The timing controller is set to output all four phase signals with a fixed 50 ns skew."}
+{"word": "output all", "text": "The touch controller shall output all coordinate reports only after the wake interrupt is acknowledged."}
+{"word": "override", "text": "// Don't override the watchdog feed timing here; the ISR already handles it."}
+{"word": "override", "text": "// Manual override: hold BTN1 for 3s to force the relay closed regardless of sensor state."}
+{"word": "override", "text": "// Override the brownout threshold to 2.7V for the low-power variant."}
+{"word": "override", "text": "// Override the default 10ms debounce for the reed switch on this board revision."}
+{"word": "override", "text": "// Override the default sensor polling interval to 50ms when the accelerometer detects motion."}
+{"word": "override", "text": "// TODO: remove the debug override before the production build ships."}
+{"word": "override", "text": "// Temporary override of the PWM frequency for the buzzer sweep test."}
+{"word": "override", "text": "// The override flag in the status register clears automatically after one polling cycle."}
+{"word": "override", "text": "// We override the default I2C address at runtime if the EEPROM config byte is nonzero."}
+{"word": "override", "text": "A long-press override on the touch panel disables the auto-dim for 30 minutes."}
+{"word": "override", "text": "Emergency override of the door lock requires two simultaneous key presses."}
+{"word": "override", "text": "Firmware override of the RTC trim register is only permitted during factory calibration."}
+{"word": "override", "text": "If the thermistor reads out of range, the fan override kicks in at 100% duty."}
+{"word": "override", "text": "Operator override is available via the front-panel keypad whenever the interlock is satisfied."}
+{"word": "override", "text": "Spec 4.2.1: the hardware override switch shall take precedence over all firmware-controlled outputs."}
+{"word": "override", "text": "Spec 7.3: any manual override event shall be logged with a timestamp to nonvolatile memory."}
+{"word": "override", "text": "The calibration override in the config block is ignored unless the magic word is present."}
+{"word": "override", "text": "The lid sensor override lets maintenance staff open the enclosure while the motor is idle."}
+{"word": "override", "text": "The override jumper on J4 bypasses the soft-start delay during bench testing."}
+{"word": "override", "text": "The override pin (PA7) is pulled low by default and must be driven high to disable the safety cutoff."}
+{"word": "passed", "text": "// Data passed from the UART FIFO to the ring buffer without overflow."}
+{"word": "passed", "text": "// Note: the debounce timer passed its 20 ms window before the ISR fired."}
+{"word": "passed", "text": "// The ADC calibration routine passed on all three boards in the batch."}
+{"word": "passed", "text": "// The UI event passed from the touch controller to the display task queue."}
+{"word": "passed", "text": "// The button press passed the 50 ms debounce filter and registered once."}
+{"word": "passed", "text": "// The clock signal passed through the divider and arrived at 1 MHz."}
+{"word": "passed", "text": "// The wire passed behind the shield can and was routed away from the crystal."}
+{"word": "passed", "text": "A 100 nF cap passed the ripple straight to ground, as intended."}
+{"word": "passed", "text": "ESD test passed at 8 kV contact discharge on the enclosure."}
+{"word": "passed", "text": "Power-on self-test passed with no faults logged to EEPROM."}
+{"word": "passed", "text": "Sensor warm-up period passed; readings are now within ±0.5 °C."}
+{"word": "passed", "text": "The 3.3 V rail passed the load-step check at 500 mA."}
+{"word": "passed", "text": "The I2C bus passed the ACK check for every device on the chain."}
+{"word": "passed", "text": "The bootloader passed control to the application after the handshake."}
+{"word": "passed", "text": "The firmware update passed CRC verification on the first attempt."}
+{"word": "passed", "text": "The harness passed the pull-test at 30 N without damage."}
+{"word": "passed", "text": "The signal passed through the ferrite bead before reaching the MCU pin."}
+{"word": "passed", "text": "The thermistor reading passed the plausibility check against the reference sensor."}
+{"word": "passed", "text": "The watchdog refresh passed within the window on every loop iteration."}
+{"word": "passed", "text": "Timing analysis passed: worst-case latency is 42 µs."}
+{"word": "password", "text": "// Default password for the debug console is printed on the label under the battery."}
+{"word": "password", "text": "// If the password check fails three times, blink the red LED for 5 s."}
+{"word": "password", "text": "// Keep the password prompt off the boot splash to avoid confusing field techs."}
+{"word": "password", "text": "// Note: password length is limited to 8 chars by the membrane keypad layout."}
+{"word": "password", "text": "// Password field uses a masked input widget on the touchscreen."}
+{"word": "password", "text": "// Password hashing runs on the secure element, not the main MCU."}
+{"word": "password", "text": "// TODO: wipe the stored password from EEPROM on factory reset."}
+{"word": "password", "text": "// The RTC keeps the password lockout timer running across a power cycle."}
+{"word": "password", "text": "// The password LED shares a GPIO with the buzzer, so don't drive both at once."}
+{"word": "password", "text": "// Wiring: the password reset jumper sits on header J4, pins 2-3."}
+{"word": "password", "text": "Hold the button for 3 s to enter the password change screen."}
+{"word": "password", "text": "Rotary encoder doubles as the password dial when the service menu is open."}
+{"word": "password", "text": "Sensor calibration mode is gated behind the same password as the config menu."}
+{"word": "password", "text": "Spec: after five bad password attempts the unit locks for 60 seconds."}
+{"word": "password", "text": "Spec: password characters echo as asterisks on the 16x2 LCD."}
+{"word": "password", "text": "Spec: the front-panel password entry shall time out after 30 seconds of inactivity."}
+{"word": "password", "text": "The door sensor logs an event whenever the password prompt is dismissed."}
+{"word": "password", "text": "The keypad accepts a 4-digit password before unlocking the enclosure door."}
+{"word": "password", "text": "The tamper switch clears the cached password from RAM when the case is opened."}
+{"word": "password", "text": "Timing diagram shows the password handshake completing within 200 ms of power-up."}
+{"word": "pretend", "text": "// Pretend the EEPROM write succeeded and continue; the retry loop handles real failures."}
+{"word": "pretend", "text": "// Pretend the GPIO interrupt fired to verify the handler clears the pending flag."}
+{"word": "pretend", "text": "// Pretend the SPI slave is selected and clock out a dummy byte to flush the shift register."}
+{"word": "pretend", "text": "// Pretend the UART FIFO is empty so the next byte goes out immediately."}
+{"word": "pretend", "text": "// Pretend the battery is at 100 percent so the low-power path is not entered during bench tests."}
+{"word": "pretend", "text": "// Pretend the crystal is already stable; the PLL lock flag is checked separately."}
+{"word": "pretend", "text": "// Pretend the relay is normally closed so the self-test does not trip the load."}
+{"word": "pretend", "text": "// Pretend the sensor is unplugged so the calibration routine takes the fallback path."}
+{"word": "pretend", "text": "// Pretend the timer wrapped once to exercise the rollover branch in the scheduler."}
+{"word": "pretend", "text": "// Pretend we have a full 16-bit ADC here; the actual part is 12-bit and shifted left."}
+{"word": "pretend", "text": "During factory test, pretend the thermistor reads 25 C to skip the warm-up wait."}
+{"word": "pretend", "text": "For the wiring harness check, pretend each pin is pulled up and read the resulting levels."}
+{"word": "pretend", "text": "In loopback mode, pretend the RS-485 transceiver is enabled and echo the frame back."}
+{"word": "pretend", "text": "In the demo mode, the display will pretend a GPS fix is available and show a canned position."}
+{"word": "pretend", "text": "Spec: The UI shall pretend the button was pressed for 50 ms to debounce contact bounce."}
+{"word": "pretend", "text": "Spec: The buzzer shall pretend to be silent by gating its enable line, not by cutting power."}
+{"word": "pretend", "text": "Spec: The status LED shall pretend to be off during sleep by driving the pin high-Z."}
+{"word": "pretend", "text": "The bootloader may pretend the watchdog was kicked once to satisfy the startup check."}
+{"word": "pretend", "text": "The config wizard will pretend the user accepted the defaults if no input arrives within 30 seconds."}
+{"word": "pretend", "text": "The touch panel driver can pretend a tap occurred to wake the screen from idle."}
+{"word": "previous", "text": "// Compare the current ADC reading against the previous sample to detect a step change."}
+{"word": "previous", "text": "// Log the previous and current temperature whenever the hysteresis threshold is crossed."}
+{"word": "previous", "text": "// Restore the previous sensor calibration values from NVRAM on boot."}
+{"word": "previous", "text": "// Roll back to the previous register value if the write verify fails."}
+{"word": "previous", "text": "// Save the previous duty cycle so we can ramp back smoothly after a fault."}
+{"word": "previous", "text": "// The previous frame's timestamp is used to compute the inter-frame interval."}
+{"word": "previous", "text": "// The previous state machine node is stored for the undo path in the UI."}
+{"word": "previous", "text": "If the checksum mismatches, discard the packet and keep the previous configuration."}
+{"word": "previous", "text": "If the debounce timer expires, the previous button state is retained."}
+{"word": "previous", "text": "On timeout, the display reverts to the previous screen without clearing the buffer."}
+{"word": "previous", "text": "Spec: the LED shall blink at 2 Hz until the previous alarm condition is acknowledged."}
+{"word": "previous", "text": "Spec: the buzzer tone shall not change until the previous tone has finished playing."}
+{"word": "previous", "text": "Spec: the controller shall resume the previous operating mode after a power cycle."}
+{"word": "previous", "text": "The previous batch of thermistors had a wider tolerance band, so recheck the offset table."}
+{"word": "previous", "text": "The previous connector footprint had a 2.54 mm pitch; the new one is 2.00 mm."}
+{"word": "previous", "text": "The previous firmware revision used a 10k pull-up on the I2C bus; this board uses 4.7k."}
+{"word": "previous", "text": "The previous page of the menu is reached by holding the encoder button for 500 ms."}
+{"word": "previous", "text": "The previous revision of this schematic omitted the series resistor on the reset line."}
+{"word": "previous", "text": "The previous test fixture used a 5 V supply; confirm the new one is set to 3.3 V."}
+{"word": "previous", "text": "Wiring note: keep the previous ground return separate from the analog ground plane."}
+{"word": "print", "text": "/* print buffer must be flushed before entering low-power sleep */"}
+{"word": "print", "text": "// TODO: print the ADC sample count every 500 ms during bring-up"}
+{"word": "print", "text": "// don't print raw register dumps in production builds"}
+{"word": "print", "text": "// print a short banner over I2C when the display controller resets"}
+{"word": "print", "text": "// print a warning if the RTC drift exceeds 2 seconds per day"}
+{"word": "print", "text": "// print one line per encoder tick to verify quadrature decoding"}
+{"word": "print", "text": "// print sensor ID and firmware revision to the serial console on startup"}
+{"word": "print", "text": "// print the GPIO pin map as a comment block above main()"}
+{"word": "print", "text": "// print the sensor calibration table to the debug UART once at boot"}
+{"word": "print", "text": "// print the timing trace after the watchdog test completes"}
+{"word": "print", "text": "Keep the print buffer under 256 bytes so the ISR never blocks the SPI bus."}
+{"word": "print", "text": "Spec 4.2: the receipt print speed defaults to 80 mm/s and is configurable via DIP switch 3."}
+{"word": "print", "text": "Spec: print density is set by PWM duty on the heater line, range 40 to 90 percent."}
+{"word": "print", "text": "Spec: the front-panel print button shall trigger a label print of the current temperature reading."}
+{"word": "print", "text": "The label print routine waits for the paper-out sensor to go low before advancing."}
+{"word": "print", "text": "The print head thermistor reading is sampled every 10 ms and clamped to 60 C."}
+{"word": "print", "text": "The status LED blinks twice whenever a print job is queued from the keypad."}
+{"word": "print", "text": "The thermal print head requires a 20 ms warm-up delay before the first dot line."}
+{"word": "print", "text": "User interface: holding the print key for 3 s feeds paper without printing."}
+{"word": "print", "text": "Wiring note: route the print-head ribbon cable away from the stepper driver to avoid EMI."}
+{"word": "print all", "text": "// TODO: print all ADC channel values after calibration completes"}
+{"word": "print all", "text": "// print all PWM duty cycles each frame during tuning"}
+{"word": "print all", "text": "// print all active interrupts in the fault handler for post-mortem review"}
+{"word": "print all", "text": "// print all connected sensor IDs at the end of the bus scan"}
+{"word": "print all", "text": "// print all fan speed setpoints when the thermal profile changes"}
+{"word": "print all", "text": "// print all pending timer events before entering low-power sleep"}
+{"word": "print all", "text": "// print all queued button events when the UI debug flag is set"}
+{"word": "print all", "text": "// print all scheduled tasks and their deadlines in the RTOS trace output"}
+{"word": "print all", "text": "// print all sensor readings to the debug UART once per second"}
+{"word": "print all", "text": "// print all temperature samples from the ring buffer on demand"}
+{"word": "print all", "text": "During factory bring-up, print all detected expansion headers to the terminal."}
+{"word": "print all", "text": "On startup, print all EEPROM-stored calibration constants to the console."}
+{"word": "print all", "text": "Spec 4.2: the test jig shall print all measured voltages to the serial port."}
+{"word": "print all", "text": "Spec: the diagnostic menu shall print all detected I2C devices on the LCD."}
+{"word": "print all", "text": "The CLI command 'dump' will print all stored configuration records."}
+{"word": "print all", "text": "The boot log will print all configured GPIO pin states for verification."}
+{"word": "print all", "text": "The handheld reader shall print all scanned tag IDs to its display log."}
+{"word": "print all", "text": "The service tool can print all register contents of the motor driver over SWD."}
+{"word": "print all", "text": "When the watchdog resets, print all retained RAM values to the log."}
+{"word": "prompt", "text": "// debounce the button before showing the confirm prompt"}
+{"word": "prompt", "text": "// don't block here; just prompt and return"}
+{"word": "prompt", "text": "// keep the prompt visible until the watchdog resets"}
+{"word": "prompt", "text": "// prompt for a new setpoint only when the heater is off"}
+{"word": "prompt", "text": "// prompt once per session, not on every poll"}
+{"word": "prompt", "text": "// prompt the operator before clearing the fault log"}
+{"word": "prompt", "text": "// prompt the tech to verify polarity before enabling the relay"}
+{"word": "prompt", "text": "// prompt the user to reseat the ribbon cable if the bus stays idle"}
+{"word": "prompt", "text": "// prompt-driven menu: press OK to confirm calibration"}
+{"word": "prompt", "text": "// route the prompt to the debug UART in test builds"}
+{"word": "prompt", "text": "// suppress the prompt during firmware flashing"}
+{"word": "prompt", "text": "A blinking cursor in the prompt indicates the UART is ready."}
+{"word": "prompt", "text": "A short prompt tone plays when the keypad buffer is full."}
+{"word": "prompt", "text": "Spec: the boot prompt shall appear within 500 ms of power-on."}
+{"word": "prompt", "text": "Spec: the low-battery prompt shall repeat every 30 seconds."}
+{"word": "prompt", "text": "Spec: the pairing prompt shall time out after 60 seconds."}
+{"word": "prompt", "text": "Spec: the prompt text shall fit within 16 characters per line."}
+{"word": "prompt", "text": "The CLI prompt echoes the current baud rate on connect."}
+{"word": "prompt", "text": "The LCD shows a prompt when the sensor reading exceeds the threshold."}
+{"word": "prompt", "text": "The diagnostic prompt lists detected I2C devices on the bus."}
+{"word": "prompt", "text": "The prompt asks the operator to confirm the wiring harness is seated."}
+{"word": "prompt", "text": "The prompt on the OLED clears after three seconds of inactivity."}
+{"word": "regardless of", "text": "// Clock stretching is honored regardless of which device initiated the transfer."}
+{"word": "regardless of", "text": "// Hold the reset line low regardless of the debugger's state."}
+{"word": "regardless of", "text": "// Keep the isolation barrier intact regardless of connector orientation."}
+{"word": "regardless of", "text": "// Keep the pull-up enabled regardless of the pin's alternate function setting."}
+{"word": "regardless of", "text": "// Route the ground return on the same layer regardless of stackup."}
+{"word": "regardless of", "text": "// Sensor readings are latched regardless of whether the bus is idle."}
+{"word": "regardless of", "text": "// Terminate the CAN bus regardless of stub length."}
+{"word": "regardless of", "text": "// The EEPROM write completes regardless of an early reset request."}
+{"word": "regardless of", "text": "// The LED stays green regardless of the charging state once power is applied."}
+{"word": "regardless of", "text": "// The fan ramps to full speed regardless of the temperature sensor's reading."}
+{"word": "regardless of", "text": "Debounce logic ignores contact bounce regardless of switch type."}
+{"word": "regardless of", "text": "Firmware logs the fault code regardless of whether the motor is spinning."}
+{"word": "regardless of", "text": "Regardless of ambient light, the backlight defaults to 40% brightness at boot."}
+{"word": "regardless of", "text": "Regardless of the jumper position, the board draws under 5 mA in standby."}
+{"word": "regardless of", "text": "Regardless of the supply voltage within spec, the ADC reference stays at 3.0 V."}
+{"word": "regardless of", "text": "The UI keeps the last screen visible regardless of orientation changes."}
+{"word": "regardless of", "text": "The status register clears on read regardless of the interrupt mask."}
+{"word": "regardless of", "text": "The touch panel reports coordinates regardless of glove thickness."}
+{"word": "regardless of", "text": "The watchdog resets the MCU regardless of the current sleep mode."}
+{"word": "regardless of", "text": "Timing margins are checked regardless of the selected clock source."}
+{"word": "repeat", "text": "// do not repeat the write command within 1 ms of the previous one"}
+{"word": "repeat", "text": "// repeat the CRC check on the received frame"}
+{"word": "repeat", "text": "// repeat the calibration sequence after each power cycle"}
+{"word": "repeat", "text": "// repeat the debounce check to confirm the button state"}
+{"word": "repeat", "text": "// repeat the handshake after a bus reset"}
+{"word": "repeat", "text": "// repeat the measurement if the ADC reading is out of range"}
+{"word": "repeat", "text": "// repeat the sampling window for each channel in turn"}
+{"word": "repeat", "text": "// repeat the self-test once per boot cycle"}
+{"word": "repeat", "text": "// repeat until the buffer is empty, then clear the flag"}
+{"word": "repeat", "text": "Firmware shall repeat the watchdog kick no later than every 500 ms."}
+{"word": "repeat", "text": "Keep the trace length matched; repeat this rule for every differential pair."}
+{"word": "repeat", "text": "Sensor polling shall repeat at 10 Hz nominal with ±5% tolerance."}
+{"word": "repeat", "text": "The UI shall repeat the last error message on the display until acknowledged."}
+{"word": "repeat", "text": "The buzzer may repeat the alert tone up to three times per event."}
+{"word": "repeat", "text": "The enclosure label repeats the model number and serial on both sides."}
+{"word": "repeat", "text": "The keypad repeat rate is configurable from 2 to 30 characters per second."}
+{"word": "repeat", "text": "The status LED will repeat the blink pattern every 2 seconds while charging."}
+{"word": "repeat", "text": "Wiring harness clips repeat every 150 mm along the chassis rail."}
+{"word": "report all", "text": "// After wiring check, report all continuity results to the test fixture."}
+{"word": "report all", "text": "// Don't forget to report all EEPROM write failures to the error log."}
+{"word": "report all", "text": "// Make sure to report all interrupt latency measurements to the profiler."}
+{"word": "report all", "text": "// Note: report all timing overruns to the scheduler trace buffer."}
+{"word": "report all", "text": "// On watchdog reset, report all saved register values to nonvolatile memory."}
+{"word": "report all", "text": "// Please report all encoder glitches to the diagnostics ring buffer."}
+{"word": "report all", "text": "// Remember to report all thermocouple readings in degrees Celsius, not raw counts."}
+{"word": "report all", "text": "// Sensor init done; report all channel offsets to the calibration log."}
+{"word": "report all", "text": "// TODO: report all ADC readings once per second instead of on demand."}
+{"word": "report all", "text": "// We should report all PWM duty cycles in the telemetry frame."}
+{"word": "report all", "text": "Firmware shall report all GPIO pin states at startup for board bring-up."}
+{"word": "report all", "text": "Spec 3.4: The display shall report all backlight brightness levels during dimming."}
+{"word": "report all", "text": "Spec 4.2: The UI must report all active fault codes on the status screen."}
+{"word": "report all", "text": "Spec 5.9: The keypad controller must report all debounce timings to the host."}
+{"word": "report all", "text": "Spec 7.1: The charger must report all cell balance statuses over CAN."}
+{"word": "report all", "text": "The HMI should report all button presses with a timestamp to the event queue."}
+{"word": "report all", "text": "The bootloader shall report all detected I2C devices on the debug UART."}
+{"word": "report all", "text": "The power monitor will report all rail voltages every 500 ms."}
+{"word": "report all", "text": "The sensor hub will report all ambient light samples once the filter settles."}
+{"word": "report all", "text": "The test jig will report all connector pin resistances after the sweep completes."}
+{"word": "reveal", "text": "// Reveal the GPIO configuration table in the header file comments."}
+{"word": "reveal", "text": "// Reveal the I2C bus scan results over UART at startup."}
+{"word": "reveal", "text": "// Reveal the PWM duty cycle on the scope trigger output for bench verification."}
+{"word": "reveal", "text": "// Reveal the debounce timing constants when verbose logging is enabled."}
+{"word": "reveal", "text": "// Reveal the interrupt priority assignments in the linker map output."}
+{"word": "reveal", "text": "// Reveal the last reset cause from the watchdog status register."}
+{"word": "reveal", "text": "// Reveal the raw ADC counts before applying the moving-average filter."}
+{"word": "reveal", "text": "// Reveal the sensor calibration values in the debug log for field diagnostics."}
+{"word": "reveal", "text": "// Reveal the timer prescaler register value during the timing self-check."}
+{"word": "reveal", "text": "// Reveal the wiring harness pinout in the maintenance panel diagram."}
+{"word": "reveal", "text": "A long press reveals the RSSI reading on the OLED status screen."}
+{"word": "reveal", "text": "A short press reveals the current temperature setpoint on the seven-segment display."}
+{"word": "reveal", "text": "Holding both buttons for two seconds reveals the hidden service menu."}
+{"word": "reveal", "text": "Spec: the boot splash shall reveal the firmware version for 500 ms."}
+{"word": "reveal", "text": "The datasheet reveals the recommended decoupling capacitor placement for the crystal."}
+{"word": "reveal", "text": "The diagnostic port reveals the sensor's internal state machine on request."}
+{"word": "reveal", "text": "The enclosure label reveals the connector polarity to prevent reverse insertion."}
+{"word": "reveal", "text": "The front-panel legend reveals which terminal is ground and which is live."}
+{"word": "reveal", "text": "The status LED will reveal a slow amber blink when the battery drops below 3.4 V."}
+{"word": "reveal", "text": "The test jig reveals continuity faults by lighting the corresponding probe LED."}
+{"word": "root", "text": "// TODO: verify root permissions before flashing the bootloader"}
+{"word": "root", "text": "// check root of the stack trace before blaming the ISR"}
+{"word": "root", "text": "// root cause of the sensor drift traced to a cold solder joint on the ADC pin"}
+{"word": "root", "text": "// root of the flicker was the PWM prescaler set one notch too high"}
+{"word": "root", "text": "// root of the interrupt storm was a floating enable line on the expander"}
+{"word": "root", "text": "// the root of this timing skew is the mismatched trace lengths"}
+{"word": "root", "text": "// the timing root of the jitter issue is the shared 32 kHz oscillator"}
+{"word": "root", "text": "Firmware update flow starts at the root menu and walks the user through each step."}
+{"word": "root", "text": "Keep the cable root radius above 40 mm to avoid exceeding bend spec."}
+{"word": "root", "text": "Root the antenna mast to the enclosure frame with two M4 standoffs."}
+{"word": "root", "text": "Route the ground return to the root of the star topology at the PSU."}
+{"word": "root", "text": "Sensor calibration values live under the root of the config tree."}
+{"word": "root", "text": "Spec 4.2: the root certificate store shall be provisioned at the factory."}
+{"word": "root", "text": "Spec 7.1: root-level access to the debug port requires a signed key."}
+{"word": "root", "text": "Spec 9.3: label the root of each wiring branch with its circuit ID."}
+{"word": "root", "text": "The filesystem root partition is mounted read-only during normal operation."}
+{"word": "root", "text": "The root hub enumerates all downstream USB devices at power-on."}
+{"word": "root", "text": "The root node of the device tree describes the SoC and its memory map."}
+{"word": "root", "text": "UI note: the settings menu is the root screen for all configuration paths."}
+{"word": "root", "text": "Wiring harness root point is the chassis ground lug behind the fuse block."}
+{"word": "rules", "text": "// Bus rules: the master owns the clock, the sensor only stretches it."}
+{"word": "rules", "text": "// Coding rules for this module: no dynamic allocation after init."}
+{"word": "rules", "text": "// Debounce rules: ignore transitions shorter than 5 ms on the door switch."}
+{"word": "rules", "text": "// Interrupt rules: clear the flag before re-enabling the line."}
+{"word": "rules", "text": "// Layout rules: keep the crystal within 5 mm of the MCU pins."}
+{"word": "rules", "text": "// Naming rules: prefix all GPIO macros with BOARD_."}
+{"word": "rules", "text": "// Pull-up rules: one 10k resistor per I2C line, no exceptions."}
+{"word": "rules", "text": "// Sampling rules: average four ADC reads before reporting the temperature."}
+{"word": "rules", "text": "// Timing rules for the watchdog: kick it once per main-loop pass, never from an ISR."}
+{"word": "rules", "text": "// Wiring rules: keep the sensor leads away from the motor supply harness."}
+{"word": "rules", "text": "Per the EMC rules, route the clock trace on the inner layer only."}
+{"word": "rules", "text": "Spec section 4.2: the power-on self-test rules out any boot if the rail is below 3.0 V."}
+{"word": "rules", "text": "The UI style rules specify a minimum touch target of 44 px."}
+{"word": "rules", "text": "The calibration rules say to zero the load cell with the platform empty."}
+{"word": "rules", "text": "The connector keying rules prevent the ribbon from being inserted upside down."}
+{"word": "rules", "text": "The display refresh rules cap the frame rate at 30 Hz to save power."}
+{"word": "rules", "text": "The enclosure labeling rules require the ground symbol on every terminal block."}
+{"word": "rules", "text": "The safety rules for the heater require a hardware cutoff independent of firmware."}
+{"word": "rules", "text": "The spec's timing rules allow up to 2 ms of jitter on the PWM output."}
+{"word": "rules", "text": "The user-interface rules require a confirmation step before any factory reset."}
+{"word": "secret", "text": "// Keep the calibration key secret from the field techs; it's only for factory use."}
+{"word": "secret", "text": "// No secret here: the pull-up resistor is just 10k to VCC."}
+{"word": "secret", "text": "// No secret timing trick here, the LED just blinks at 1 Hz from the systick."}
+{"word": "secret", "text": "// Secret internal flag: bit 7 of the status register means the sensor is saturated."}
+{"word": "secret", "text": "// Secret: the watchdog actually resets at 1.8 s, not the 2 s in the datasheet."}
+{"word": "secret", "text": "// The secret of the UI is that the long-press threshold is 800 ms, not 500 ms."}
+{"word": "secret", "text": "// The secret of this wiring harness is that pin 3 and pin 4 are swapped on purpose."}
+{"word": "secret", "text": "// The secret sauce of this debounce routine is a 20 ms sample window."}
+{"word": "secret", "text": "// There's a secret 100 nF cap hidden under the shield can for the RF front end."}
+{"word": "secret", "text": "// There's no secret password on the debug port, just a jumper you have to short."}
+{"word": "secret", "text": "Keep the secret test point on the back of the board so it doesn't clutter the front panel."}
+{"word": "secret", "text": "Route the secret GPIO trace away from the switching regulator to avoid noise coupling."}
+{"word": "secret", "text": "Spec: the secret boot key combination is holding both buttons for 3 seconds at power-on."}
+{"word": "secret", "text": "Spec: the secret handshake between MCU and sensor is a 0x5A preamble followed by a checksum."}
+{"word": "secret", "text": "Spec: the secret serial number is stored in the last 16 bytes of EEPROM."}
+{"word": "secret", "text": "The secret to a clean I2C bus is 4.7k pull-ups and short traces."}
+{"word": "secret", "text": "The secret to accurate timing is trimming the internal RC oscillator against the crystal at boot."}
+{"word": "secret", "text": "The secret to low jitter is a dedicated 32.768 kHz crystal on its own ground island."}
+{"word": "secret", "text": "The secret to reliable button presses is a Schmitt trigger input, not software filtering alone."}
+{"word": "secret", "text": "The secret to stable readings is letting the ADC settle for 2 ms after switching channels."}
+{"word": "show", "text": "// show a short blink pattern on D13 to indicate the watchdog reset"}
+{"word": "show", "text": "// show calibration values after the first boot to confirm the EEPROM write"}
+{"word": "show", "text": "// show raw ADC counts here while bringing up the thermistor channel"}
+{"word": "show", "text": "// show the CRC result in the log so we can compare against the reference build"}
+{"word": "show", "text": "// show the PWM duty cycle on the scope while sweeping the pot from end to end"}
+{"word": "show", "text": "// show the RTC drift in seconds per day after the 72-hour run"}
+{"word": "show", "text": "// show the SPI mode and clock divider at init for sanity"}
+{"word": "show", "text": "// show the battery voltage on the OLED during low-power sleep wakeups"}
+{"word": "show", "text": "// show the debounce counter value when the button seems to double-trigger"}
+{"word": "show", "text": "// show the encoder quadrature states in the trace to catch missed edges"}
+{"word": "show", "text": "// show the interrupt latency histogram after the stress run"}
+{"word": "show", "text": "// show the last error code on the seven-segment display until cleared"}
+{"word": "show", "text": "// show the measured period on the logic analyzer to verify the 10 kHz PWM"}
+{"word": "show", "text": "// show the sensor reading on the debug UART once per second"}
+{"word": "show", "text": "// show the stack high-water mark in the idle task once a minute"}
+{"word": "show", "text": "// show the temperature trend on the serial plotter during the soak test"}
+{"word": "show", "text": "A quick look at the schematic shows the reset line lacks a series resistor."}
+{"word": "show", "text": "Bench notes show the pull-up resistor needs to drop to 2.2k for reliable I2C at 400 kHz."}
+{"word": "show", "text": "During power-up self-test, the display must show all segments for 500 ms."}
+{"word": "show", "text": "Per the datasheet, the timing diagram shows a minimum 5 us between chip-select pulses."}
+{"word": "show", "text": "Spec: the front panel shall show the current setpoint within 200 ms of a key press."}
+{"word": "show", "text": "The UI spec says the settings screen should show units next to every numeric field."}
+{"word": "show", "text": "The boot sequence should show the firmware version and build date on the LCD for two seconds."}
+{"word": "show", "text": "The enclosure drawing shows the antenna keep-out zone shaded in gray."}
+{"word": "show", "text": "The harness drawing shows the twisted pair routed away from the motor leads."}
+{"word": "show", "text": "The label on the connector shows pin 1 orientation with a small triangle."}
+{"word": "show", "text": "The spec requires the keypad backlight to show activity only while a key is held."}
+{"word": "show", "text": "The status LED should show green when the link is up and amber while negotiating."}
+{"word": "show", "text": "The test fixture should show pass or fail on the red and green lamps respectively."}
+{"word": "show", "text": "The timing chart shows CLK rising 20 ns before the data line settles."}
+{"word": "show", "text": "The user guide should show how to reseat the ribbon cable without bending the pins."}
+{"word": "show", "text": "The wiring diagram shows the shield tied to chassis ground at a single point."}
+{"word": "show all", "text": "// Debug flag: show all sensor readings on the serial console during bring-up."}
+{"word": "show all", "text": "// Quick hack: show all GPIO states whenever the UART receives a 'd' character."}
+{"word": "show all", "text": "// Set SHOW_ALL_BITS to 1 to show all bits of the shift register in the log."}
+{"word": "show all", "text": "// TODO: show all pending interrupts in the trace buffer before the watchdog fires."}
+{"word": "show all", "text": "// show all active PWM channels in the scope capture to compare duty cycles."}
+{"word": "show all", "text": "// show all channels of the ADC in the plotter for a quick sanity check."}
+{"word": "show all", "text": "// show all pending tasks in the RTOS viewer when debugging the scheduler stall."}
+{"word": "show all", "text": "// show all queued CAN frames in the terminal until we find the missing heartbeat."}
+{"word": "show all", "text": "// show all register writes to the EEPROM so we can audit the config sequence."}
+{"word": "show all", "text": "// show all timers in the debug view so we can spot the one that keeps drifting."}
+{"word": "show all", "text": "During factory test, the fixture shall show all rail voltages on the panel meter."}
+{"word": "show all", "text": "Press and hold the test button for two seconds to show all diagnostic LEDs at once."}
+{"word": "show all", "text": "Spec 4.2: the HMI shall show all active alarms in a single scrollable list."}
+{"word": "show all", "text": "Spec 7.1: the dashboard shall show all sensor channels at a minimum of 1 Hz."}
+{"word": "show all", "text": "The bootloader menu can show all detected I2C addresses on the bus."}
+{"word": "show all", "text": "The calibration screen will show all four load-cell offsets side by side."}
+{"word": "show all", "text": "The service tool can show all detected faults with timestamps and hex codes."}
+{"word": "show all", "text": "The settings menu lets the operator show all stored presets on one screen."}
+{"word": "show all", "text": "The status page shall show all connected peripherals and their firmware revisions."}
+{"word": "show all", "text": "The wiring diagram should show all ground returns tied to a single chassis stud."}
+{"word": "skip", "text": "// TODO: skip channels 6-7 on rev B boards, they are not populated"}
+{"word": "skip", "text": "// skip padding bytes when parsing the EEPROM header"}
+{"word": "skip", "text": "// skip the first LED in the chain, it is the power indicator"}
+{"word": "skip", "text": "// skip the first sample after power-on to avoid ADC settling error"}
+{"word": "skip", "text": "// skip the last byte of the packet, it is just the checksum placeholder"}
+{"word": "skip", "text": "// skip the optional temperature check in low-power mode"}
+{"word": "skip", "text": "// skip this block on hardware without the external RTC"}
+{"word": "skip", "text": "During calibration, skip the first 100 readings to let the thermistor stabilize."}
+{"word": "skip", "text": "Firmware shall skip redundant writes to the same register value."}
+{"word": "skip", "text": "If the button is held during reset, skip the normal startup chime."}
+{"word": "skip", "text": "If the sensor does not respond within 5 ms, skip to the next slot in the scan table."}
+{"word": "skip", "text": "Operators may skip the self-test by holding the service key for two seconds."}
+{"word": "skip", "text": "Skip the debounce delay for the emergency-stop input; it must latch immediately."}
+{"word": "skip", "text": "The DMA engine will skip descriptors marked with the DONE flag."}
+{"word": "skip", "text": "The UI may skip the splash screen when resuming from deep sleep."}
+{"word": "skip", "text": "The bootloader will skip CRC verification if the magic word is 0xFFFFFFFF."}
+{"word": "skip", "text": "The display driver can skip a frame if the previous one has not finished transferring."}
+{"word": "skip", "text": "The scheduler will skip any task whose deadline has already passed."}
+{"word": "skip", "text": "When the battery is below 3.0 V, skip the backlight ramp and go straight to dim."}
+{"word": "skip", "text": "Wiring note: skip the ferrite bead on the UART lines if the cable is under 10 cm."}
+{"word": "skip all", "text": "// skip all ADC oversampling when the battery voltage is below 3.0 V"}
+{"word": "skip all", "text": "// skip all PWM ramping on cold start to reach target duty quickly"}
+{"word": "skip all", "text": "// skip all UART logging in the release build to free flash space"}
+{"word": "skip all", "text": "// skip all calibration steps if the EEPROM checksum already matches"}
+{"word": "skip all", "text": "// skip all debounce delays when the button is held for more than 2 seconds"}
+{"word": "skip all", "text": "// skip all keypad scans while the backlight is off to save power"}
+{"word": "skip all", "text": "// skip all menu animations when the display refresh rate drops below 30 Hz"}
+{"word": "skip all", "text": "// skip all retry attempts if the I2C bus reports a stuck clock"}
+{"word": "skip all", "text": "// skip all splash screen frames if the watchdog reset flag is set"}
+{"word": "skip all", "text": "// skip all temperature compensation when the reading is within ±0.5 °C"}
+{"word": "skip all", "text": "During factory test, skip all user prompts and run the self-check directly."}
+{"word": "skip all", "text": "If the sensor bus is idle, skip all polling and wait for the interrupt."}
+{"word": "skip all", "text": "In diagnostic mode, skip all safety interlocks except the overcurrent trip."}
+{"word": "skip all", "text": "Spec: In low-power mode, skip all LED refresh cycles to save current."}
+{"word": "skip all", "text": "Spec: skip all redundant CRC checks on the internal loopback path."}
+{"word": "skip all", "text": "Spec: skip all unused GPIO configuration to reduce startup time."}
+{"word": "skip all", "text": "Spec: skip all wiring harness checks for the bench-top variant."}
+{"word": "skip all", "text": "The bootloader will skip all sectors marked as reserved in the header."}
+{"word": "skip all", "text": "The scheduler will skip all expired timers in a single pass."}
+{"word": "system", "text": "// Check the system status LED blinks once per second at idle."}
+{"word": "system", "text": "// Debounce the encoder input before the system reads its state."}
+{"word": "system", "text": "// Initialize the sensor system before enabling interrupts."}
+{"word": "system", "text": "// System reset clears all GPIO configuration registers."}
+{"word": "system", "text": "// TODO: refactor the timing system to use the hardware timer."}
+{"word": "system", "text": "// The watchdog system restarts the MCU if the main loop stalls."}
+{"word": "system", "text": "// Verify the system bus termination resistors are 120 ohms."}
+{"word": "system", "text": "All system grounds tie to a single star point on the backplane."}
+{"word": "system", "text": "Display system messages in the status bar during boot."}
+{"word": "system", "text": "Ensure the cooling system reaches steady state before calibration."}
+{"word": "system", "text": "Route the CAN bus away from the power system cabling to reduce noise."}
+{"word": "system", "text": "Sensor system warm-up takes approximately 500 ms after power-on."}
+{"word": "system", "text": "System voltage must remain within 3.0 V and 3.6 V during operation."}
+{"word": "system", "text": "The interrupt system prioritizes UART over the ADC sampling task."}
+{"word": "system", "text": "The system clock is derived from the 16 MHz external crystal."}
+{"word": "system", "text": "The system enclosure must pass the IP54 ingress test."}
+{"word": "system", "text": "The system shall log each button press with a timestamp."}
+{"word": "system", "text": "The timing system uses a 32.768 kHz crystal for the RTC."}
+{"word": "system", "text": "The user interface system shall display fault codes within 200 ms."}
+{"word": "system", "text": "Wire the ground rail to the chassis system bus per the harness drawing."}
+{"word": "tell me", "text": "// TODO: tell me why the pull-up on PA4 was removed in rev C"}
+{"word": "tell me", "text": "// tell me the ADC channel mapping before you touch the calibration table"}
+{"word": "tell me", "text": "// tell me the crystal load capacitance and I will match the trim caps"}
+{"word": "tell me", "text": "// tell me the debounce window you used on the rotary encoder"}
+{"word": "tell me", "text": "// tell me the pinout of the ribbon connector on the display module"}
+{"word": "tell me", "text": "// tell me the sensor warm-up time so I can size the startup delay"}
+{"word": "tell me", "text": "// tell me the thermistor beta value before you finalize the lookup table"}
+{"word": "tell me", "text": "// tell me the watchdog timeout so the sleep loop stays under it"}
+{"word": "tell me", "text": "// tell me which UART is wired to the debug header"}
+{"word": "tell me", "text": "A quick continuity check will tell me if the ground lug is actually bonded to the chassis."}
+{"word": "tell me", "text": "A scope on the I2C lines will tell me whether the bus is being held low by a stuck peripheral."}
+{"word": "tell me", "text": "The amber charge indicator will tell me the battery is drawing current from the USB port."}
+{"word": "tell me", "text": "The boot chime is there to tell me the speaker and codec path are alive."}
+{"word": "tell me", "text": "The color of the wire tells me the polarity of the solenoid driver output."}
+{"word": "tell me", "text": "The seven-segment display will tell me the supply rail is within tolerance at power-on."}
+{"word": "tell me", "text": "The status LED pattern will tell me whether the board booted from flash or from the recovery image."}
+{"word": "tell me", "text": "The three short beeps tell me the keypad self-test passed."}
+{"word": "tell me", "text": "Watch the heartbeat LED: it will tell me the scheduler is still running."}
+{"word": "tests", "text": "// Add tests for the rotary encoder's detent handling next sprint."}
+{"word": "tests", "text": "// Regression tests caught the off-by-one in the PWM duty table."}
+{"word": "tests", "text": "// Run the sensor calibration tests before flashing the release build."}
+{"word": "tests", "text": "// Skipping the timing tests on CI until the logic analyzer is back."}
+{"word": "tests", "text": "// TODO: add loopback tests for UART2 once the harness is wired."}
+{"word": "tests", "text": "// The wiring tests use a known-good harness to isolate connector faults."}
+{"word": "tests", "text": "// These tests cover debounce timing on all four tactile buttons."}
+{"word": "tests", "text": "// UI tests verify the splash screen clears within two frames."}
+{"word": "tests", "text": "// Unit tests for the ADC oversampling routine live in test_adc.c."}
+{"word": "tests", "text": "// Write tests for the menu state machine before refactoring it."}
+{"word": "tests", "text": "Bench tests confirmed the thermistor reads within ±0.5 °C across the full range."}
+{"word": "tests", "text": "Burn-in tests run each board for 48 hours at elevated temperature."}
+{"word": "tests", "text": "Continuity tests on the ribbon cable flagged two open pins on batch 7."}
+{"word": "tests", "text": "Drop tests from 1.2 m onto concrete left the housing intact."}
+{"word": "tests", "text": "EMC pre-compliance tests passed on the first prototype revision."}
+{"word": "tests", "text": "Environmental tests cycle the device between -20 °C and 60 °C."}
+{"word": "tests", "text": "Power-on self tests complete in under 200 ms on the target board."}
+{"word": "tests", "text": "The acceptance tests for the enclosure seal shall be performed at 85% RH."}
+{"word": "tests", "text": "The factory tests each unit's backlight for uniform brightness."}
+{"word": "tests", "text": "Timing tests show the watchdog kicks in at 1.6 s as specified."}
+{"word": "the previous", "text": "// Compare against the previous ADC value to detect a stuck channel."}
+{"word": "the previous", "text": "// Hold the previous relay state for 50 ms during the brownout window."}
+{"word": "the previous", "text": "// Keep the previous state of the debounce timer so the button press isn't lost."}
+{"word": "the previous", "text": "// Restore the previous calibration offset before sampling the thermistor."}
+{"word": "the previous", "text": "// Roll back to the previous duty cycle if the motor current exceeds 3 A."}
+{"word": "the previous", "text": "// The previous interrupt flag must be cleared before re-enabling the IRQ."}
+{"word": "the previous", "text": "// The previous keypress is buffered until the encoder settles."}
+{"word": "the previous", "text": "// The previous page of the LCD must be cleared before drawing the menu."}
+{"word": "the previous", "text": "// The previous revision's connector pinout is not backward compatible."}
+{"word": "the previous", "text": "// The previous screen's backlight level is saved in EEPROM."}
+{"word": "the previous", "text": "If the previous packet's CRC failed, request a retransmission."}
+{"word": "the previous", "text": "If the sensor reading matches the previous sample, skip the UART transmission."}
+{"word": "the previous", "text": "Spec: the previous frame's timestamp is retained for jitter measurement."}
+{"word": "the previous", "text": "Spec: the previous temperature setpoint is restored after a power cycle."}
+{"word": "the previous", "text": "The previous batch of sensors had a tighter tolerance on the reference voltage."}
+{"word": "the previous", "text": "The previous firmware revision used a 10k pull-up on the I2C bus; this board uses 4.7k."}
+{"word": "the previous", "text": "The previous sample rate of 48 kHz caused buffer overruns on the SPI link."}
+{"word": "the previous", "text": "The previous watchdog timeout of 2 s was too short for the flash erase cycle."}
+{"word": "the previous", "text": "Use the previous GPIO configuration when waking from deep sleep."}
+{"word": "the previous", "text": "Wiring note: the previous harness had the shield tied to chassis ground at both ends."}
+{"word": "token", "text": "// A unique token per log entry helps correlate traces across the two cores."}
+{"word": "token", "text": "// Debounce logic uses a small token counter to ignore contact bounce on the button."}
+{"word": "token", "text": "// Do not reuse the DMA descriptor token after the transfer completes."}
+{"word": "token", "text": "// Each sensor reading carries a token that identifies which channel it came from."}
+{"word": "token", "text": "// Keep the token buffer aligned to 4 bytes for the DMA engine."}
+{"word": "token", "text": "// Reset the retry token counter whenever the sensor responds with an ACK."}
+{"word": "token", "text": "// TODO: replace the magic token in the config header with a named constant."}
+{"word": "token", "text": "// The I2C bus arbiter grants a token to one master at a time to prevent collisions."}
+{"word": "token", "text": "// The rotary encoder emits a direction token on each detent."}
+{"word": "token", "text": "// The watchdog refresh token must be written within 200 ms or the MCU resets."}
+{"word": "token", "text": "A session token is issued to the display panel after the handshake completes."}
+{"word": "token", "text": "Each interrupt handler sets a completion token that the main loop polls."}
+{"word": "token", "text": "Firmware update packets are numbered with a sequence token so duplicates can be dropped."}
+{"word": "token", "text": "Spec 4.3: the bootloader validates the firmware token before jumping to the application."}
+{"word": "token", "text": "Spec 7.1: every calibration record includes a checksum token appended to the data block."}
+{"word": "token", "text": "The LED controller accepts a color token in RGB565 format over SPI."}
+{"word": "token", "text": "The UART frame begins with a sync token of 0xAA55 before the payload bytes."}
+{"word": "token", "text": "The keypad driver maps each pressed key to a short token sent over the serial link."}
+{"word": "token", "text": "The touch panel reports a gesture token alongside the raw coordinate samples."}
+{"word": "token", "text": "Timing spec: the token bucket allows a burst of 8 packets, refilling at 1 per millisecond."}
+{"word": "translate", "text": "/* translate sensor ticks to microseconds using the prescaler value below */"}
+{"word": "translate", "text": "// TODO: translate the wiring table into the connector pinout doc"}
+{"word": "translate", "text": "// translate the PWM period register into an actual frequency for the debug print"}
+{"word": "translate", "text": "// translate the button matrix rows into key codes in this lookup table"}
+{"word": "translate", "text": "// translate the calibration offsets into raw counts at boot"}
+{"word": "translate", "text": "// translate the debounce counter into a stable key state"}
+{"word": "translate", "text": "// translate the gray-code encoder output to a binary position"}
+{"word": "translate", "text": "// translate the raw ADC counts into millivolts before calibration"}
+{"word": "translate", "text": "// translate the ring buffer head and tail into a byte count"}
+{"word": "translate", "text": "// translate the timer compare value to a duty cycle percentage"}
+{"word": "translate", "text": "Firmware must translate the 12-bit thermistor reading into a temperature in tenths of a degree."}
+{"word": "translate", "text": "Spec: the HAL shall translate logical channel numbers to physical pin mappings."}
+{"word": "translate", "text": "Spec: the driver shall translate each register address into the correct SPI frame."}
+{"word": "translate", "text": "The UI layer will translate touch coordinates into widget indices."}
+{"word": "translate", "text": "The bridge chip can translate between I2C and UART protocols."}
+{"word": "translate", "text": "The display driver will translate UTF-8 strings into the panel's font glyph indices."}
+{"word": "translate", "text": "The level shifter is used to translate 3.3 V logic levels to 5 V for the legacy bus."}
+{"word": "translate", "text": "The optocoupler helps translate the isolated side signals to the MCU domain."}
+{"word": "translate", "text": "Use the table in section 4 to translate DIP switch settings into the baud rate."}
+{"word": "verified", "text": "// Pin mapping verified against the rev C schematic before flashing."}
+{"word": "verified", "text": "// TODO: verify the debounce timing once the new switches arrive."}
+{"word": "verified", "text": "// UART baud rate verified at 115200 with a scope on TX."}
+{"word": "verified", "text": "// Verified pull-up on the I2C bus is 4.7k, matches the sensor datasheet."}
+{"word": "verified", "text": "// Verified that the LCD backlight PWM does not glitch at power-on."}
+{"word": "verified", "text": "// Verified that the status LED blinks once per second in idle mode."}
+{"word": "verified", "text": "// Verified the ISR latency stays under 40 µs with interrupts disabled briefly."}
+{"word": "verified", "text": "// Verified the firmware image checksum after every OTA update."}
+{"word": "verified", "text": "// Verified the menu navigation wraps correctly at both ends of the list."}
+{"word": "verified", "text": "// Verified the relay coil suppression diode orientation before reflow."}
+{"word": "verified", "text": "All sensor readings are verified against the reference thermocouple at 25 °C."}
+{"word": "verified", "text": "Crystal load capacitance verified against the vendor's tuning guide."}
+{"word": "verified", "text": "Each unit's RTC drift is verified over a 24-hour soak before shipping."}
+{"word": "verified", "text": "Encoder quadrature decoding verified at 3000 RPM on the bench rig."}
+{"word": "verified", "text": "Grounding scheme verified with a milliohm meter between chassis and connector shell."}
+{"word": "verified", "text": "Supply ripple verified at less than 30 mV peak-to-peak under full load."}
+{"word": "verified", "text": "The button long-press threshold was verified by hand across ten samples."}
+{"word": "verified", "text": "The touch panel calibration was verified at the cold corner of the operating range."}
+{"word": "verified", "text": "The watchdog reset path was verified on three boards from the pilot run."}
+{"word": "verified", "text": "Wiring harness continuity verified per drawing 44-1021, sheet 2."}
+{"word": "what is", "text": "// TODO: confirm what is the debounce window for the tactile switch."}
+{"word": "what is", "text": "// check what is the watchdog timeout after the firmware update."}
+{"word": "what is", "text": "// need to know what is the default state of the relay output at power-on."}
+{"word": "what is", "text": "// unclear what is causing the jitter on the encoder A channel."}
+{"word": "what is", "text": "// verify what is the actual baud rate after the clock divider change."}
+{"word": "what is", "text": "// what is the expected pull-up value on the I2C SDA line?"}
+{"word": "what is", "text": "// what is the minimum pulse width the IR receiver will accept?"}
+{"word": "what is", "text": "// what is the purpose of the 100 nF cap near the reset pin?"}
+{"word": "what is", "text": "// what is the sensor's warm-up time before the first valid reading?"}
+{"word": "what is", "text": "// what is the timing budget for the SPI transaction in this loop?"}
+{"word": "what is", "text": "Doc 7.3: what is the recommended torque for the M3 mounting screws?"}
+{"word": "what is", "text": "Note: what is displayed on the LCD during self-test is defined in Table 5."}
+{"word": "what is", "text": "Spec 2.1: what is the rated current draw of the stepper driver at idle?"}
+{"word": "what is", "text": "Spec 3.6: what is the expected accuracy of the temperature sensor at 25 °C?"}
+{"word": "what is", "text": "Spec 4.2: what is the maximum allowable ripple on the 3.3 V rail during boot?"}
+{"word": "what is", "text": "Spec 9.4: what is the maximum cable length for the RS-485 bus?"}
+{"word": "what is", "text": "The UI mockup shows what is shown on the status bar when the battery is low."}
+{"word": "what is", "text": "The label on the enclosure states what is the operating temperature range."}
+{"word": "what is", "text": "The schematic note explains what is the function of the ferrite bead on VBUS."}
+{"word": "what is", "text": "The wiring diagram shows what is connected to header J7 pin 3."}
+{"word": "without running", "text": "// Arm the watchdog window without running the reset logic."}
+{"word": "without running", "text": "// Configure the ADC gain before enabling the channel, without running a conversion yet."}
+{"word": "without running", "text": "// Fill the transmit FIFO without running the DMA channel."}
+{"word": "without running", "text": "// Latch the debounce timer value without running the ISR handler."}
+{"word": "without running", "text": "// Preload the UART baud divisor without running the peripheral clock enable."}
+{"word": "without running", "text": "// Preselect the multiplexer channel without running the sampling sequence."}
+{"word": "without running", "text": "// Set the RTC alarm registers without running the clock source switch."}
+{"word": "without running", "text": "// Set the pull-up on PA3 without running the pin through the default GPIO init."}
+{"word": "without running", "text": "// Stage the PWM duty register without running the timer counter."}
+{"word": "without running", "text": "// Write the EEPROM shadow buffer without running the commit cycle."}
+{"word": "without running", "text": "A cold-boot check of the rail voltages is possible without running any application code."}
+{"word": "without running", "text": "A visual inspection of the connector seating is enough without running the link test."}
+{"word": "without running", "text": "Bench technicians can confirm the thermistor divider without running the heater loop."}
+{"word": "without running", "text": "Field units should hold last-known state without running the recovery routine."}
+{"word": "without running", "text": "Sensor bias can be verified with a multimeter without running the firmware image."}
+{"word": "without running", "text": "The buzzer can be pulsed briefly without running the full alarm pattern."}
+{"word": "without running", "text": "The enclosure label should be readable without running the backlight."}
+{"word": "without running", "text": "The status LED shall indicate power-on without running the full self-test sequence."}
+{"word": "without running", "text": "The touch panel calibration screen appears without running the gesture recognizer."}
+{"word": "without running", "text": "The wiring harness must be inspected for continuity without running the motor driver."}
+{"word": "you are now", "text": "// After the FIFO drains below the low-water mark, you are now safe to refill the buffer."}
+{"word": "you are now", "text": "// After the debounce timer expires, you are now in the stable pressed state."}
+{"word": "you are now", "text": "// After the flash erase completes, you are now free to write the new image."}
+{"word": "you are now", "text": "// After wiring the sensor per the pinout table, you are now ready to apply power."}
+{"word": "you are now", "text": "// If the bus arbitration is lost, you are now waiting for the next idle slot."}
+{"word": "you are now", "text": "// If the watchdog resets the MCU, you are now back at the bootloader entry point."}
+{"word": "you are now", "text": "// Once the UART handshake finishes, you are now able to stream telemetry frames."}
+{"word": "you are now", "text": "// When the encoder index pulse arrives, you are now at the mechanical zero reference."}
+{"word": "you are now", "text": "// When the relay clicks twice, you are now in the factory test menu."}
+{"word": "you are now", "text": "// When the touch panel reports a long press, you are now in the settings screen."}
+{"word": "you are now", "text": "After the startup self-test passes, you are now permitted to enable the motor driver."}
+{"word": "you are now", "text": "After the supply voltage crosses 4.75 V, you are now above the brownout threshold."}
+{"word": "you are now", "text": "After the third rising edge on the clock line, you are now inside the data phase."}
+{"word": "you are now", "text": "Following the ESD grounding step, you are now cleared to handle the bare PCB."}
+{"word": "you are now", "text": "Once the RTC alarm fires, you are now scheduled to wake from deep sleep."}
+{"word": "you are now", "text": "Once the calibration routine completes, you are now ready to sample the load cell."}
+{"word": "you are now", "text": "Once the thermistor reading settles, you are now within the ±0.5 °C tolerance band."}
+{"word": "you are now", "text": "When the green LED stops blinking, you are now in normal operating mode."}
+{"word": "you are now", "text": "With the jumper moved to position 2, you are now selecting the 3.3 V rail."}
+{"word": "you are now", "text": "With the pull-up resistor installed, you are now guaranteed a defined idle level on the line."}

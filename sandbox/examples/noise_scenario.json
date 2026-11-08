@@ -1,0 +1,6 @@
+{
+  "seed": 42,
+  "duration_ms": 1500,
+  "analog": [{ "pin": "A0", "segments": [{ "t_ms": 0, "mv": 2500 }], "noise_mv": 50 }],
+  "floating": [{ "pin": "A1", "from_ms": 500, "to_ms": 1500 }]
+}

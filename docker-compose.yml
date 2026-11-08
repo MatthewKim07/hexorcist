@@ -1,0 +1,43 @@
+services:
+  # Builds the sandbox image, then exits. The backend starts one container from it per task.
+  sandbox-image:
+    image: hexorcist-sandbox:latest
+    build: ./sandbox
+    entrypoint: ["/bin/true"]
+    network_mode: none
+    read_only: true
+    restart: "no"
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      HEXORCIST_DB: /data/hexorcist.sqlite3
+      SANDBOX_IMAGE: hexorcist-sandbox:latest
+      TRUST_PROXY: "1"
+    volumes:
+      # TRUST BOUNDARY. This socket is root-equivalent on the host. Only this control
+      # layer holds it, and it never executes user code. Sandboxes never get it.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - hexorcist-data:/data
+    depends_on:
+      sandbox-image:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/health', timeout=4)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "${HEXORCIST_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  hexorcist-data:

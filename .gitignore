@@ -218,3 +218,39 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Agent context and tool settings (never committed)
+CLAUDE.md
+.claude/
+.ai/
+AGENTS.md
+.cursor/
+.kiro/
+
+# Secrets
+.env.*
+!.env.example
+
+# Node / Vite
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+
+# The Python template's lib/ rule would otherwise swallow frontend source
+!frontend/src/lib/
+
+# Hexorcist runtime data
+data/
+*.sqlite3
+*.db
+
+# Deploy evidence, may name the VM
+smoke-results-*.txt
+
+# OS
+.DS_Store
+
+# Editor ignore config
+.cursorignore

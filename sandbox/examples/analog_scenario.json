@@ -1,0 +1,22 @@
+{
+  "seed": 7,
+  "duration_ms": 5000,
+  "analog": [
+    {
+      "pin": "A0",
+      "segments": [
+        { "t_ms": 0, "mv": 1000 },
+        { "t_ms": 4000, "mv": 4000 }
+      ],
+      "noise_mv": 0,
+      "spikes": [{ "t_ms": 2000, "width_ms": 100, "mv": 4900 }]
+    }
+  ],
+  "digital": [
+    {
+      "pin": "D2",
+      "initial": 1,
+      "events": [{ "t_ms": 3000, "value": 0, "bounce_ms": 5, "bounce_count": 6 }]
+    }
+  ]
+}

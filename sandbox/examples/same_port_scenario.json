@@ -1,0 +1,1 @@
+{ "seed": 1, "duration_ms": 2000, "digital": [{ "pin": "D2", "initial": 1, "events": [{ "t_ms": 500, "value": 0 }, { "t_ms": 1500, "value": 1 }] }] }

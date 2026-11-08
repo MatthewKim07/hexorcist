@@ -1,0 +1,21 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_HOST} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	reverse_proxy frontend:80 {
+		# Caddy overwrites this, so a client cannot choose its own rate-limit bucket.
+		header_up X-Real-IP {remote_host}
+		# Server-sent events: pass every step straight through.
+		flush_interval -1
+	}
+}

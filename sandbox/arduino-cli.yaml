@@ -1,0 +1,8 @@
+directories:
+  data: /opt/arduino/data
+  downloads: /opt/arduino/downloads
+  user: /opt/arduino/user
+updater:
+  enable_notification: false
+metrics:
+  enabled: false
