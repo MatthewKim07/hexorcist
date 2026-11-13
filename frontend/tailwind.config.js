@@ -4,6 +4,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        // The bench the instrument sits on, a shade under the faceplate
+        bench: "#D8DBD5",
         // Faceplate
         bg: "#E3E5E0",
         raised: "#EEF0EC",

@@ -1,4 +1,4 @@
-import { ReactNode, SyntheticEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as RCheckbox from "@radix-ui/react-checkbox";
 import * as RCollapsible from "@radix-ui/react-collapsible";
 import * as RSelect from "@radix-ui/react-select";
@@ -122,47 +122,46 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
 
 /* -------------------------------------------------------------------- Tabs */
 
-/** Underlined tabs whose underline slides. With `closable`, choosing the open tab again closes it. */
-export function TabStrip<T extends string>({ tabs, value, onChange, label, closable = false, children }: { tabs: Option<T>[]; value: T | null; onChange: (v: T | null) => void; label: string; closable?: boolean; children?: ReactNode }) {
-  const { box, pos, replace } = useIndicator('[aria-selected="true"]', [value, tabs.length]);
+export interface PanelKey<T extends string> {
+  value: T;
+  label: string;
+  /** A step lamp: lit once the step is done. Left out for keys that are not steps. */
+  lamp?: boolean;
+}
+
+/** The row of keys under the screen. Each opens its panel below; with `closable`, pressing the open key closes it. */
+export function KeyRow<T extends string>({ keys, value, onChange, onPress, label, closable = false, end, children }: { keys: PanelKey<T>[]; value: T | null; onChange: (v: T | null) => void; onPress?: (v: T, wasOpen: boolean) => void; label: string; closable?: boolean; end?: ReactNode; children?: ReactNode }) {
   const wasActive = useRef(false);
-  const remember = (id: T) => () => {
-    wasActive.current = value === id;
-  };
-  // Radix focuses the trigger from script on mousedown, which Chrome can treat as keyboard focus and ring.
-  const pointer = (on: boolean) => (e: SyntheticEvent<HTMLElement>) => {
-    e.currentTarget.toggleAttribute("data-pointer", on);
-  };
   return (
-    <RTabs.Root value={value ?? ""} onValueChange={(v) => onChange(v as T)}>
-      <div ref={box} className="relative border-b border-line">
-        <RTabs.List aria-label={label} onScroll={replace} className="scroll -mx-1.5 flex gap-6 overflow-x-auto px-1.5">
-          {tabs.map((t) => (
+    <RTabs.Root value={value ?? ""} onValueChange={(v) => onChange(v as T)} activationMode="manual">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+        <RTabs.List aria-label={label} className="flex flex-wrap gap-2">
+          {keys.map((k) => (
             <RTabs.Trigger
-              key={t.value}
-              value={t.value}
-              onPointerDownCapture={(e) => {
-                remember(t.value)();
-                pointer(true)(e);
+              key={k.value}
+              value={k.value}
+              onPointerDownCapture={() => {
+                wasActive.current = value === k.value;
               }}
-              onKeyDownCapture={(e) => {
-                remember(t.value)();
-                pointer(false)(e);
+              onKeyDownCapture={() => {
+                wasActive.current = value === k.value;
               }}
-              onBlur={pointer(false)}
               onClick={() => {
                 if (closable && wasActive.current) {
                   onChange(null);
                 }
+                onPress?.(k.value, wasActive.current);
                 wasActive.current = false;
               }}
-              className="hover-ink -mx-1.5 whitespace-nowrap rounded px-1.5 py-3 text-sm text-muted transition-colors focus-visible:outline-offset-[-2px] data-[pointer]:outline-none data-[state=active]:text-ink"
+              className="panel-key"
             >
-              {t.label}
+              {k.lamp !== undefined && <span aria-hidden="true" className={`step-lamp ${k.lamp ? "is-lit" : ""}`} />}
+              {k.label}
+              {k.lamp !== undefined && <span className="sr-only">{k.lamp ? ", done" : ", not done"}</span>}
             </RTabs.Trigger>
           ))}
         </RTabs.List>
-        <span aria-hidden="true" className={`pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-ink ${pos.animate ? "indicator" : ""}`} style={{ transform: `translateX(${pos.x + 6}px)`, width: Math.max(0, pos.w - 12), opacity: pos.ready ? 1 : 0 }} />
+        {end && <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">{end}</div>}
       </div>
       {value && (
         <RTabs.Content value={value} className="outline-none" tabIndex={-1}>
@@ -170,37 +169,6 @@ export function TabStrip<T extends string>({ tabs, value, onChange, label, closa
         </RTabs.Content>
       )}
     </RTabs.Root>
-  );
-}
-
-/** A row of exclusive choices that load something, like the example presets, with the same sliding underline. */
-export function Choices<T extends string>({ options, value, onChange, label, hints }: { options: Option<T>[]; value: T | null; onChange: (v: T) => void; label: string; hints?: Partial<Record<T, string>> }) {
-  const { box, pos } = useIndicator('[aria-checked="true"]', [value, options.length]);
-  return (
-    <RToggle.Root type="single" value={value ?? ""} onValueChange={(v) => v && onChange(v as T)} aria-label={label} asChild>
-      <div ref={box} className="relative flex flex-wrap gap-x-6 gap-y-2">
-        {options.map((o) => {
-          const item = (
-            <RToggle.Item key={o.value} value={o.value} className="hover-ink pb-1.5 text-sm text-muted transition-colors aria-checked:text-ink">
-              {o.label}
-            </RToggle.Item>
-          );
-          const hint = hints?.[o.value];
-          return hint ? (
-            <Tip key={o.value} content={hint}>
-              {item}
-            </Tip>
-          ) : (
-            item
-          );
-        })}
-        <span
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-0 top-0 h-0.5 rounded-full bg-ink ${pos.animate ? "indicator" : ""}`}
-          style={{ transform: `translate(${pos.x}px, ${pos.y + pos.h - 2}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }}
-        />
-      </div>
-    </RToggle.Root>
   );
 }
 
