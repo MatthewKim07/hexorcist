@@ -24,7 +24,7 @@ Focus is a 2 px probe-cyan ring (`#1C6884`) with a 2 px offset, the same everywh
 - **Geist** for all interface text. Weights 400, 500, 600.
 - **Geist Mono** only for measured values (`23×`, `5.20 s`, `304 mV`) and code (the editor, diffs, logs). Never for labels or metadata. Mono means "this was measured". Geist Mono shares Geist's metrics, so a readout sits inside a sentence without jumping. Readouts use tabular figures.
 - Both self-hosted from npm.
-- Scale: 12 secondary, 14 body and UI, 16 lead, 20 section, 28 verdict. At most three sizes on one screen. Line height 1.5 for body, 1.2 for headings. Lines under 72 characters.
+- Scale: 12 secondary, 14 body and UI, 16 lead, 20 section, 28 verdict, plus 48 for the product name on the landing page only. At most three sizes on one screen. Line height 1.5 for body, 1.2 for headings. Lines under 72 characters.
 
 ### Space and shape
 

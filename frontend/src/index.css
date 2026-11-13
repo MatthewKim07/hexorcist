@@ -1,49 +1,211 @@
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  background: #0b0b0d;
-  color: #ececee;
-  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  background: #e3e5e0;
+  color: #202427;
+  font-family: "Geist Sans", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Type scale: 12 for labels, 14 for body, 28 for the one headline on a screen. */
+/* One focus ring for every control on the page. */
+:focus-visible {
+  outline: 2px solid #1c6884;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.screen :focus-visible {
+  outline-color: #7cc4dc;
+}
+
+/* Thin, toned scrollbars inside scrolling panels only. */
+.scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #b3b8b0 transparent;
+}
+.screen .scroll {
+  scrollbar-color: #3a4540 transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: #b3b8b0;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 @layer components {
   .label {
-    @apply text-[12px] text-faint;
+    @apply text-xs text-muted;
   }
   .headline {
-    @apply text-[28px] font-semibold leading-tight tracking-tight;
-  }
-  .field {
-    @apply w-full rounded-md border border-line bg-raised px-3 py-2 text-[14px] text-ink outline-none transition-colors placeholder:text-faint focus:border-accent/70;
-  }
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md bg-accent px-5 py-2.5 text-[14px] font-medium text-[#0b0b10] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[14px] text-muted transition-colors hover:bg-raised hover:text-ink disabled:opacity-50;
-  }
-  .btn-outline {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line px-5 py-2.5 text-[14px] font-medium text-ink transition-colors hover:bg-raised;
+    @apply text-xl font-semibold tracking-tight;
   }
   .num {
-    @apply font-mono text-[13px];
+    @apply font-mono tabular-nums;
   }
+  .field {
+    @apply w-full rounded-md border border-line bg-raised px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/80;
+    transition: border-color 150ms ease;
+  }
+  .field:focus-visible {
+    @apply border-ink/40;
+    outline-offset: 0;
+  }
+  /* Keys: they press. */
+  .key {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-md text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50;
+    transition: transform 120ms var(--ease-out), background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  }
+  .key:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn-primary {
+    @apply key bg-ink px-5 py-2.5 text-bg;
+  }
+  .btn-outline {
+    @apply key border border-line bg-raised px-5 py-2.5 text-ink;
+  }
+  .btn-ghost {
+    @apply key px-3 py-2 font-normal text-muted;
+  }
+  .link {
+    @apply text-muted underline decoration-line underline-offset-4;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover:not(:disabled) {
+    background: #33383c;
+  }
+  .btn-outline:hover:not(:disabled) {
+    border-color: #a9aea6;
+  }
+  .btn-ghost:hover:not(:disabled),
+  .hover-ink:hover {
+    color: #202427;
+  }
+  .hover-row:hover {
+    background: rgba(238, 240, 236, 0.7);
+  }
+  .link:hover {
+    color: #202427;
+    text-decoration-color: #5a615d;
+  }
+}
+
+/* Radix Select and Tooltip popovers grow from their trigger. */
+.pop {
+  transform-origin: var(--radix-select-content-transform-origin, var(--radix-tooltip-content-transform-origin, top));
+  animation: pop-in 180ms var(--ease-out);
+}
+.pop[data-state="closed"] {
+  animation: pop-out 120ms var(--ease-out) forwards;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+/* Collapsible rows open by height and fade. */
+.fold[data-state="open"] {
+  animation: fold-open 200ms var(--ease-out);
+}
+.fold[data-state="closed"] {
+  animation: fold-close 150ms var(--ease-out);
+}
+@keyframes fold-open {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+}
+@keyframes fold-close {
+  from {
+    height: var(--radix-collapsible-content-height);
+    opacity: 1;
+  }
+  to {
+    height: 0;
+    opacity: 0;
+  }
+}
+.fold {
+  overflow: hidden;
+}
+
+.chev {
+  transition: transform 200ms var(--ease-out);
+}
+[data-state="open"] > .chev,
+[aria-expanded="true"] > .chev {
+  transform: rotate(90deg);
+}
+
+/* Sliding indicators under tabs and behind segments. */
+.indicator {
+  transition: transform 200ms var(--ease-in-out), width 200ms var(--ease-in-out);
+}
+
+/* A lamp that is working breathes. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.breathe {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  animation: spin-slow 1.1s linear infinite;
 }
 
 .cm-editor {
@@ -51,60 +213,37 @@ body {
   font-size: 13px;
 }
 .cm-editor .cm-scroller {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  scrollbar-width: thin;
+  scrollbar-color: #b3b8b0 transparent;
 }
 .cm-editor.cm-focused {
   outline: none;
 }
 
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-.pulse-soft {
-  animation: pulse-soft 1.4s ease-in-out infinite;
-}
-
-@keyframes spin-slow {
-  to { transform: rotate(360deg); }
-}
-.spin {
-  animation: spin-slow 1.1s linear infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .pulse-soft, .spin {
+  .breathe,
+  .spin {
     animation: none;
   }
+  .indicator,
+  .chev {
+    transition: none;
+  }
+  .key:active:not(:disabled) {
+    transform: none;
+  }
+  .fold[data-state="open"],
+  .fold[data-state="closed"] {
+    animation: none;
+  }
+  .pop,
+  .pop[data-state="closed"] {
+    animation-name: fade;
+  }
 }
-
-summary {
-  list-style: none;
-}
-summary::-webkit-details-marker {
-  display: none;
-}
-
-input[type="range"].scrub {
-  appearance: none;
-  height: 4px;
-  border-radius: 2px;
-  background: #2a2a30;
-  outline-offset: 4px;
-}
-input[type="range"].scrub::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #8b9bff;
-  cursor: grab;
-}
-input[type="range"].scrub::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: 0;
-  border-radius: 50%;
-  background: #8b9bff;
-  cursor: grab;
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
 }

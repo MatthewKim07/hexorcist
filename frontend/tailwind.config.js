@@ -4,20 +4,41 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#0b0b0d",
-        panel: "#0b0b0d",
-        raised: "#151518",
-        line: "#232327",
-        ink: "#ececee",
-        muted: "#a0a0a8",
-        faint: "#80808a",
-        accent: "#8b9bff",
-        pass: "#3fb97f",
-        fail: "#ef5b5b",
+        // Faceplate
+        bg: "#E3E5E0",
+        raised: "#EEF0EC",
+        line: "#C4C8C1",
+        ink: "#202427",
+        muted: "#5A615D",
+        pass: "#1E6B43",
+        fail: "#B0382F",
+        probe: "#1C6884",
+        // The one lit screen
+        screen: {
+          DEFAULT: "#121816",
+          raised: "#1A221F",
+          line: "#2A3430",
+          ink: "#C9D1CC",
+          muted: "#8A958F",
+        },
+        trace: "#E8C15A",
+        "pass-lit": "#5CC98A",
+        "fail-lit": "#F0766B",
       },
       fontFamily: {
-        sans: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
-        mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+        sans: ['"Geist Sans"', "system-ui", "sans-serif"],
+        mono: ['"Geist Mono"', "ui-monospace", "monospace"],
+      },
+      fontSize: {
+        xs: ["12px", "16px"],
+        sm: ["14px", "20px"],
+        base: ["16px", "24px"],
+        lg: ["20px", "26px"],
+        xl: ["28px", "34px"],
+      },
+      transitionTimingFunction: {
+        out: "cubic-bezier(0.23, 1, 0.32, 1)",
+        "in-out": "cubic-bezier(0.77, 0, 0.175, 1)",
       },
     },
   },
