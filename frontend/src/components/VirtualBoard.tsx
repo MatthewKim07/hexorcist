@@ -103,30 +103,13 @@ export function VirtualBoard({ pins, trace, t, scenario, tag }: { pins: PinSpec[
 
   return (
     <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className="mx-auto block max-h-[420px] w-full" role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
-      <defs>
-        <linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#0f4c5c" />
-          <stop offset="1" stopColor="#0a3644" />
-        </linearGradient>
-        <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
-          <feGaussianBlur stdDeviation="5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        <radialGradient id="ledGlow">
-          <stop offset="0" stopColor="#ffd98a" stopOpacity="0.95" />
-          <stop offset="1" stopColor="#f0c05a" stopOpacity="0" />
-        </radialGradient>
-      </defs>
 
       {[...top, ...bottom].map(({ item, x, y }) => {
         const p = pinXY(item.pin.pin);
         const isTop = y === TOP_Y;
         const active = item.pin.type.endsWith("output") ? item.level === 1 : item.pin.type === "digital_input" ? item.pressed : true;
         const d = isTop ? `M ${p.x} ${p.y} C ${p.x} ${p.y - 34}, ${x} ${y + 40}, ${x} ${y}` : `M ${p.x} ${p.y} C ${p.x} ${p.y + 34}, ${x} ${y - 40}, ${x} ${y}`;
-        return <path key={item.pin.pin} d={d} fill="none" stroke={item.color} strokeWidth="2.2" strokeLinecap="round" opacity={active ? 1 : 0.38} filter={active && item.pin.type.endsWith("output") ? "url(#glow)" : undefined} />;
+        return <path key={item.pin.pin} d={d} fill="none" stroke={item.color} strokeWidth="2.2" strokeLinecap="round" opacity={active ? 1 : 0.38} />;
       })}
 
       <Board live={live} lineNow={lineNow} d13On={d13?.level === 1 && d13.pin.type.endsWith("output")} />
@@ -144,15 +127,12 @@ export function VirtualBoard({ pins, trace, t, scenario, tag }: { pins: PinSpec[
 
       {tag && (
         <g transform={`translate(${viewLeft + 8}, ${viewH - 32})`}>
-          <rect width="104" height="22" rx="4" fill="#181c25" stroke="#262b36" />
-          <text x="52" y="15" textAnchor="middle" fontSize="11" fontFamily="IBM Plex Mono" fill="#e7e9ee">
+          <rect width="104" height="22" rx="4" fill="#1A221F" stroke="#2A3430" />
+          <text x="52" y="15" textAnchor="middle" fontSize="11" fontFamily="Geist Mono" fill="#C9D1CC">
             {tag}
           </text>
         </g>
       )}
-      <text x={viewRight - 8} y={viewH - 16} textAnchor="end" fontSize="16" fontFamily="IBM Plex Mono" fill="#e7e9ee">
-        t = {(t / 1000).toFixed(2)} s
-      </text>
     </svg>
   );
 }
@@ -177,9 +157,9 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
     const lit = u && (u.pin.type.endsWith("output") ? u.level === 1 : u.pin.type === "digital_input" ? u.pressed : true);
     return (
       <g key={pin}>
-        <rect x={x - 6} y={y - 6} width="12" height="12" fill="#0a0c10" />
+        <rect x={x - 6} y={y - 6} width="12" height="12" fill="#0C1110" />
         <circle cx={x} cy={y} r={u ? 3.6 : 2.2} fill={u ? u.color : "#8a7a4a"} opacity={u && !lit ? 0.6 : 1} />
-        <text x={x} y={pin.startsWith("A") ? y - 11 : y + 19} textAnchor="middle" fontSize="8.5" fontFamily="IBM Plex Mono" fill={u ? "#e7e9ee" : "#7fb3bf"}>
+        <text x={x} y={pin.startsWith("A") ? y - 11 : y + 19} textAnchor="middle" fontSize="8.5" fontFamily="Geist Mono" fill={u ? "#C9D1CC" : "#7fb3bf"}>
           {pin.slice(pin.startsWith("A") ? 0 : 1)}
         </text>
       </g>
@@ -187,19 +167,19 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
   };
   return (
     <g>
-      <rect x="290" y="130" width="380" height="240" rx="10" fill="url(#pcb)" stroke="#1b6a7d" />
+      <rect x="290" y="130" width="380" height="240" rx="10" fill="#0F4553" stroke="#1B6476" />
       {[[304, 144], [656, 150], [304, 356], [656, 356]].map(([cx, cy]) => (
-        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="5" fill="#0b0d12" stroke="#c9b26a" strokeWidth="1.5" />
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="5" fill="#0C1110" stroke="#c9b26a" strokeWidth="1.5" />
       ))}
       <rect x="262" y="170" width="74" height="52" rx="3" fill="#aeb4bd" stroke="#6d737c" />
       <rect x="268" y="178" width="30" height="36" fill="#7f858e" />
       <rect x="266" y="296" width="62" height="50" rx="4" fill="#15171c" stroke="#2a2d34" />
-      <circle cx="288" cy="321" r="11" fill="#0b0d12" stroke="#2a2d34" />
-      <rect x="354" y="138" width="124" height="20" rx="1" fill="#0a0c10" />
-      <rect x="484" y="138" width="170" height="20" rx="1" fill="#0a0c10" />
-      <rect x="500" y="342" width="144" height="20" rx="1" fill="#0a0c10" />
-      <rect x="350" y="342" width="136" height="20" rx="1" fill="#0a0c10" />
-      <text x="418" y="337" textAnchor="middle" fontSize="8.5" fontFamily="IBM Plex Mono" fill="#7fb3bf">POWER</text>
+      <circle cx="288" cy="321" r="11" fill="#0C1110" stroke="#2a2d34" />
+      <rect x="354" y="138" width="124" height="20" rx="1" fill="#0C1110" />
+      <rect x="484" y="138" width="170" height="20" rx="1" fill="#0C1110" />
+      <rect x="500" y="342" width="144" height="20" rx="1" fill="#0C1110" />
+      <rect x="350" y="342" width="136" height="20" rx="1" fill="#0C1110" />
+      <text x="418" y="337" textAnchor="middle" fontSize="8.5" fontFamily="Geist Mono" fill="#7fb3bf">POWER</text>
       {digital.map(header)}
       {analog.map(header)}
 
@@ -210,19 +190,19 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
           <rect x={426 + i * 12.3} y="314" width="5" height="5" fill="#b8bcc4" />
         </g>
       ))}
-      <text x="510" y="295" textAnchor="middle" fontSize="12" fontFamily="IBM Plex Mono" fill="#aeb4bd">ATmega328P</text>
+      <text x="510" y="295" textAnchor="middle" fontSize="12" fontFamily="Geist Mono" fill="#aeb4bd">ATmega328P</text>
       <rect x="366" y="272" width="34" height="14" rx="6" fill="#c8ccd3" />
 
       <g transform="translate(360, 182)">
-        <circle cx="4" cy="4" r="4" fill={d13On ? "#ffcf6e" : "#3a3f2a"} filter={d13On ? "url(#glow)" : undefined} />
-        <text x="13" y="7.5" fontSize="8.5" fontFamily="IBM Plex Mono" fill="#7fb3bf">L</text>
-        <circle cx="4" cy="20" r="4" fill={lineNow ? "#ffcf6e" : "#3a3f2a"} filter={lineNow ? "url(#glow)" : undefined} />
-        <text x="13" y="23.5" fontSize="8.5" fontFamily="IBM Plex Mono" fill="#7fb3bf">TX</text>
+        <circle cx="4" cy="4" r="4" fill={d13On ? "#E8C15A" : "#3a3f2a"} />
+        <text x="13" y="7.5" fontSize="8.5" fontFamily="Geist Mono" fill="#7fb3bf">L</text>
+        <circle cx="4" cy="20" r="4" fill={lineNow ? "#E8C15A" : "#3a3f2a"} />
+        <text x="13" y="23.5" fontSize="8.5" fontFamily="Geist Mono" fill="#7fb3bf">TX</text>
       </g>
 
       <g transform="translate(476, 196)">
-        <text x="18" y="-6" fontSize="15" fontWeight="600" fontFamily="IBM Plex Sans" fill="#cfe6ec" letterSpacing="1.5">HEXORCIST</text>
-        <text x="18" y="9" fontSize="9" fontFamily="IBM Plex Mono" fill="#7fb3bf">UNO, EMULATED AT 16 MHZ</text>
+        <text x="18" y="-6" fontSize="15" fontWeight="600" fontFamily="Geist Sans" fill="#cfe6ec" letterSpacing="1.5">HEXORCIST</text>
+        <text x="18" y="9" fontSize="9" fontFamily="Geist Mono" fill="#7fb3bf">UNO, EMULATED AT 16 MHZ</text>
         <rect x="-9" y="-6" width="18" height="16" rx="1.5" fill="none" stroke="#cfe6ec" strokeWidth="1.2" />
       </g>
     </g>
@@ -232,11 +212,11 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
 function Caption({ item, state, y = 8 }: { item: Live; state?: string; y?: number }) {
   return (
     <>
-      <text textAnchor="middle" y={y} fontSize="11" fontFamily="IBM Plex Sans" fontWeight="500" fill="#e7e9ee">
+      <text textAnchor="middle" y={y} fontSize="11" fontFamily="Geist Sans" fontWeight="500" fill="#C9D1CC">
         {item.pin.pin} {shorten(item.pin.role)}
       </text>
       {state && (
-        <text textAnchor="middle" y={y + 13} fontSize="10" fontFamily="IBM Plex Mono" fill="#a2a9b6">
+        <text textAnchor="middle" y={y + 13} fontSize="10" fontFamily="Geist Mono" fill="#8A958F">
           {state}
         </text>
       )}
@@ -252,12 +232,12 @@ function shorten(role: string): string {
 function Part({ item }: { item: Live }) {
   const toggles = `${item.toggles} toggle${item.toggles === 1 ? "" : "s"}`;
   if (item.component === "button" || item.component === "switch") {
-    const label = item.floating ? "FLOATING" : item.pressed ? "PRESSED" : "RELEASED";
+    const label = item.floating ? "Floating" : item.pressed ? "Pressed" : "Released";
     return (
       <g>
         <Caption item={item} state={label} y={12} />
-        <rect x="-26" y="68" width="52" height="30" rx="4" fill="#20242e" stroke="#3a4050" />
-        <rect x="-16" y={item.pressed ? 62 : 52} width="32" height={item.pressed ? 12 : 22} rx="4" fill={item.floating ? "#e8a33d" : item.pressed ? "#f0c05a" : "#59606f"} stroke="#0b0d12" filter={item.pressed ? "url(#glow)" : undefined} />
+        <rect x="-26" y="68" width="52" height="30" rx="4" fill="#1A221F" stroke="#34403B" />
+        <rect x="-16" y={item.pressed ? 62 : 52} width="32" height={item.pressed ? 12 : 22} rx="4" fill={item.floating ? "#F0766B" : item.pressed ? "#E8C15A" : "#56625C"} stroke="#0C1110" />
         <line x1="0" y1="98" x2="0" y2="112" stroke={item.color} strokeWidth="2.2" />
       </g>
     );
@@ -266,13 +246,13 @@ function Part({ item }: { item: Live }) {
     const on = item.level === 1;
     return (
       <g>
-        <Caption item={item} state={`${on ? "ON" : "OFF"}  ${toggles}`} y={10} />
-        <circle cy="66" r="34" fill="#181c25" stroke={on ? "#f0c05a" : "#3a4050"} strokeWidth="2" filter={on ? "url(#glow)" : undefined} />
+        <Caption item={item} state={`${on ? "On" : "Off"}, ${toggles}`} y={10} />
+        <circle cy="66" r="34" fill="#1A221F" stroke={on ? "#E8C15A" : "#34403B"} strokeWidth="2" />
         <g transform={`translate(0, 66) rotate(${item.angle})`}>
           {[0, 120, 240].map((a) => (
-            <path key={a} transform={`rotate(${a})`} d="M0 -5 C 12 -25, 25 -18, 22 -6 C 19 -1, 8 -1, 0 -5 Z" fill={on ? "#f0c05a" : "#59606f"} />
+            <path key={a} transform={`rotate(${a})`} d="M0 -5 C 12 -25, 25 -18, 22 -6 C 19 -1, 8 -1, 0 -5 Z" fill={on ? "#E8C15A" : "#56625C"} />
           ))}
-          <circle r="5" fill="#0b0d12" stroke={on ? "#f0c05a" : "#59606f"} strokeWidth="1.5" />
+          <circle r="5" fill="#0C1110" stroke={on ? "#E8C15A" : "#56625C"} strokeWidth="1.5" />
         </g>
       </g>
     );
@@ -281,23 +261,23 @@ function Part({ item }: { item: Live }) {
     const on = item.level === 1;
     return (
       <g>
-        <Caption item={item} state={`${on ? "SOUNDING" : "SILENT"}  ${toggles}`} y={10} />
-        <path d="M-22 56 h12 l20 -16 v52 l-20 -16 h-12 Z" fill={on ? "#f0c05a" : "#59606f"} stroke="#0b0d12" filter={on ? "url(#glow)" : undefined} transform="translate(-2, 0)" />
+        <Caption item={item} state={`${on ? "Sounding" : "Silent"}, ${toggles}`} y={10} />
+        <path d="M-22 56 h12 l20 -16 v52 l-20 -16 h-12 Z" fill={on ? "#E8C15A" : "#56625C"} stroke="#0C1110" transform="translate(-2, 0)" />
         {[0, 1, 2].map((i) => (
-          <path key={i} d={`M ${15 + i * 8} ${50 - i * 4} q ${8 + i * 2} 16 0 ${32 + i * 8}`} fill="none" stroke="#f0c05a" strokeWidth="2" strokeLinecap="round" opacity={on ? 1 - i * 0.25 : 0.08} />
+          <path key={i} d={`M ${15 + i * 8} ${50 - i * 4} q ${8 + i * 2} 16 0 ${32 + i * 8}`} fill="none" stroke="#E8C15A" strokeWidth="2" strokeLinecap="round" opacity={on ? 1 - i * 0.25 : 0.08} />
         ))}
         <line x1="-10" y1="92" x2="-10" y2="112" stroke={item.color} strokeWidth="2.2" />
       </g>
     );
   }
   const on = item.brightness > 0;
-  const duty = item.pin.type === "pwm_output" && on ? `  ${Math.round(item.brightness * 100)}%` : "";
+  const duty = item.pin.type === "pwm_output" && on ? ` at ${Math.round(item.brightness * 100)}%` : "";
   return (
     <g>
-      <Caption item={item} state={`${on ? "ON" : "OFF"}${duty}  ${toggles}`} y={10} />
-      <circle cy="62" r="46" fill="url(#ledGlow)" opacity={item.brightness} />
-      <path d="M-14 78 v-20 a14 14 0 0 1 28 0 v20 Z" fill={on ? "#ffd98a" : "#3f4452"} stroke={on ? "#f0c05a" : "#59606f"} strokeWidth="1.5" />
-      <rect x="-18" y="78" width="36" height="6" rx="1" fill={on ? "#f0c05a" : "#59606f"} />
+      <Caption item={item} state={`${on ? "On" : "Off"}${duty}, ${toggles}`} y={10} />
+      <circle cy="62" r="30" fill="#E8C15A" opacity={item.brightness * 0.16} />
+      <path d="M-14 78 v-20 a14 14 0 0 1 28 0 v20 Z" fill={on ? "#F1D58A" : "#3A4640"} stroke={on ? "#E8C15A" : "#56625C"} strokeWidth="1.5" />
+      <rect x="-18" y="78" width="36" height="6" rx="1" fill={on ? "#E8C15A" : "#56625C"} />
       <line x1="0" y1="84" x2="0" y2="112" stroke={item.color} strokeWidth="2.2" />
     </g>
   );
@@ -315,18 +295,18 @@ function Gauge({ item }: { item: Live }) {
   return (
     <g>
       <g transform="translate(0, 44)">
-        <path d={`M ${point(-120, R)} A ${R} ${R} 0 1 1 ${point(120, R)}`} fill="none" stroke="#262b36" strokeWidth="6" strokeLinecap="round" />
-        {frac > 0.002 && <path d={`M ${point(-120, R)} A ${R} ${R} 0 ${frac * 240 > 180 ? 1 : 0} 1 ${point(angle, R)}`} fill="none" stroke={item.floating ? "#e8a33d" : "#f0c05a"} strokeWidth="6" strokeLinecap="round" />}
-        <line x1="0" y1="0" x2="0" y2={-R + 10} stroke="#e7e9ee" strokeWidth="2.2" strokeLinecap="round" transform={`rotate(${angle})`} />
-        <circle r="4" fill="#e7e9ee" />
-        <text x={-R - 6} y={R - 8} fontSize="10" textAnchor="end" fontFamily="IBM Plex Mono" fill="#7f8794">{lo}</text>
-        <text x={R + 6} y={R - 8} fontSize="10" textAnchor="start" fontFamily="IBM Plex Mono" fill="#7f8794">{hi}</text>
+        <path d={`M ${point(-120, R)} A ${R} ${R} 0 1 1 ${point(120, R)}`} fill="none" stroke="#2A3430" strokeWidth="6" strokeLinecap="round" />
+        {frac > 0.002 && <path d={`M ${point(-120, R)} A ${R} ${R} 0 ${frac * 240 > 180 ? 1 : 0} 1 ${point(angle, R)}`} fill="none" stroke={item.floating ? "#F0766B" : "#E8C15A"} strokeWidth="6" strokeLinecap="round" />}
+        <line x1="0" y1="0" x2="0" y2={-R + 10} stroke="#C9D1CC" strokeWidth="2.2" strokeLinecap="round" transform={`rotate(${angle})`} />
+        <circle r="4" fill="#C9D1CC" />
+        <text x={-R - 6} y={R - 8} fontSize="10" textAnchor="end" fontFamily="Geist Mono" fill="#8A958F">{lo}</text>
+        <text x={R + 6} y={R - 8} fontSize="10" textAnchor="start" fontFamily="Geist Mono" fill="#8A958F">{hi}</text>
       </g>
-      <text y="84" textAnchor="middle" fontSize="17" fontWeight="500" fontFamily="IBM Plex Mono" fill="#e7e9ee">
+      <text y="84" textAnchor="middle" fontSize="17" fontWeight="500" fontFamily="Geist Mono" fill="#C9D1CC">
         {item.value.toFixed(item.unit === "mV" ? 0 : 1)} {item.unit}
       </text>
-      <text y="99" textAnchor="middle" fontSize="11" fontFamily="IBM Plex Sans" fontWeight="500" fill="#a2a9b6">
-        {item.pin.pin} {shorten(item.pin.role)}{item.floating ? ", FLOATING" : `, ${Math.round(item.mv)} mV`}
+      <text y="99" textAnchor="middle" fontSize="11" fontFamily="Geist Sans" fontWeight="500" fill="#8A958F">
+        {item.pin.pin} {shorten(item.pin.role)}{item.floating ? ", floating" : `, ${Math.round(item.mv)} mV`}
       </text>
     </g>
   );

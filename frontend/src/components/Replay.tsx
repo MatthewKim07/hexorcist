@@ -3,6 +3,7 @@ import { PinSpec, Scenario, Trace, Violation } from "../api";
 import { fmtTime } from "../trace";
 import { Icon } from "./Common";
 import { TraceChart } from "./TraceChart";
+import { Collapsible, Scrubber, Segmented, Select, Ticking } from "./ui";
 import { VirtualBoard } from "./VirtualBoard";
 
 interface Props {
@@ -30,6 +31,7 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [chart, setChart] = useState(false);
+  const resume = useRef(false);
 
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const end = trace?.sim_ms || scenario?.duration_ms || 1000;
@@ -69,84 +71,93 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
   return (
     <section id="replay" className="scroll-mt-20">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <select aria-label="Scenario" className="field w-auto max-w-[min(360px,100%)] py-1.5" value={scenarioId ?? ""} onChange={(e) => onScenario(e.target.value)}>
-          {scenarios.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <Select label="Scenario" className="w-auto max-w-[min(360px,100%)] py-1.5" value={scenarioId ?? ""} onChange={onScenario} options={scenarios.map((s) => ({ value: s.id, label: s.name }))} />
         {hasAfter && (
-          <div className="flex rounded-md border border-line p-0.5" role="group" aria-label="Firmware version">
-            {(["before", "after"] as const).map((v) => (
-              <button key={v} aria-pressed={side === v} onClick={() => onSide(v)} className={`rounded px-5 py-1.5 text-[14px] transition-colors ${side === v ? (v === "before" ? "bg-fail/15 text-fail" : "bg-pass/15 text-pass") : "text-muted hover:text-ink"}`}>
-                {v === "before" ? "Before" : "After"}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            label="Firmware version"
+            value={side}
+            onChange={onSide}
+            options={[
+              { value: "before", label: "Before" },
+              { value: "after", label: "After" },
+            ]}
+          />
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-lg bg-raised p-3">
-        <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} />
-        {!trace && <p className="absolute bottom-3 left-0 right-0 text-center text-[13px] text-faint">{error ? `Could not load the trace: ${error}` : ready ? "Loading…" : "Not run yet"}</p>}
-      </div>
+      <div className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="relative px-3 pt-3">
+          <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} />
+          {!trace && <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>}
+        </div>
 
-      <div className="mt-3 flex items-center gap-3">
-        <button
-          aria-label={playing ? "Pause" : "Play"}
-          className="btn-primary h-9 w-9 shrink-0 !p-0"
-          disabled={!trace}
-          onClick={() => {
-            if (t >= end) {
-              setT(0);
-            }
-            setPlaying(!playing);
-          }}
-        >
-          <Icon name={playing ? "pause" : "play"} />
-        </button>
-        <input aria-label="Scrub replay time" type="range" className="scrub min-w-0 flex-1" min={0} max={end} step={1} value={Math.min(t, end)} onChange={(e) => setT(Number(e.target.value))} />
-        <span className="num shrink-0 whitespace-nowrap text-right text-muted">
-          {fmtTime(t)} / {fmtTime(end)}
-        </span>
-        <button
-          aria-label={`Playback speed ${speed}x, click to change`}
-          className="num w-10 shrink-0 rounded text-faint hover:text-ink"
-          onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}
-        >
-          {speed}x
-        </button>
+        <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+          <button
+            aria-label={playing ? "Pause" : "Play"}
+            className="key h-9 w-9 shrink-0 rounded-md bg-trace text-screen disabled:opacity-40"
+            disabled={!trace}
+            onClick={() => {
+              if (t >= end) {
+                setT(0);
+              }
+              setPlaying(!playing);
+            }}
+          >
+            <Icon name={playing ? "pause" : "play"} />
+          </button>
+          <Scrubber
+            label="Replay time"
+            value={Math.min(t, end)}
+            max={end}
+            valueText={`${fmtTime(t)} of ${fmtTime(end)}`}
+            disabled={!trace}
+            onChange={setT}
+            onScrubStart={() => {
+              resume.current = playing;
+              setPlaying(false);
+            }}
+            onScrubEnd={() => {
+              if (resume.current && tRef.current < end) {
+                setPlaying(true);
+              }
+              resume.current = false;
+            }}
+          />
+          <span className="num shrink-0 whitespace-nowrap text-right text-xs text-screen-muted" aria-hidden="true">
+            <span className="text-screen-ink">{fmtTime(t)}</span> / {fmtTime(end)}
+          </span>
+          <button aria-label={`Playback speed ${speed} times. Change speed`} className="key num w-11 shrink-0 rounded py-1 text-xs !font-normal text-screen-muted hover:text-screen-ink" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
+            {speed}×
+          </button>
+        </div>
+
+        <Collapsible.Root open={chart} onOpenChange={setChart} className="border-t border-screen-line">
+          <Collapsible.Trigger className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-screen-muted transition-colors hover:text-screen-ink data-[state=open]:text-screen-ink">
+            <Icon name="chevron" className="chev h-3 w-3" /> Signal trace
+          </Collapsible.Trigger>
+          <Collapsible.Content className="fold">
+            {trace && (
+              <div className="px-4 pb-4">
+                <TraceChart trace={trace} pins={pins} scenario={scenario} violations={violations} t={t} end={end} onScrub={setT} />
+              </div>
+            )}
+          </Collapsible.Content>
+        </Collapsible.Root>
       </div>
 
       {evidence && (
-        <p className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[16px]" aria-label="Measured evidence">
-          <span className="whitespace-nowrap">
-            <span className="text-faint">Before </span>
-            <span className="num !text-[15px] text-fail">{evidence.before}</span>
-          </span>
+        <p className="mt-4 text-base" aria-label="Measured evidence">
+          <span className="text-muted">Before the fix, </span>
+          <Ticking key={`b-${evidence.before}`} className="num text-sm text-fail" text={evidence.before} />
           {evidence.after && (
             <>
-              <span className="text-faint">→</span>
-              <span className="whitespace-nowrap">
-                <span className="text-faint">After </span>
-                <span className="num !text-[15px] text-pass">{evidence.after}</span>
-              </span>
+              <span className="text-muted">. After it, </span>
+              <Ticking key={`a-${evidence.after}`} className="num text-sm text-pass" text={evidence.after} />
             </>
           )}
+          <span className="text-muted">.</span>
         </p>
       )}
-
-      <div className="mt-4">
-        <button className="flex items-center gap-1.5 text-[13px] text-muted hover:text-ink" aria-expanded={chart} onClick={() => setChart(!chart)}>
-          <Icon name="chevron" className={`h-3 w-3 transition-transform ${chart ? "rotate-90" : ""}`} /> Signal trace
-        </button>
-        {chart && trace && (
-          <div className="mt-3">
-            <TraceChart trace={trace} pins={pins} scenario={scenario} violations={violations} t={t} end={end} onScrub={setT} />
-          </div>
-        )}
-      </div>
     </section>
   );
 }
