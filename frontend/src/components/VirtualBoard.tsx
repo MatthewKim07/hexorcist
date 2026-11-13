@@ -7,7 +7,35 @@ const H = 500;
 const TOP_Y = 112;
 const BOTTOM_Y = 388;
 
-function pinXY(pin: string): { x: number; y: number } {
+export const HEADER_PINS = [...Array.from({ length: 14 }, (_, n) => `D${n}`), ...Array.from({ length: 6 }, (_, n) => `A${n}`)];
+/** The USB socket, where serial and timing checks sit, and the chip, where the sketch lives. */
+export const USB_XY = { x: 262, y: 196 };
+export const MCU_XY = { x: 510, y: 291 };
+
+export interface BoardLayout {
+  view: { x: number; w: number; h: number };
+  slots: { pin: string; x: number; y: number; top: boolean }[];
+}
+
+/** Where each part goes. Outputs and digital inputs sit above the board, analog sensors below. */
+export function boardLayout(pins: PinSpec[], full = false): BoardLayout {
+  const place = (items: PinSpec[], y: number, top: boolean) => {
+    const sorted = [...items].sort((a, b) => pinXY(a.pin).x - pinXY(b.pin).x);
+    const gap = Math.min(170, (W - 60) / Math.max(sorted.length, 1));
+    const left = W / 2 - (gap * (sorted.length - 1)) / 2;
+    return sorted.map((p, i) => ({ pin: p.pin, x: left + gap * i, y, top }));
+  };
+  const slots = [...place(pins.filter((p) => p.type !== "analog_input"), TOP_Y, true), ...place(pins.filter((p) => p.type === "analog_input"), BOTTOM_Y, false)];
+  if (full) {
+    return { view: { x: 0, w: W, h: H }, slots };
+  }
+  const xs = slots.map((s) => s.x);
+  const left = Math.max(0, Math.min(190, ...xs.map((x) => x - 100)));
+  const right = Math.min(W, Math.max(W - 190, ...xs.map((x) => x + 100)));
+  return { view: { x: left, w: right - left, h: slots.some((s) => !s.top) ? H : 410 }, slots };
+}
+
+export function pinXY(pin: string): { x: number; y: number } {
   const n = parseInt(pin.slice(1), 10);
   if (pin.startsWith("A")) {
     return { x: 512 + n * 20, y: 352 };
@@ -41,7 +69,7 @@ function niceRange(lo: number, hi: number): [number, number] {
   return [Math.floor(lo / step - 0.5) * step, Math.ceil(hi / step + 0.5) * step];
 }
 
-export function VirtualBoard({ pins, trace, t, scenario, tag, className = "mx-auto block max-h-[420px] w-full" }: { pins: PinSpec[]; trace: Trace | null; t: number; scenario?: Scenario; tag?: string; className?: string }) {
+export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, className = "mx-auto block max-h-[420px] w-full" }: { pins: PinSpec[]; trace: Trace | null; t: number; scenario?: Scenario; tag?: string; full?: boolean; className?: string }) {
   const tracks = useMemo(() => {
     if (!trace) {
       return null;
@@ -86,18 +114,17 @@ export function VirtualBoard({ pins, trace, t, scenario, tag, className = "mx-au
     return base;
   });
 
-  const place = (items: Live[], y: number) => {
-    const sorted = [...items].sort((a, b) => pinXY(a.pin.pin).x - pinXY(b.pin.pin).x);
-    const gap = Math.min(170, (W - 60) / Math.max(sorted.length, 1));
-    const left = W / 2 - (gap * (sorted.length - 1)) / 2;
-    return sorted.map((item, i) => ({ item, x: left + gap * i, y }));
-  };
-  const top = place(live.filter((l) => l.pin.type !== "analog_input"), TOP_Y);
-  const bottom = place(live.filter((l) => l.pin.type === "analog_input"), BOTTOM_Y);
-  const viewH = bottom.length ? H : 410;
-  const slots = [...top, ...bottom].map((s) => s.x);
-  const viewLeft = Math.max(0, Math.min(190, ...slots.map((x) => x - 100)));
-  const viewRight = Math.min(W, Math.max(W - 190, ...slots.map((x) => x + 100)));
+  const layout = boardLayout(pins, full);
+  const byPin = new Map(live.map((l) => [l.pin.pin, l]));
+  const placed = layout.slots.flatMap((s) => {
+    const item = byPin.get(s.pin);
+    return item ? [{ item, x: s.x, y: s.y, top: s.top }] : [];
+  });
+  const top = placed.filter((p) => p.top);
+  const bottom = placed.filter((p) => !p.top);
+  const viewLeft = layout.view.x;
+  const viewRight = layout.view.x + layout.view.w;
+  const viewH = layout.view.h;
   const lineNow = !!trace?.serial_log.some((l) => l.t_ms <= t && t - l.t_ms < 60);
   const d13 = live.find((l) => l.pin.pin === "D13");
 

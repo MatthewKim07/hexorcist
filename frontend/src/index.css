@@ -149,9 +149,32 @@ body {
   }
 }
 
-/* Radix Select and Tooltip popovers grow from their trigger. */
+/* Header pins on the board: invisible until pointed at or focused, then ringed like a probe touching the pin. */
+.pin-hot {
+  background: transparent;
+  box-shadow: inset 0 0 0 0 transparent;
+  transition: box-shadow 120ms ease;
+}
+.pin-hot:focus-visible,
+.pin-hot[data-state="open"] {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #e8c15a;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pin-hot:hover {
+    box-shadow: inset 0 0 0 1.5px rgba(232, 193, 90, 0.7);
+    cursor: pointer;
+  }
+}
+
+/* A rule lamp catching the moment it is broken. */
+.chip-flash {
+  box-shadow: 0 0 0 4px rgba(240, 118, 107, 0.28);
+}
+
+/* Radix Select, Tooltip and Popover popovers grow from their trigger. */
 .pop {
-  transform-origin: var(--radix-select-content-transform-origin, var(--radix-tooltip-content-transform-origin, top));
+  transform-origin: var(--radix-select-content-transform-origin, var(--radix-tooltip-content-transform-origin, var(--radix-popover-content-transform-origin, top)));
   animation: pop-in 180ms var(--ease-out);
 }
 .pop[data-state="closed"] {
