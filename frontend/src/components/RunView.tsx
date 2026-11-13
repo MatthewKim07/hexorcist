@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Bug, PinSpec, Report } from "../api";
 import { duration, keyFact, rankBugs } from "../format";
 import { useRun } from "../useRun";
@@ -62,7 +62,7 @@ export function RunView({ runId }: { runId: string }) {
   const report = state.run?.report ?? null;
   const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
   const pins: PinSpec[] = report?.spec?.pins ?? state.spec?.pins ?? state.run?.spec?.pins ?? [];
-  const [scenarioId, setScenarioId] = useState<string | null>(null);
+  const [chosenId, setScenarioId] = useState<string | null>(null);
   const [side, setSide] = useState<"before" | "after">("before");
   const [tab, setTab] = useState<TabId | null>(null);
 
@@ -72,17 +72,8 @@ export function RunView({ runId }: { runId: string }) {
   const afterIteration = report?.fix?.iteration ?? null;
   const iteration = side === "after" && afterIteration !== null ? afterIteration : 0;
 
-  useEffect(() => {
-    // Wait for the report on a finished run, so the board opens on the worst bug and not on the first scenario.
-    if (!report) {
-      return;
-    }
-    if (bugs.length) {
-      setScenarioId((cur) => cur ?? bugs[0].scenario_id);
-    } else if (emulated.length) {
-      setScenarioId((cur) => cur ?? emulated[0].id);
-    }
-  }, [report, bugs, emulated]);
+  // On a finished run the board opens on the worst bug, not on the first scenario, so wait for the report.
+  const scenarioId = chosenId ?? (report ? (bugs[0]?.scenario_id ?? emulated[0]?.id ?? null) : null);
 
   const ready = !!scenarioId && !!state.results[iteration]?.[scenarioId];
   const { trace, error: traceError } = useTrace(runId, iteration, scenarioId, ready);

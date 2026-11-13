@@ -71,7 +71,7 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
   return (
     <section id="replay" className="scroll-mt-20">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <Select label="Scenario" className="w-auto max-w-[min(360px,100%)] py-1.5" value={scenarioId ?? ""} onChange={onScenario} options={scenarios.map((s) => ({ value: s.id, label: s.name }))} />
+        <Select label="Scenario" className="w-auto max-w-[min(360px,100%)]" value={scenarioId ?? ""} onChange={onScenario} options={scenarios.map((s) => ({ value: s.id, label: s.name }))} />
         {hasAfter && (
           <Segmented
             label="Firmware version"

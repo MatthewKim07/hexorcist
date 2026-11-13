@@ -26,10 +26,10 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
       {pins.map((p, i) => (
         <div key={i} className="grid grid-cols-[64px_minmax(0,1.3fr)_112px_minmax(0,1fr)_24px] items-center gap-1.5">
           <Select label={`Pin ${i + 1}`} mono className="px-2" value={p.pin} onChange={(v) => update(i, { pin: v })} options={PINS.map((name) => ({ value: name, label: name }))} />
-          <input aria-label={`Role of ${p.pin}`} className="field" placeholder="Temp sensor" value={p.role} onChange={(e) => update(i, { role: e.target.value })} />
+          <input aria-label={`Role of ${p.pin}`} className="field h-9 py-0" placeholder="Temp sensor" value={p.role} onChange={(e) => update(i, { role: e.target.value })} />
           <Select label={`Type of ${p.pin}`} className="px-2" value={p.type} onChange={(v) => update(i, { type: v })} options={TYPES} />
           {p.type === "analog_input" ? (
-            <input aria-label={`Scale of ${p.pin}`} className="field font-mono" placeholder="10 mV/°C" value={p.scale} onChange={(e) => update(i, { scale: e.target.value })} />
+            <input aria-label={`Scale of ${p.pin}`} className="field h-9 py-0 font-mono" placeholder="10 mV/°C" value={p.scale} onChange={(e) => update(i, { scale: e.target.value })} />
           ) : p.type === "digital_input" ? (
             <Checkbox checked={p.active_low} onChange={(v) => update(i, { active_low: v })} className="text-xs text-muted">
               Active low

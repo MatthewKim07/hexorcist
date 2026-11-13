@@ -70,7 +70,7 @@ body {
     @apply font-mono tabular-nums;
   }
   .field {
-    @apply w-full rounded-md border border-line bg-raised px-3 py-2 text-sm text-ink outline-none placeholder:text-muted/80;
+    @apply w-full rounded-md border border-line bg-raised px-3 py-2 text-sm text-ink outline-none placeholder:text-muted;
     transition: border-color 150ms ease;
   }
   .field:focus-visible {
@@ -237,13 +237,20 @@ body {
   .fold[data-state="closed"] {
     animation: none;
   }
-  .pop,
+  .pop {
+    animation-name: fade-in;
+  }
   .pop[data-state="closed"] {
-    animation-name: fade;
+    animation-name: fade-out;
   }
 }
-@keyframes fade {
+@keyframes fade-in {
   from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
     opacity: 0;
   }
 }

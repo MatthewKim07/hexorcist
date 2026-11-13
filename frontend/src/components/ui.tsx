@@ -52,7 +52,7 @@ export interface Option<T extends string> {
 export function Select<T extends string>({ value, onChange, options, label, mono = false, className = "" }: { value: T; onChange: (v: T) => void; options: Option<T>[]; label: string; mono?: boolean; className?: string }) {
   return (
     <RSelect.Root value={value} onValueChange={(v) => onChange(v as T)}>
-      <RSelect.Trigger aria-label={label} className={`key field flex min-w-0 items-center justify-between gap-2 !font-normal data-[state=open]:border-ink/40 ${mono ? "font-mono" : ""} ${className}`}>
+      <RSelect.Trigger aria-label={label} className={`key field flex h-9 min-w-0 items-center justify-between gap-2 !py-0 !font-normal data-[state=open]:border-ink/40 ${mono ? "font-mono" : ""} ${className}`}>
         <span className="min-w-0 truncate text-left">
           <RSelect.Value />
         </span>
@@ -141,7 +141,7 @@ export function TabStrip<T extends string>({ tabs, value, onChange, label, closa
                 }
                 wasActive.current = false;
               }}
-              className="hover-ink whitespace-nowrap py-3 text-sm text-muted transition-colors data-[state=active]:text-ink"
+              className="hover-ink whitespace-nowrap py-3 text-sm text-muted transition-colors focus-visible:outline-offset-[-2px] data-[state=active]:text-ink"
             >
               {t.label}
             </RTabs.Trigger>
@@ -264,9 +264,9 @@ export function useTicker(value: number, ms = 450): number {
   return shown;
 }
 
-/** Text whose first whole number ticks up, like "D9 switched 23× in 5 s". Screen readers get the final text. */
+/** Text whose first standalone whole number ticks up: the 23 in "D9 switched 23× in 5 s". Screen readers get the final text. */
 export function Ticking({ text, className = "" }: { text: string; className?: string }) {
-  const match = /\d+(?![.,]\d)/.exec(text);
+  const match = /(?<![A-Za-z\d.])\d+(?![.,\d])/.exec(text);
   const target = match ? Number(match[0]) : NaN;
   const n = useTicker(target);
   if (!match) {
@@ -277,7 +277,9 @@ export function Ticking({ text, className = "" }: { text: string; className?: st
       <span className="sr-only">{text}</span>
       <span aria-hidden="true">
         {text.slice(0, match.index)}
-        {n}
+        <span className="inline-block text-right tabular-nums" style={{ minWidth: `${match[0].length}ch` }}>
+          {n}
+        </span>
         {text.slice(match.index + match[0].length)}
       </span>
     </span>
