@@ -3,14 +3,14 @@ import { ReactNode } from "react";
 export function Logo({ size = 24 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="9" y="9" width="14" height="14" rx="2.5" fill="none" stroke="#ececee" strokeWidth="1.8" />
-      <path d="M13 9V6M19 9V6M13 26v-3M19 26v-3M9 13H6M9 19H6M26 13h-3M26 19h-3" stroke="#ececee" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M13.5 16.5l2 2 3.5-4" fill="none" stroke="#8b9bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="9" y="9" width="14" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M13 9V6M19 9V6M13 26v-3M19 26v-3M9 13H6M9 19H6M26 13h-3M26 19h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M13.5 16.5l2 2 3.5-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-type IconName = "check" | "x" | "dash" | "dot" | "warn" | "shield" | "play" | "pause" | "restart" | "chevron" | "arrow";
+type IconName = "check" | "x" | "dash" | "dot" | "warn" | "shield" | "play" | "pause" | "restart" | "chevron" | "chevronDown" | "arrow";
 
 export function Icon({ name, className = "" }: { name: IconName; className?: string }) {
   const paths: Record<IconName, ReactNode> = {
@@ -24,6 +24,7 @@ export function Icon({ name, className = "" }: { name: IconName; className?: str
     pause: <path d="M5 3v10M11 3v10" />,
     restart: <path d="M3.5 8a4.5 4.5 0 1 0 1.4-3.3M3.5 2.5v3h3" />,
     chevron: <path d="M6 3.5L10.5 8 6 12.5" />,
+    chevronDown: <path d="M3.5 6L8 10.5 12.5 6" />,
     arrow: <path d="M2.5 8h11M9.5 4l4 4-4 4" />,
   };
   return (
@@ -36,13 +37,12 @@ export function Icon({ name, className = "" }: { name: IconName; className?: str
 export function DiffView({ unified }: { unified: string }) {
   const lines = unified.split("\n").filter((l) => !l.startsWith("---") && !l.startsWith("+++"));
   return (
-    <pre className="max-h-96 overflow-auto rounded-md bg-raised py-2 font-mono text-[12px] leading-5">
+    <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-raised py-2 font-mono text-xs leading-5">
       {lines.map((line, i) => {
         const add = line.startsWith("+");
         const del = line.startsWith("-");
-        const hunk = line.startsWith("@@");
         return (
-          <div key={i} className={`whitespace-pre px-3 ${add ? "bg-pass/10 text-pass" : del ? "bg-fail/10 text-fail" : hunk ? "text-faint" : "text-muted"}`}>
+          <div key={i} className={`whitespace-pre px-3 ${add ? "bg-pass/10 text-pass" : del ? "bg-fail/10 text-fail" : "text-muted"}`}>
             {line || " "}
           </div>
         );
@@ -78,24 +78,5 @@ export function Verdict({ status }: { status: string }) {
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {meta.label}
     </span>
-  );
-}
-
-/** Underlined tab strip that can also be closed: clicking the open tab collapses it. */
-export function Tabs<T extends string>({ tabs, value, onChange }: { tabs: { id: T; label: string }[]; value: T | null; onChange: (id: T | null) => void }) {
-  return (
-    <div role="tablist" className="flex gap-6 overflow-x-auto border-b border-line" aria-label="Details">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          role="tab"
-          aria-selected={value === t.id}
-          onClick={() => onChange(value === t.id ? null : t.id)}
-          className={`-mb-px whitespace-nowrap border-b-2 py-3 text-[14px] transition-colors ${value === t.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
   );
 }
