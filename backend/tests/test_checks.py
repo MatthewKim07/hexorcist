@@ -4,9 +4,10 @@ import asyncio
 from fastapi.testclient import TestClient
 
 from app import main
-from app.agent import Pipeline
+from app.agent import Pipeline, normalize_assertions
 from app.checks import CheckSet
 from app.models import DeviceSpec, PinSpec
+from app.presets import PRESETS
 from tests.test_api import settings
 from tests.test_fix_loop import ORIGINAL, FakeRunner, NullBus, NullStore
 
@@ -92,3 +93,14 @@ def test_a_run_with_checks_evaluates_them_without_reading_the_spec_again():
     assert any("D4" in w for w in report["warnings"])
     assert report["bugs"], status
 
+
+def test_every_example_ships_checks_that_survive_validation():
+    for preset in PRESETS:
+        if preset["id"] == "containment":
+            assert "checks" not in preset
+            continue
+        checks = CheckSet(**preset["checks"])
+        spec = DeviceSpec(pins=[PinSpec(**p) for p in preset["pins"]], behaviour=preset["behaviour"])
+        kept, warnings = normalize_assertions(checks.assertions, spec)
+        assert warnings == [], preset["id"]
+        assert len(kept) == len(checks.assertions) + 1, preset["id"]
