@@ -1,4 +1,4 @@
-import { KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { forwardRef, KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
 import * as RPopover from "@radix-ui/react-popover";
 import { Check, PinSpec, Scenario, Trace } from "../api";
 import { anchorOf, chipLabel, shortRole } from "../checks";
@@ -42,7 +42,9 @@ function pct(v: number, from: number, span: number): string {
   return `${((v - from) / span) * 100}%`;
 }
 
-export function RuleChip({ chip, pins, active = false, as = "button", ...rest }: { chip: StageChip; pins: PinSpec[]; active?: boolean; as?: "button" | "span" } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+type ChipProps = { chip: StageChip; pins: PinSpec[]; active?: boolean; as?: "button" | "span" } & React.ButtonHTMLAttributes<HTMLButtonElement>;
+
+export const RuleChip = forwardRef<HTMLButtonElement, ChipProps>(function RuleChip({ chip, pins, active = false, as = "button", ...rest }, ref) {
   const lamp = { pass: "bg-pass-lit", fail: "bg-fail-lit", off: "bg-screen-muted/50", idle: "border border-screen-muted bg-transparent" }[chip.tone];
   const label = chipLabel(chip.check, pins);
   const body = (
@@ -56,11 +58,11 @@ export function RuleChip({ chip, pins, active = false, as = "button", ...rest }:
     return <span className={look}>{body}</span>;
   }
   return (
-    <button type="button" aria-label={`${label}${chip.status ? `, ${chip.status}` : ""}`} aria-pressed={active || undefined} className={`key ${look} !font-normal hover:border-screen-muted`} {...rest}>
+    <button ref={ref} type="button" aria-label={`${label}${chip.status ? `, ${chip.status}` : ""}`} aria-pressed={active || undefined} className={`key ${look} !font-normal hover:border-screen-muted`} {...rest}>
       {body}
     </button>
   );
-}
+});
 
 function Pop({ open, onOpenChange, trigger, children, label }: { open: boolean; onOpenChange: (v: boolean) => void; trigger: ReactNode; children: ReactNode; label: string }) {
   return (
@@ -166,8 +168,10 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
     const slot = layout.slots.find((s) => s.pin === key)!;
     const right = topCount <= 1 || slot.x >= 480 || !slot.top;
     const y = slot.top ? 64 : slot.y + 46;
+    // A gauge's scale labels reach further out than a fan's blades.
+    const reach = slot.top ? 54 : 72;
     return right
-      ? { left: pct(slot.x + 54, view.x, view.w), top: pct(y, 0, view.h), transform: "translate(0, -50%)", alignItems: "flex-start" }
+      ? { left: pct(slot.x + reach, view.x, view.w), top: pct(y, 0, view.h), transform: "translate(0, -50%)", alignItems: "flex-start" }
       : { left: pct(slot.x - 54, view.x, view.w), top: pct(y, 0, view.h), transform: "translate(-100%, -50%)", alignItems: "flex-end" };
   };
 
@@ -176,7 +180,7 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
       <div ref={box} className="relative" style={{ aspectRatio: `${view.w} / ${view.h}` }}>
         <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} full={overlays} className="absolute inset-0 block h-full w-full" />
 
-        {sketch && (
+        {sketch && !asList && (
           <button
             type="button"
             onClick={sketch.onOpen}
@@ -210,8 +214,14 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
           ))}
       </div>
 
-      {asList && (pinPopover || chips.length > 0) && (
+      {asList && (pinPopover || chips.length > 0 || sketch) && (
         <div className="space-y-4 px-4 pb-4 pt-2 text-sm text-screen-ink">
+          {sketch && (
+            <button type="button" onClick={sketch.onOpen} className={`key flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-xs !font-normal ${sketch.empty ? "border-dashed border-trace text-trace" : "border-screen-line text-screen-ink hover:border-screen-muted"}`}>
+              <span className="truncate font-mono">{sketch.label}</span>
+              <span className="shrink-0 text-screen-muted">{sketch.empty ? "Paste your sketch" : "Edit the sketch"}</span>
+            </button>
+          )}
           {pinPopover && (
             <div role="group" aria-label="Header pins. Arrow keys move between pins, Enter opens the wiring for one.">
               <p className="mb-2 text-xs text-screen-muted">Wiring</p>

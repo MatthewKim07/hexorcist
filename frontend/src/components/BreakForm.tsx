@@ -1,88 +1,137 @@
-import { useEffect, useState } from "react";
-import CodeMirror from "@uiw/react-codemirror";
-import { cpp } from "@codemirror/lang-cpp";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { EditorView } from "@codemirror/view";
-import { tags } from "@lezer/highlight";
-import { api, PinSpec, Preset, RunSummary } from "../api";
-import { HeroScope } from "./HeroScope";
-import { PinTable } from "./PinTable";
-import { Checkbox, Choices } from "./ui";
+import { useEffect, useMemo, useState } from "react";
+import { api, Check, DeviceModel, Health, PinSpec, Preset } from "../api";
+import { ms } from "../checks";
+import { lineCount, mentionedPins, sketchName } from "../sketch";
+import { BoardStage, StageChip } from "./BoardStage";
+import { useStripText } from "./Chassis";
+import { CheckEditor, PinEditor, SketchSheet } from "./SetupEditors";
+import { Checkbox, Fold, KeyRow } from "./ui";
 
-// The editor sits on the faceplate, so its colours stay quiet: graphite text, muted tints for syntax.
-const editorTheme = [
-  EditorView.theme({
-    "&": { backgroundColor: "#EEF0EC", color: "#202427" },
-    ".cm-content": { caretColor: "#202427", padding: "12px 0" },
-    ".cm-cursor": { borderLeftColor: "#202427" },
-    ".cm-gutters": { backgroundColor: "#EEF0EC", color: "#8A908B", border: "none" },
-    ".cm-activeLine": { backgroundColor: "rgba(32, 36, 39, 0.035)" },
-    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#5A615D" },
-    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(28, 104, 132, 0.18)" },
-    ".cm-matchingBracket": { backgroundColor: "rgba(32, 36, 39, 0.08)", outline: "none" },
-  }),
-  syntaxHighlighting(
-    HighlightStyle.define([
-      { tag: [tags.keyword, tags.controlKeyword, tags.modifier, tags.processingInstruction], color: "#3D5663" },
-      { tag: [tags.typeName, tags.standard(tags.typeName)], color: "#3D5663" },
-      { tag: [tags.string, tags.character], color: "#55612F" },
-      { tag: [tags.number, tags.bool, tags.null], color: "#7A4E22" },
-      { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#646B67" },
-      { tag: [tags.function(tags.variableName), tags.macroName], color: "#202427", fontWeight: "500" },
-    ]),
-  ),
-];
+type Panel = "firmware" | "wiring" | "checks";
+type Source = "example" | "preview";
 
-export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
+/** What the checks were read from. A run may reuse them only while the text and wiring still match. */
+interface ReadFrom {
+  behaviour: string;
+  wiring: string;
+  firmware: string;
+}
+
+interface Setup {
+  preset: string | null;
+  title: string;
+  firmware: string;
+  pins: PinSpec[];
+  behaviour: string;
+  checks: Check[] | null;
+  source: Source | null;
+  deviceModel: DeviceModel | null;
+  readFrom: ReadFrom | null;
+  readBy: string;
+}
+
+const EMPTY: Setup = { preset: null, title: "", firmware: "", pins: [], behaviour: "", checks: null, source: null, deviceModel: null, readFrom: null, readBy: "" };
+const STORE = "hexorcist.setup";
+const TYPE_NAMES: Record<string, string> = { digital_output: "digital out", pwm_output: "PWM out", digital_input: "digital in", analog_input: "analog in" };
+
+/** The wiring as the checks see it. Renaming a part changes no measurement, so roles are left out. */
+function wiringKey(pins: PinSpec[]): string {
+  return JSON.stringify([...pins].sort((a, b) => a.pin.localeCompare(b.pin)).map((p) => [p.pin, p.type, p.scale, p.active_low]));
+}
+
+function restore(): Setup {
+  try {
+    const saved = sessionStorage.getItem(STORE);
+    return saved ? { ...EMPTY, ...JSON.parse(saved) } : EMPTY;
+  } catch {
+    return EMPTY;
+  }
+}
+
+function listOf(items: string[]): string {
+  return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+export function BreakForm({ health, onStarted }: { health: Health | null; onStarted: (id: string) => void }) {
   const [presets, setPresets] = useState<Preset[]>([]);
-  const thermostat = presets.find((p) => p.id === "thermostat");
-  const [active, setActive] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const [firmware, setFirmware] = useState("");
-  const [pins, setPins] = useState<PinSpec[]>([]);
-  const [behaviour, setBehaviour] = useState("");
-  const [finished, setFinished] = useState<RunSummary | null>(null);
+  const [s, setS] = useState<Setup>(restore);
+  const [panel, setPanel] = useState<Panel | null>("firmware");
+  const [sheet, setSheet] = useState(() => !restore().firmware.trim());
+  const [list, setList] = useState(false);
   const [compare, setCompare] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [previewError, setPreviewError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const patch = (p: Partial<Setup>) => setS((prev) => ({ ...prev, ...p }));
 
   useEffect(() => {
     api
       .presets()
-      .then((list) => {
-        setPresets(list);
-        // Open on a real sketch with real bugs, not an empty form.
-        const first = list.find((p) => p.id === "thermostat") ?? list[0];
-        if (first) {
-          load(first);
-        }
-      })
-      .catch((e) => setError(`Could not load presets: ${e.message}`));
-    // A finished run to open instantly, for anyone who does not want to wait ninety seconds.
-    api
-      .runs()
-      .then((runs) => {
-        const done = runs.filter((r) => r.mode === "break" && r.status === "fixed");
-        setFinished(done.find((r) => /thermostat/i.test(r.title)) ?? done[0] ?? null);
-      })
-      .catch(() => undefined);
+      .then(setPresets)
+      .catch((e) => setError(`Could not load the examples: ${e.message}`));
   }, []);
 
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORE, JSON.stringify(s));
+    } catch {
+      // Private windows can refuse storage. The setup still works for this visit.
+    }
+  }, [s]);
+
+  const hasSketch = !!s.firmware.trim();
+  const fresh = !!s.checks && !!s.readFrom && s.readFrom.behaviour === s.behaviour && s.readFrom.wiring === wiringKey(s.pins);
+  const sameSketch = fresh && s.readFrom!.firmware === s.firmware;
+  const shown = (s.checks ?? []).filter((c) => c.type !== "no_crash");
+  const llm = health?.llm_configured ?? true;
+  const canRun = hasSketch && !!s.behaviour.trim() && llm && !busy;
+  const mentioned = useMemo(() => mentionedPins(s.firmware), [s.firmware]);
+  const unwired = mentioned.filter((m) => !s.pins.some((p) => p.pin === m.pin));
+
+  useStripText(busy ? "Starting" : !hasSketch ? "Paste a sketch to start" : !s.behaviour.trim() ? "Say what the sketch must do" : !llm ? "No model configured" : "Ready to run");
+
   const load = (p: Preset) => {
-    setActive(p.id);
-    setTitle(p.title);
-    setFirmware(p.firmware);
-    setPins(p.pins);
-    setBehaviour(p.behaviour);
+    setS({
+      preset: p.id,
+      title: p.title,
+      firmware: p.firmware,
+      pins: p.pins,
+      behaviour: p.behaviour,
+      checks: p.checks?.assertions ?? null,
+      source: p.checks ? "example" : null,
+      deviceModel: p.checks?.device_model ?? null,
+      readFrom: p.checks ? { behaviour: p.behaviour, wiring: wiringKey(p.pins), firmware: p.firmware } : null,
+      readBy: "",
+    });
+    setWarnings([]);
+    setPreviewError("");
     setError("");
+    setSheet(false);
   };
 
-  const start = async (override?: Preset) => {
+  const preview = async () => {
+    setPreviewing(true);
+    setPreviewError("");
+    try {
+      const got = await api.previewChecks({ firmware: s.firmware, pins: s.pins, behaviour: s.behaviour });
+      patch({ checks: got.assertions, source: "preview", deviceModel: got.device_model, readFrom: { behaviour: s.behaviour, wiring: wiringKey(s.pins), firmware: s.firmware }, readBy: `${got.model} in ${ms(got.duration_ms)}` });
+      setWarnings(got.warnings);
+    } catch (e) {
+      setPreviewError((e as Error).message);
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const start = async () => {
     setBusy(true);
     setError("");
     try {
-      const body = override ? { title: override.title, firmware: override.firmware, pins: override.pins, behaviour: override.behaviour } : { title, firmware, pins, behaviour };
-      const { run_id } = await api.start({ mode: "break", ...body, compare });
+      const checks = fresh ? { assertions: s.checks, device_model: sameSketch ? s.deviceModel : null, source: s.source } : undefined;
+      const title = s.preset && s.firmware === presets.find((p) => p.id === s.preset)?.firmware ? s.title : "";
+      const { run_id } = await api.start({ mode: "break", title, firmware: s.firmware, pins: s.pins, behaviour: s.behaviour, compare, ...(checks ? { checks } : {}) });
       onStarted(run_id);
     } catch (e) {
       setError((e as Error).message);
@@ -90,81 +139,175 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
     }
   };
 
-  const toForm = () => document.getElementById("paste")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const setPin = (next: PinSpec) => patch({ pins: s.pins.some((p) => p.pin === next.pin) ? s.pins.map((p) => (p.pin === next.pin ? next : p)) : [...s.pins, next] });
+  const dropPin = (pin: string) => patch({ pins: s.pins.filter((p) => p.pin !== pin) });
+  const keyOf = (c: Check, i: number) => c.id ?? `c${i}`;
+  const setCheck = (key: string, next: Check | null) => patch({ checks: (s.checks ?? []).flatMap((c, i) => (keyOf(c, i) === key ? (next ? [next] : []) : [c])) });
+
+  const chips: StageChip[] = (s.checks ?? []).flatMap((c, i) => (c.type === "no_crash" ? [] : [{ key: keyOf(c, i), check: c, tone: fresh ? "idle" : "off", status: fresh ? undefined : "out of date" }]));
+
+  const examples = presets.length > 0 && (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="label mr-1">Load an example</span>
+      {presets.map((p) => (
+        <button key={p.id} aria-pressed={s.preset === p.id} className="key rounded-full border border-line bg-raised px-3 py-1 text-xs !font-normal text-muted hover:text-ink aria-pressed:border-ink aria-pressed:text-ink" onClick={() => load(p)} title={p.summary}>
+          {p.title}
+        </button>
+      ))}
+    </div>
+  );
+
+  const behaviourField = (
+    <textarea aria-label="What the sketch must do" rows={5} className="field scroll resize-y leading-relaxed" value={s.behaviour} onChange={(e) => patch({ behaviour: e.target.value })} placeholder="What it must do, with numbers. For example: the fan turns on at 30 °C and off at 27 °C, and switches at most twice in any 5 seconds." />
+  );
 
   return (
-    <div>
-      <section className="grid min-h-[calc(100svh-57px-80px)] content-center items-center gap-x-12 gap-y-8 py-12 [grid-template-areas:'copy''scope''actions'] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:[grid-template-areas:'copy_scope''actions_scope']">
-        <div className="[grid-area:copy] lg:self-end">
-          <h1 className="text-[48px] font-semibold leading-none tracking-[-0.03em]">Hexorcist</h1>
-          <p className="mt-4 max-w-sm text-base text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
+    <div className="space-y-5">
+      <section aria-label="Bench" className="screen rounded-xl border border-[#0b0f0e] bg-screen">
+        <div className="flex items-center gap-3 px-4 pt-3 text-xs">
+          <span className="font-mono text-screen-muted">{s.title && s.preset ? s.title : hasSketch ? sketchName(s.firmware) : "No sketch"}</span>
+          <span className="text-screen-muted/70">
+            {s.pins.length} wired · {shown.length} check{shown.length === 1 ? "" : "s"}
+          </span>
+          <button type="button" aria-pressed={list} aria-label="List view" onClick={() => setList((v) => !v)} className="key ml-auto rounded-full border border-screen-line px-2.5 py-1 !font-normal text-screen-muted hover:text-screen-ink aria-pressed:border-screen-muted aria-pressed:text-screen-ink">
+            List
+          </button>
         </div>
-        <div className="[grid-area:scope]">
-          <HeroScope />
-        </div>
-        <div className="[grid-area:actions] lg:self-start">
-          <div className="flex flex-wrap items-center gap-3">
-            <button className="btn-primary" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
-              {busy ? "Starting" : "Try the thermostat"}
-            </button>
-            <button className="btn-outline" onClick={toForm}>
-              Paste your own firmware
-            </button>
-          </div>
-          {error && <p className="mt-6 text-fail">{error}</p>}
-        </div>
+        <BoardStage
+          pins={s.pins}
+          trace={null}
+          t={0}
+          chips={chips}
+          list={list}
+          className="mx-auto max-w-[960px] pb-2"
+          sketch={{ label: hasSketch ? sketchName(s.firmware) : "sketch.ino", empty: !hasSketch, onOpen: () => setSheet(true) }}
+          pinPopover={(pin, close) => {
+            const m = mentioned.find((x) => x.pin === pin);
+            return <PinEditor key={pin} pin={pin} current={s.pins.find((p) => p.pin === pin)} guess={m} onChange={setPin} onRemove={() => (dropPin(pin), close())} onClose={close} />;
+          }}
+          chipPopover={(chip, close) => <CheckEditor check={chip.check} pins={s.pins} onChange={(c) => setCheck(chip.key, c)} onRemove={() => (setCheck(chip.key, null), close())} onClose={close} />}
+        />
       </section>
 
-      <section id="paste" className="scroll-mt-20 border-t border-line pt-10">
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <Choices
-            label="Examples"
-            options={presets.map((p) => ({ value: p.id, label: p.title }))}
-            hints={Object.fromEntries(presets.map((p) => [p.id, p.summary]))}
-            value={active}
-            onChange={(id) => {
-              const p = presets.find((x) => x.id === id);
-              if (p) {
-                load(p);
-              }
-            }}
-          />
-          {finished && (
-            <a href={`#/runs/${finished.id}`} className="link text-sm">
-              Open a finished run
-            </a>
+      <KeyRow
+        label="Setup"
+        value={panel}
+        onChange={setPanel}
+        onPress={(v, wasOpen) => v === "firmware" && wasOpen && setSheet(true)}
+        keys={[
+          { value: "firmware", label: "Firmware", lamp: hasSketch },
+          { value: "wiring", label: "Wiring", lamp: s.pins.length > 0 },
+          { value: "checks", label: "Checks", lamp: fresh && shown.length > 0 },
+        ]}
+        end={
+          <>
+            <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted" hint="One extra model call with no emulator, shown beside the measured results">
+              Add a plain LLM review
+            </Checkbox>
+            <button className="btn-primary" disabled={!canRun} onClick={start}>
+              {busy ? "Starting" : "Run"}
+            </button>
+          </>
+        }
+      >
+        <div className="mt-4 rounded-lg border border-line bg-raised/60 p-5 text-sm">
+          {panel === "firmware" && (
+            <div className="space-y-5">
+              {hasSketch ? (
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <div>
+                    <p className="font-mono">{sketchName(s.firmware)}</p>
+                    <p className="mt-0.5 text-muted">
+                      {lineCount(s.firmware)} lines{mentioned.length > 0 ? `, uses ${listOf(mentioned.map((m) => m.pin))}` : ""}
+                    </p>
+                  </div>
+                  <button className="btn-outline" onClick={() => setSheet(true)}>
+                    Open the sketch
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <p className="max-w-[48ch] text-muted">No sketch yet. It compiles for an Arduino Uno and runs only inside a sealed sandbox.</p>
+                  <button className="btn-primary" onClick={() => setSheet(true)}>
+                    Paste your sketch
+                  </button>
+                </div>
+              )}
+              {examples}
+            </div>
+          )}
+
+          {panel === "wiring" && (
+            <div className="space-y-4">
+              <p className="max-w-[62ch] text-muted">Click a header pin on the board to say what is connected to it. Inputs get driven by the test scenarios; outputs are what the checks watch.</p>
+              {unwired.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="mr-1">The sketch uses {listOf(unwired.map((m) => m.pin))}:</span>
+                  {unwired.map((m) => (
+                    <button key={m.pin} className="btn-outline !py-1.5 text-xs" onClick={() => setPin({ pin: m.pin, role: "", type: m.type, scale: "", active_low: m.active_low })}>
+                      Wire {m.pin} as {TYPE_NAMES[m.type]}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {s.pins.length > 0 && (
+                <ul className="divide-y divide-line border-y border-line">
+                  {s.pins.map((p) => (
+                    <li key={p.pin} className="flex items-baseline gap-4 py-2">
+                      <span className="w-8 font-mono">{p.pin}</span>
+                      <span className="min-w-0 flex-1 truncate">{p.role || <span className="text-muted">unnamed</span>}</span>
+                      <span className="text-muted">
+                        {TYPE_NAMES[p.type]}
+                        {p.scale ? `, ${p.scale}` : ""}
+                        {p.active_low ? ", active low" : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          {panel === "checks" && (
+            <div className="space-y-4">
+              {s.checks && fresh && (
+                <p className="max-w-[66ch] text-muted">
+                  {s.source === "example" ? `These ${shown.length} checks come with the example, as a finished run read them from its text.` : `${shown.length} check${shown.length === 1 ? "" : "s"} read from your text by ${s.readBy}.`} The run measures exactly these, plus a crash check. Click one on the board to change its numbers.
+                </p>
+              )}
+              {s.checks && !fresh && <p className="max-w-[66ch]">The text or wiring changed after these checks were read. Preview again to see the new ones, or run, and the checks are read again during the run.</p>}
+              {!s.checks && <p className="max-w-[66ch] text-muted">Say what the sketch must do, with numbers. Preview checks turns the text into checks you can see on the board and change before the run.</p>}
+              {warnings.length > 0 && fresh && (
+                <ul className="space-y-1 text-muted">
+                  {warnings.map((w) => (
+                    <li key={w}>{w}</li>
+                  ))}
+                </ul>
+              )}
+              {s.checks ? (
+                <Fold title="Edit the full text" defaultOpen={!fresh}>
+                  {behaviourField}
+                </Fold>
+              ) : (
+                behaviourField
+              )}
+              {(!s.checks || !fresh || s.source === "preview") && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <button className="btn-outline" disabled={!s.behaviour.trim() || previewing || !llm} onClick={preview}>
+                    {previewing ? "Reading the text" : fresh ? "Preview checks again" : "Preview checks"}
+                  </button>
+                  <span className="text-xs text-muted">One model call. Nothing compiles or runs.</span>
+                </div>
+              )}
+              {previewError && <p className="text-fail">{previewError}</p>}
+            </div>
           )}
         </div>
+      </KeyRow>
 
-        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-          <div>
-            <div className="label mb-2">Sketch</div>
-            <div className="h-[420px] overflow-hidden rounded-md border border-line bg-raised">
-              <CodeMirror value={firmware} onChange={setFirmware} theme="none" extensions={[cpp(), ...editorTheme]} basicSetup={{ foldGutter: false, highlightActiveLineGutter: true }} height="420px" aria-label="Arduino sketch" />
-            </div>
-          </div>
-          <div className="space-y-8">
-            <div>
-              <div className="label mb-2">Pins</div>
-              <PinTable pins={pins} onChange={setPins} />
-            </div>
-            <div>
-              <div className="label mb-2">Behaviour</div>
-              <textarea aria-label="Intended behaviour" rows={7} className="field scroll resize-none leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="What it must do, with numbers" />
-            </div>
-          </div>
-        </div>
+      {error && <p className="text-fail">{error}</p>}
 
-        {error && <p className="mt-6 text-fail">{error}</p>}
-        <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
-          <button className="btn-primary" disabled={busy} onClick={() => start()}>
-            {busy ? "Starting" : "Run"}
-          </button>
-          <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted" hint="One extra model call with no emulator, shown beside the measured results">
-            Add a plain LLM review
-          </Checkbox>
-        </div>
-      </section>
+      <SketchSheet open={sheet} onOpenChange={setSheet} firmware={s.firmware} onFirmware={(v) => patch({ firmware: v })} presets={presets} onPreset={load} />
     </div>
   );
 }
