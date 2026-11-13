@@ -6,7 +6,7 @@ import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { api, PinSpec, Preset, RunSummary } from "../api";
 import { PinTable } from "./PinTable";
-import { Checkbox, Choices, Tip } from "./ui";
+import { Checkbox, Choices } from "./ui";
 
 // The editor sits on the faceplate, so its colours stay quiet: graphite text, muted tints for syntax.
 const editorTheme = [
@@ -152,13 +152,9 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
           <button className="btn-primary" disabled={busy} onClick={() => start()}>
             {busy ? "Starting" : "Run"}
           </button>
-          <Tip content="One extra model call with no emulator, shown beside the measured results">
-            <span>
-              <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted">
-                Add a plain LLM review
-              </Checkbox>
-            </span>
-          </Tip>
+          <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted" hint="One extra model call with no emulator, shown beside the measured results">
+            Add a plain LLM review
+          </Checkbox>
         </div>
       </section>
     </div>

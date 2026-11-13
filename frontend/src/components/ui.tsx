@@ -80,14 +80,18 @@ export function Select<T extends string>({ value, onChange, options, label, mono
 
 /* ---------------------------------------------------------------- Checkbox */
 
-export function Checkbox({ checked, onChange, children, className = "" }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string }) {
+export function Checkbox({ checked, onChange, children, className = "", hint }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string; hint?: string }) {
+  // A tooltip trigger takes over data-state, so the checked look keys off aria-checked.
+  const box = (
+    <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-[#9aa098] bg-raised aria-checked:border-ink aria-checked:bg-ink">
+      <RCheckbox.Indicator className="text-bg">
+        <Icon name="check" className="h-3 w-3" />
+      </RCheckbox.Indicator>
+    </RCheckbox.Root>
+  );
   return (
     <label className={`group flex cursor-pointer select-none items-center gap-2 ${className}`}>
-      <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-[#9aa098] bg-raised data-[state=checked]:border-ink data-[state=checked]:bg-ink">
-        <RCheckbox.Indicator className="text-bg">
-          <Icon name="check" className="h-3 w-3" />
-        </RCheckbox.Indicator>
-      </RCheckbox.Root>
+      {hint ? <Tip content={hint}>{box}</Tip> : box}
       {children}
     </label>
   );
