@@ -8,6 +8,31 @@ export interface PinSpec {
   active_low: boolean;
 }
 
+/** A machine-checkable assertion with its parameters, as the backend validates and evaluates it. */
+export interface Check {
+  id?: string;
+  type: string;
+  description?: string;
+  [param: string]: any;
+}
+
+export type DeviceModel = { summary: string; inputs: string[]; outputs: string[]; thresholds: string[]; risks: string[] };
+
+/** Checks a run evaluates as given instead of reading the spec again. */
+export interface CheckSet {
+  assertions: Check[];
+  device_model?: DeviceModel | null;
+  source: "preview" | "example";
+}
+
+export interface CheckPreview {
+  assertions: Check[];
+  device_model: DeviceModel;
+  warnings: string[];
+  model: string;
+  duration_ms: number;
+}
+
 export interface Preset {
   id: string;
   title: string;
@@ -15,6 +40,7 @@ export interface Preset {
   firmware: string;
   pins: PinSpec[];
   behaviour: string;
+  checks?: CheckSet;
 }
 
 export interface Health {
@@ -42,9 +68,8 @@ export interface Scenario {
   floating?: { pin: string; from_ms: number; to_ms: number }[];
 }
 
-export interface AssertionDef {
+export interface AssertionDef extends Check {
   id: string;
-  type: string;
   description: string;
 }
 
@@ -113,7 +138,7 @@ export interface Report {
   status: string;
   firmware: string;
   spec: { pins: PinSpec[]; behaviour: string };
-  device_model: { summary: string; inputs: string[]; outputs: string[]; thresholds: string[]; risks: string[] } | null;
+  device_model: DeviceModel | null;
   assertions: AssertionDef[];
   scenarios: Scenario[];
   matrix: Record<string, Record<string, AssertionResult[]>>;
@@ -238,4 +263,5 @@ export const api = {
   review: (id: string) => getJson<ReviewState>(`/api/runs/${id}/review`),
   requestReview: (id: string) => postJson<ReviewState>(`/api/runs/${id}/review`),
   start: (body: Record<string, unknown>) => postJson<{ run_id: string; guard: Guard }>("/api/runs", body),
+  previewChecks: (body: { firmware: string; pins: PinSpec[]; behaviour: string }) => postJson<CheckPreview>("/api/checks", body),
 };
