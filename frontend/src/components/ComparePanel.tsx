@@ -111,7 +111,7 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-8 border-b border-line pb-3 text-[14px]">
+      <div className="grid grid-cols-2 gap-8 border-b border-line pb-3 text-sm">
         <div className="text-muted">Plain LLM review</div>
         <div>Hexorcist measured</div>
       </div>
@@ -121,64 +121,65 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
           const first = row.left[0];
           return (
             <li key={row.key} className="border-b border-line">
-              <button aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : row.key)} className="grid w-full grid-cols-2 gap-8 py-3.5 text-left hover:bg-raised/60">
+              <button aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : row.key)} className="hover-row grid w-full grid-cols-2 gap-8 py-3.5 text-left transition-colors">
                 <span className="min-w-0 text-muted">
-                  {first ? first.title : <span className="text-faint">Nothing matched</span>}
-                  {row.left.length > 1 && <span className="ml-2 text-faint">+{row.left.length - 1}</span>}
+                  {first ? first.title : <span className="text-muted">Nothing matched</span>}
+                  {row.left.length > 1 && <span className="ml-2 text-muted">+{row.left.length - 1}</span>}
                 </span>
                 <span className="min-w-0">
                   {row.bug ? (
                     <>
                       <span className="block">{row.bug.title}</span>
                       <span className="mt-0.5 flex items-center gap-3">
-                        <span className="num text-fail">{keyFact(row.bug.before?.evidence ?? row.bug.evidence)}</span>
+                        <span className="num text-xs text-fail">{keyFact(row.bug.before?.evidence ?? row.bug.evidence)}</span>
                         {row.bug.verified && (
                           <span className="flex items-center gap-1 text-pass">
-                            <Icon name="check" /> fixed
+                            <Icon name="check" /> Fixed
                           </span>
                         )}
                       </span>
                     </>
                   ) : (
-                    <span className="text-faint">Not measured</span>
+                    <span className="text-muted">Not measured</span>
                   )}
                 </span>
               </button>
               {isOpen && (
-                <div className="grid grid-cols-2 gap-8 pb-4 text-[13px] text-muted">
+                <div className="grid grid-cols-2 gap-8 pb-4 text-xs text-muted">
                   <div className="space-y-2">
                     {row.left.map((c, i) => (
                       <p key={i}>
                         {c.detail}
-                        {c.lines.length > 0 && <span className="num ml-2 text-faint">line {c.lines.join(", ")}</span>}
+                        {c.lines.length > 0 && <span className="num ml-2 text-muted">line {c.lines.join(", ")}</span>}
                       </p>
                     ))}
                   </div>
-                  <div className="space-y-2">{row.bug ? <p>{row.bug.evidence}</p> : <p className="text-faint">No scenario measured this. A guess stays a guess until it is run.</p>}</div>
+                  <div className="space-y-2">{row.bug ? <p>{row.bug.evidence}</p> : <p className="text-muted">No scenario measured this. A guess stays a guess until it is run.</p>}</div>
                 </div>
               )}
             </li>
           );
         })}
         {rows.length === 0 && (
-          <li className="grid grid-cols-2 gap-8 border-b border-line py-3.5 text-faint">
+          <li className="grid grid-cols-2 gap-8 border-b border-line py-3.5 text-muted">
             <span>{review.verdict === "looks_correct" ? "Nothing flagged" : "No concerns"}</span>
             <span>No check failed</span>
           </li>
         )}
       </ul>
       {rows.length > VISIBLE && (
-        <button className="mt-3 text-[13px] text-muted hover:text-ink" onClick={() => setMore(!more)} aria-expanded={more}>
+        <button className="hover-ink mt-3 text-xs text-muted" onClick={() => setMore(!more)} aria-expanded={more}>
           {more ? "Show fewer" : `Show ${rows.length - VISIBLE} more`}
         </button>
       )}
 
-      <div className="mt-6 grid grid-cols-2 gap-8 text-[14px]">
+      <div className="mt-6 grid grid-cols-2 gap-8 text-sm">
         <p className="text-muted">
-          {review.concerns.length} concern{review.concerns.length === 1 ? "" : "s"} · <span className="num text-ink">0</span> measured · <span className="num text-ink">0</span> fixes tested
+          {review.concerns.length} concern{review.concerns.length === 1 ? "" : "s"}, none measured, no fix tested
         </p>
         <p>
-          <span className="num">{bugs.length}</span> measured · <span className="num text-pass">{verified}</span> fixes verified{fix ? <span className="num ml-2 text-faint">+{fix.diff.added} −{fix.diff.removed}</span> : null}
+          {bugs.length} measured, <span className="text-pass">{verified} fix{verified === 1 ? "" : "es"} verified</span>
+          {fix ? <span className="num ml-2 text-xs text-muted">+{fix.diff.added} −{fix.diff.removed}</span> : null}
         </p>
       </div>
     </div>
@@ -196,7 +197,7 @@ export function ComparePanel({ runId, bugs, report, finished }: { runId: string;
       ) : (
         <div className="space-y-3">
           <button className="btn-outline" onClick={ask} disabled={waiting}>
-            {waiting ? "Asking the model…" : "Run a plain LLM review"}
+            {waiting ? "Asking the model" : "Run a plain LLM review"}
           </button>
           <p className="label">One extra LLM call. No compiler, no emulator.</p>
           {error && <p className="text-fail">{error}</p>}

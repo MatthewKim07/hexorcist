@@ -5,11 +5,12 @@ import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { BugList } from "./BugList";
 import { ComparePanel } from "./ComparePanel";
-import { Icon, STATUS_META, Tabs, TONE_TEXT } from "./Common";
+import { Icon, STATUS_META, TONE_TEXT } from "./Common";
 import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
 import { Replay } from "./Replay";
 import { Stepper } from "./Stepper";
+import { Fold, TabStrip, Ticking } from "./ui";
 
 type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
 
@@ -18,15 +19,16 @@ function headline(report: Report | null, status: string, firstWarning: string): 
   const n = s?.bugs_found ?? 0;
   const v = s?.bugs_verified ?? 0;
   const bugs = `${n} bug${n === 1 ? "" : "s"} found`;
+  const fixed = v === n ? (n === 1 ? "fixed and verified" : n === 2 ? "both fixed and verified" : "all fixed and verified") : `${v} fixed and verified`;
   switch (status) {
     case "fixed":
-      return { title: `${bugs} · ${v} fixed and verified`, sub: "" };
+      return { title: `${bugs}, ${fixed}`, sub: "" };
     case "clean":
       return { title: "No bugs found", sub: `${s?.assertions} checks passed in ${s?.scenarios} scenarios` };
     case "partial":
-      return { title: `${bugs} · ${v} fixed and verified`, sub: "The best patch still fails a check, so it is not claimed as a fix" };
+      return { title: `${bugs}, ${v} fixed and verified`, sub: "The best patch still fails a check, so it is not claimed as a fix" };
     case "unfixed":
-      return { title: `${bugs} · no working fix`, sub: "" };
+      return { title: `${bugs}, no working fix`, sub: "" };
     case "inconclusive":
       return { title: "Inconclusive", sub: firstWarning || "Not everything could be checked" };
     case "compile_failed":
@@ -49,8 +51,8 @@ function headline(report: Report | null, status: string, firstWarning: string): 
 function Skeleton() {
   return (
     <div aria-busy="true" className="space-y-6">
-      <div className="h-3 w-40 rounded bg-raised" />
-      <div className="h-8 w-80 rounded bg-raised" />
+      <div className="h-4 w-40 rounded bg-raised" />
+      <div className="h-[34px] w-80 rounded bg-raised" />
     </div>
   );
 }
@@ -115,19 +117,19 @@ export function RunView({ runId }: { runId: string }) {
   const evidence = focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
   const emulatedResults = state.results[iteration] ?? {};
 
-  const tabs: { id: TabId; label: string }[] = [];
+  const tabs: { value: TabId; label: string }[] = [];
   if (!running) {
     if (hasBoard) {
-      tabs.push({ id: "scenarios", label: "Scenarios" }, { id: "checks", label: "Checks" });
+      tabs.push({ value: "scenarios", label: "Scenarios" }, { value: "checks", label: "Checks" });
     }
     if (records.length) {
-      tabs.push({ id: "containment", label: "Containment" });
+      tabs.push({ value: "containment", label: "Containment" });
     }
     if (comparable) {
-      tabs.push({ id: "compare", label: "Compare with plain LLM" });
+      tabs.push({ value: "compare", label: "Compare with plain LLM" });
     }
     if (report && !report.contained) {
-      tabs.push({ id: "logs", label: "Logs" });
+      tabs.push({ value: "logs", label: "Logs" });
     }
   }
 
@@ -139,11 +141,13 @@ export function RunView({ runId }: { runId: string }) {
   return (
     <div className="space-y-8">
       <header>
-        <p className="label flex flex-wrap items-center gap-x-3">
-          <span>{state.run.title}</span>
-          {report && state.run.mode === "build" && <span>Build</span>}
+        <p className="label flex flex-wrap items-baseline justify-between gap-x-6">
+          <span>
+            {state.run.title}
+            {report && state.run.mode === "build" && <span>, built from a description</span>}
+          </span>
           {state.run.finished_at && <span className="num">{duration(state.run.created_at, state.run.finished_at)}</span>}
-          {state.connectionLost && running && <span>Reconnecting…</span>}
+          {state.connectionLost && running && <span>Reconnecting</span>}
         </p>
         {running ? (
           <div className="mt-6">
@@ -151,11 +155,11 @@ export function RunView({ runId }: { runId: string }) {
           </div>
         ) : (
           <>
-            <h1 className="headline mt-3 flex items-center gap-3">
+            <h1 className="headline mt-2 flex items-center gap-3">
               {meta.tone !== "neutral" && <Icon name={meta.tone === "pass" ? "check" : "x"} className={`h-6 w-6 shrink-0 ${TONE_TEXT[meta.tone]}`} />}
               {title}
             </h1>
-            {sub && <p className="mt-2 text-[16px] text-muted">{sub}</p>}
+            {sub && <Ticking className="mt-2 block text-base text-muted" text={sub} />}
           </>
         )}
       </header>
@@ -170,19 +174,18 @@ export function RunView({ runId }: { runId: string }) {
             ))}
           </ul>
           {guard.reasons.length > 3 && (
-            <details className="mt-2">
-              <summary className="cursor-pointer text-[13px] text-faint hover:text-ink">{guard.reasons.length - 3} more</summary>
-              <ul className="mt-2 space-y-2 text-muted">
+            <Fold className="mt-3" title={`${guard.reasons.length - 3} more`}>
+              <ul className="space-y-2 text-muted">
                 {guard.reasons.slice(3).map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>
-            </details>
+            </Fold>
           )}
         </section>
       )}
 
-      {status === "compile_failed" && report?.compile_log && <pre className="max-h-96 overflow-auto rounded-md bg-raised p-4 font-mono text-[12px] text-muted">{report.compile_log}</pre>}
+      {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-raised p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
 
       {hasBoard && (
         <Replay
@@ -205,12 +208,13 @@ export function RunView({ runId }: { runId: string }) {
 
       {tabs.length > 0 && (
         <section>
-          <Tabs tabs={tabs} value={tab} onChange={setTab} />
+          <TabStrip label="Details" closable tabs={tabs} value={tab} onChange={setTab}>
           {tab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
           {tab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
           {tab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
           {tab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
           {tab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
+          </TabStrip>
         </section>
       )}
     </div>

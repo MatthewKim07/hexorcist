@@ -31,22 +31,22 @@ export function History() {
           </thead>
           <tbody>
             {runs?.map((run) => (
-              <tr key={run.id} className="cursor-pointer border-t border-line transition-colors hover:bg-raised/60" onClick={() => (location.hash = `#/runs/${run.id}`)}>
+              <tr key={run.id} className="hover-row cursor-pointer border-t border-line transition-colors" onClick={() => (location.hash = `#/runs/${run.id}`)}>
                 <td className="py-3.5 pr-4">
-                  <a href={`#/runs/${run.id}`} onClick={(e) => e.stopPropagation()} className="hover:underline">
+                  <a href={`#/runs/${run.id}`} onClick={(e) => e.stopPropagation()} className="underline decoration-transparent underline-offset-4 transition-colors hover:decoration-line">
                     {run.title}
                   </a>
                 </td>
                 <td className="py-3.5 pr-4">
                   <Verdict status={run.status} />
                 </td>
-                <td className="num py-3.5 pr-4 text-right text-muted">{duration(run.created_at, run.finished_at) || "…"}</td>
+                <td className="num py-3.5 pr-4 text-right text-xs text-muted">{duration(run.created_at, run.finished_at) || "Running"}</td>
                 <td className="whitespace-nowrap py-3.5 text-right text-muted">{when(run.created_at)}</td>
               </tr>
             ))}
             {runs?.length === 0 && (
               <tr>
-                <td colSpan={4} className="border-t border-line py-10 text-center text-faint">
+                <td colSpan={4} className="border-t border-line py-10 text-center text-muted">
                   No runs yet
                 </td>
               </tr>

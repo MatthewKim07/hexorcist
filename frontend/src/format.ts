@@ -119,5 +119,5 @@ export function duration(from: number, to: number | null): string {
     return "";
   }
   const s = Math.round(to - from);
-  return s >= 60 ? `${Math.floor(s / 60)} m ${String(s % 60).padStart(2, "0")} s` : `${s} s`;
+  return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
 }
