@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PinSpec, Scenario, Trace, Violation } from "../api";
 import { fmtTime } from "../trace";
+import { BoardStage, StageChip } from "./BoardStage";
 import { Icon } from "./Common";
 import { TraceChart } from "./TraceChart";
 import { Collapsible, Scrubber, Segmented, Select, Ticking } from "./ui";
@@ -23,12 +24,16 @@ interface Props {
   evidence: { before: string; after: string } | null;
   /** Where the board opens, paused, for each scenario. Null until it is known. */
   startAt: number | null;
+  /** Rule lamps on the board, lit by how each check came out in this scenario. */
+  chips?: StageChip[];
+  onChip?: (chip: StageChip) => void;
+  activeChip?: string | null;
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 
 /** The board replay: one scenario, one firmware version at a time, and the single number that shows the difference. */
-export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, side, onSide, hasAfter, violations, evidence, startAt }: Props) {
+export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, side, onSide, hasAfter, violations, evidence, startAt, chips, onChip, activeChip }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -103,7 +108,7 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
 
       <div className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
         <div className="relative px-3 pt-3">
-          <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} />
+          {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} className="mx-auto max-w-[960px]" /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} />}
           {!trace && <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>}
         </div>
 

@@ -1,16 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bug, PinSpec, Report } from "../api";
 import { duration, keyFact, rankBugs } from "../format";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
+import { StageChip } from "./BoardStage";
 import { BugList } from "./BugList";
+import { Mode, useStripText } from "./Chassis";
 import { ComparePanel } from "./ComparePanel";
 import { Icon, STATUS_META, TONE_TEXT } from "./Common";
 import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
 import { Replay } from "./Replay";
 import { Stepper } from "./Stepper";
-import { Fold, TabStrip, Ticking } from "./ui";
+import { Fold, KeyRow, reducedMotion, Ticking } from "./ui";
 
 type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
 
@@ -60,7 +62,7 @@ function Skeleton() {
   );
 }
 
-export function RunView({ runId }: { runId: string }) {
+export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode | null) => void }) {
   const state = useRun(runId);
   const report = state.run?.report ?? null;
   const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
@@ -68,6 +70,14 @@ export function RunView({ runId }: { runId: string }) {
   const [chosenId, setScenarioId] = useState<string | null>(null);
   const [side, setSide] = useState<"before" | "after">("before");
   const [tab, setTab] = useState<TabId | null>(null);
+  const [openBug, setOpenBug] = useState<string | null>(null);
+
+  const runMode = state.run?.mode as Mode | undefined;
+  useEffect(() => {
+    onMode?.(runMode ?? null);
+  }, [runMode, onMode]);
+  const finishedIn = state.run?.finished_at ? duration(state.run.created_at, state.run.finished_at) : "";
+  useStripText(!state.run ? "Loading the run" : status === "running" ? (state.connectionLost ? "Reconnecting" : "Running") : finishedIn ? `Finished in ${finishedIn}` : "Finished");
 
   const scenarios = report?.scenarios?.length ? report.scenarios : state.scenarios;
   const emulated = useMemo(() => scenarios.filter((s) => !s.id.startsWith("containment-")), [scenarios]);
@@ -96,6 +106,20 @@ export function RunView({ runId }: { runId: string }) {
     }
     return Math.max(0, Math.floor((anchor - LEAD_MS) / 100) * 100);
   }, [report, bugs, scenarioId, trace]);
+
+  const assertions = report?.assertions ?? state.assertions;
+  const chips: StageChip[] = useMemo(
+    () =>
+      assertions.flatMap((a) => {
+        const r = results.find((x) => x.assertion_id === a.id);
+        if (a.type === "no_crash" && r?.status !== "fail") {
+          return [];
+        }
+        const tone = r?.status === "fail" ? "fail" : r?.status === "pass" ? "pass" : "off";
+        return [{ key: a.id, check: a, tone, status: tone === "fail" ? "broken in this scenario" : tone === "pass" ? "held in this scenario" : "not measured in this scenario" }];
+      }),
+    [assertions, results],
+  );
 
   const showReplay = () => {
     const el = document.getElementById("replay");
@@ -145,6 +169,16 @@ export function RunView({ runId }: { runId: string }) {
     setScenarioId(bug.scenario_id);
     showReplay();
   };
+  const onChip = (chip: StageChip) => {
+    const bug = bugs.find((b) => b.assertion_id === chip.key && b.scenario_id === scenarioId) ?? bugs.find((b) => b.assertion_id === chip.key);
+    if (chip.tone === "fail" && bug) {
+      setOpenBug(bug.id);
+      requestAnimationFrame(() => document.getElementById(`bug-${bug.id}`)?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "center" }));
+    } else {
+      setTab("checks");
+    }
+  };
+  const activeChip = bugs.find((b) => b.id === openBug)?.assertion_id ?? null;
 
   return (
     <div className="space-y-8">
@@ -215,20 +249,25 @@ export function RunView({ runId }: { runId: string }) {
           violations={violations}
           evidence={evidence}
           startAt={startAt}
+          chips={report ? chips : undefined}
+          onChip={onChip}
+          activeChip={activeChip}
         />
       )}
 
-      {!running && bugs.length > 0 && <BugList bugs={bugs} report={report} focusId={focus?.id ?? null} onFocus={onFocus} />}
+      {!running && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
 
       {tabs.length > 0 && (
         <section>
-          <TabStrip label="Details" closable tabs={tabs} value={tab} onChange={setTab}>
+          <KeyRow label="Details" closable keys={tabs} value={tab} onChange={setTab}>
+            <div className="mt-5">
           {tab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
           {tab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
           {tab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
           {tab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
           {tab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
-          </TabStrip>
+            </div>
+          </KeyRow>
         </section>
       )}
     </div>
