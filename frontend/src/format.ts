@@ -46,7 +46,8 @@ export function keyFact(evidence: string | undefined | null): string {
   }
   const after = /^(\w+) toggled (\d+) time\(s\) in ([\d.]+) ?s/.exec(evidence);
   if (after) {
-    return `${after[1]} switched ${after[2]}× in ${seconds(parseFloat(after[3]) * 1000)}`;
+    const span = seconds(parseFloat(after[3]) * 1000);
+    return after[2] === "0" ? `${after[1]} held steady: 0 switches in ${span}` : `${after[1]} switched ${after[2]}× in ${span}`;
   }
   const wrong = /^(\w+) was in the wrong state for (\d+) ms/.exec(evidence);
   if (wrong) {
