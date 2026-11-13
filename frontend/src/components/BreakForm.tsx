@@ -1,14 +1,36 @@
 import { useEffect, useState } from "react";
 import CodeMirror from "@uiw/react-codemirror";
 import { cpp } from "@codemirror/lang-cpp";
-import { tokyoNightInit } from "@uiw/codemirror-theme-tokyo-night";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { api, PinSpec, Preset, RunSummary } from "../api";
-import { Icon } from "./Common";
 import { PinTable } from "./PinTable";
+import { Checkbox, Choices, Tip } from "./ui";
 
-// The stock theme's comments are too dim to read on a screen recording.
-const editorTheme = tokyoNightInit({ settings: { background: "#151518", gutterBackground: "#151518" }, styles: [{ tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#8b93a7" }] });
+// The editor sits on the faceplate, so its colours stay quiet: graphite text, muted tints for syntax.
+const editorTheme = [
+  EditorView.theme({
+    "&": { backgroundColor: "#EEF0EC", color: "#202427" },
+    ".cm-content": { caretColor: "#202427", padding: "12px 0" },
+    ".cm-cursor": { borderLeftColor: "#202427" },
+    ".cm-gutters": { backgroundColor: "#EEF0EC", color: "#8A908B", border: "none" },
+    ".cm-activeLine": { backgroundColor: "rgba(32, 36, 39, 0.035)" },
+    ".cm-activeLineGutter": { backgroundColor: "transparent", color: "#5A615D" },
+    "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(28, 104, 132, 0.18)" },
+    ".cm-matchingBracket": { backgroundColor: "rgba(32, 36, 39, 0.08)", outline: "none" },
+  }),
+  syntaxHighlighting(
+    HighlightStyle.define([
+      { tag: [tags.keyword, tags.controlKeyword, tags.modifier, tags.processingInstruction], color: "#3D5663" },
+      { tag: [tags.typeName, tags.standard(tags.typeName)], color: "#3D5663" },
+      { tag: [tags.string, tags.character], color: "#55612F" },
+      { tag: [tags.number, tags.bool, tags.null], color: "#7A4E22" },
+      { tag: [tags.comment, tags.lineComment, tags.blockComment], color: "#646B67" },
+      { tag: [tags.function(tags.variableName), tags.macroName], color: "#202427", fontWeight: "500" },
+    ]),
+  ),
+];
 
 export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -72,43 +94,45 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
   return (
     <div>
       <section className="flex min-h-[calc(100svh-57px-80px)] flex-col items-center justify-center py-12 text-center">
-        <h1 className="text-[48px] font-semibold leading-none tracking-tight">Hexorcist</h1>
-        <p className="mt-5 max-w-md text-[18px] text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
+        <h1 className="text-[48px] font-semibold leading-none tracking-[-0.03em]">Hexorcist</h1>
+        <p className="mt-4 max-w-lg text-base text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <button className="btn-primary" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
-            {busy ? "Starting…" : "Try the thermostat"}
+            {busy ? "Starting" : "Try the thermostat"}
           </button>
           <button className="btn-outline" onClick={toForm}>
             Paste your own firmware
           </button>
         </div>
         {error && <p className="mt-6 text-fail">{error}</p>}
-        <p className="mt-10 flex items-center gap-3 text-[13px] text-faint">
-          Attack <Icon name="arrow" className="h-3 w-3" /> Measure <Icon name="arrow" className="h-3 w-3" /> Fix
-        </p>
       </section>
 
       <section id="paste" className="scroll-mt-20 border-t border-line pt-10">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <div className="flex flex-wrap gap-x-5 gap-y-2" role="tablist" aria-label="Examples">
-            {presets.map((p) => (
-              <button key={p.id} role="tab" aria-selected={active === p.id} title={p.summary} onClick={() => load(p)} className={`-mb-px border-b-2 pb-1 text-[14px] transition-colors ${active === p.id ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"}`}>
-                {p.title}
-              </button>
-            ))}
-          </div>
+          <Choices
+            label="Examples"
+            options={presets.map((p) => ({ value: p.id, label: p.title }))}
+            hints={Object.fromEntries(presets.map((p) => [p.id, p.summary]))}
+            value={active}
+            onChange={(id) => {
+              const p = presets.find((x) => x.id === id);
+              if (p) {
+                load(p);
+              }
+            }}
+          />
           {finished && (
-            <a href={`#/runs/${finished.id}`} className="flex items-center gap-1.5 text-[14px] text-muted hover:text-ink">
-              Open a finished run <Icon name="arrow" className="h-3 w-3" />
+            <a href={`#/runs/${finished.id}`} className="link text-sm">
+              Open a finished run
             </a>
           )}
         </div>
 
-        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
           <div>
             <div className="label mb-2">Sketch</div>
-            <div className="h-[420px] overflow-hidden rounded-md bg-raised">
-              <CodeMirror value={firmware} onChange={setFirmware} theme={editorTheme} extensions={[cpp()]} height="420px" aria-label="Arduino sketch" />
+            <div className="h-[420px] overflow-hidden rounded-md border border-line bg-raised">
+              <CodeMirror value={firmware} onChange={setFirmware} theme="none" extensions={[cpp(), ...editorTheme]} basicSetup={{ foldGutter: false, highlightActiveLineGutter: true }} height="420px" aria-label="Arduino sketch" />
             </div>
           </div>
           <div className="space-y-8">
@@ -118,7 +142,7 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
             </div>
             <div>
               <div className="label mb-2">Behaviour</div>
-              <textarea aria-label="Intended behaviour" rows={6} className="field resize-y leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="What it must do, with numbers" />
+              <textarea aria-label="Intended behaviour" rows={7} className="field scroll resize-none leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="What it must do, with numbers" />
             </div>
           </div>
         </div>
@@ -126,12 +150,15 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
         {error && <p className="mt-6 text-fail">{error}</p>}
         <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4 pb-10">
           <button className="btn-primary" disabled={busy} onClick={() => start()}>
-            {busy ? "Starting…" : "Run"}
+            {busy ? "Starting" : "Run"}
           </button>
-          <label className="flex cursor-pointer items-center gap-2 text-[14px] text-muted" title="One extra LLM call, no emulator, shown beside the measured results">
-            <input type="checkbox" className="accent-[#8b9bff]" checked={compare} onChange={(e) => setCompare(e.target.checked)} />
-            Add a plain LLM review
-          </label>
+          <Tip content="One extra model call with no emulator, shown beside the measured results">
+            <span>
+              <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted">
+                Add a plain LLM review
+              </Checkbox>
+            </span>
+          </Tip>
         </div>
       </section>
     </div>

@@ -1,5 +1,6 @@
 import { PinSpec, PinType } from "../api";
 import { Icon } from "./Common";
+import { Checkbox, Select } from "./ui";
 
 const PINS = [...Array.from({ length: 14 }, (_, i) => `D${i}`), ...Array.from({ length: 6 }, (_, i) => `A${i}`)];
 const TYPES: { value: PinType; label: string }[] = [
@@ -15,7 +16,7 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
 
   return (
     <div className="space-y-1.5">
-      <div className="grid grid-cols-[62px_minmax(0,1fr)_104px_minmax(0,1fr)_24px] gap-1.5 px-0.5 text-[12px] text-faint">
+      <div className="grid grid-cols-[64px_minmax(0,1.3fr)_112px_minmax(0,1fr)_24px] gap-1.5 px-0.5 text-xs text-muted">
         <span>Pin</span>
         <span>Role</span>
         <span>Type</span>
@@ -23,31 +24,20 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
         <span />
       </div>
       {pins.map((p, i) => (
-        <div key={i} className="grid grid-cols-[62px_minmax(0,1fr)_104px_minmax(0,1fr)_24px] items-center gap-1.5">
-          <select aria-label="Pin" className="field px-1.5 font-mono" value={p.pin} onChange={(e) => update(i, { pin: e.target.value })}>
-            {PINS.map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
-          <input aria-label="Role" className="field" placeholder="Temp sensor" value={p.role} onChange={(e) => update(i, { role: e.target.value })} />
-          <select aria-label="Type" className="field px-1.5" value={p.type} onChange={(e) => update(i, { type: e.target.value as PinType })}>
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+        <div key={i} className="grid grid-cols-[64px_minmax(0,1.3fr)_112px_minmax(0,1fr)_24px] items-center gap-1.5">
+          <Select label={`Pin ${i + 1}`} mono className="px-2" value={p.pin} onChange={(v) => update(i, { pin: v })} options={PINS.map((name) => ({ value: name, label: name }))} />
+          <input aria-label={`Role of ${p.pin}`} className="field" placeholder="Temp sensor" value={p.role} onChange={(e) => update(i, { role: e.target.value })} />
+          <Select label={`Type of ${p.pin}`} className="px-2" value={p.type} onChange={(v) => update(i, { type: v })} options={TYPES} />
           {p.type === "analog_input" ? (
-            <input aria-label="Scale" className="field font-mono" placeholder="10 mV/°C" value={p.scale} onChange={(e) => update(i, { scale: e.target.value })} />
+            <input aria-label={`Scale of ${p.pin}`} className="field font-mono" placeholder="10 mV/°C" value={p.scale} onChange={(e) => update(i, { scale: e.target.value })} />
           ) : p.type === "digital_input" ? (
-            <label className="flex items-center gap-1.5 text-[12px] text-muted">
-              <input type="checkbox" className="accent-[#8b9bff]" checked={p.active_low} onChange={(e) => update(i, { active_low: e.target.checked })} />
-              Active LOW
-            </label>
+            <Checkbox checked={p.active_low} onChange={(v) => update(i, { active_low: v })} className="text-xs text-muted">
+              Active low
+            </Checkbox>
           ) : (
             <span />
           )}
-          <button aria-label={`Remove ${p.pin}`} className="flex h-6 w-6 items-center justify-center rounded text-faint hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
+          <button aria-label={`Remove ${p.pin}`} className="key h-6 w-6 rounded text-muted hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
             <Icon name="x" className="h-3 w-3" />
           </button>
         </div>

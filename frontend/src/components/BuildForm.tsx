@@ -28,17 +28,17 @@ export function BuildForm({ onStarted }: { onStarted: (id: string) => void }) {
     <div className="mx-auto max-w-2xl">
       <h1 className="headline">Describe a device</h1>
       <p className="mt-2 text-muted">It writes the firmware, then attacks it.</p>
-      <textarea aria-label="Device description" rows={7} className="field mt-8 resize-y leading-relaxed" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sensors, outputs, pins, behaviour" />
+      <textarea aria-label="Device description" rows={7} className="field scroll mt-8 resize-none leading-relaxed" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Sensors, outputs, pins, behaviour" />
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
         {EXAMPLES.map((e) => (
-          <button key={e.label} onClick={() => setDescription(e.text)} className="text-[13px] text-muted hover:text-ink">
+          <button key={e.label} onClick={() => setDescription(e.text)} className="key text-xs !font-normal text-muted hover:text-ink">
             {e.label}
           </button>
         ))}
       </div>
       {error && <p className="mt-4 text-fail">{error}</p>}
       <button className="btn-primary mt-8" disabled={busy || !description.trim()} onClick={start}>
-        {busy ? "Starting…" : "Build and attack"}
+        {busy ? "Starting" : "Build and attack"}
       </button>
     </div>
   );
