@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { PinSpec, Scenario, Trace } from "../api";
+import { Check, PinSpec, Scenario, Trace } from "../api";
 import { keyFact } from "../format";
+import { BoardStage } from "./BoardStage";
 import { Icon } from "./Common";
 import { Lamp, reducedMotion } from "./ui";
-import { VirtualBoard } from "./VirtualBoard";
 
 /** One finished run's stored traces, exported to public/demo so the landing works with an empty history. */
 interface Demo {
@@ -17,7 +17,12 @@ interface Demo {
   after_on: { from_ms: number; to_ms: number };
   before: Trace;
   after: Trace;
+  /** The switching-limit check from the same run, and how it came out on each side. */
+  check: Check;
+  check_status: { before: string; after: string };
 }
+
+const FLASH_MS = 160;
 
 type Side = "before" | "after";
 
@@ -106,6 +111,9 @@ export function HeroScope() {
 
   const trace = demo ? demo[frame.side] : null;
   const after = frame.side === "after";
+  const status = demo?.check_status[frame.side];
+  const flash = !!trace && !after && trace.pin_events.some((e) => e.pin === demo?.check.pin && e.dir === "out" && e.t_ms <= frame.t && frame.t - e.t_ms < FLASH_MS);
+  const chips = demo ? [{ key: "limit", check: demo.check, tone: status === "fail" ? ("fail" as const) : status === "pass" ? ("pass" as const) : ("off" as const), flash }] : [];
 
   return (
     <figure className="m-0">
@@ -117,8 +125,8 @@ export function HeroScope() {
               {after ? "After the fix" : "Before the fix"}
             </span>
           </p>
-          <div className="h-[280px] px-3 pb-2 pt-9 transition-opacity duration-200 ease-in-out sm:h-[360px] lg:h-[420px]" style={{ opacity: !demo ? 0 : frame.dim ? 0.35 : 1 }}>
-            {demo && <VirtualBoard pins={demo.pins} trace={trace} t={frame.t} scenario={demo.scenario} className="block h-full w-full" />}
+          <div className="mx-auto min-h-[200px] max-w-[880px] px-3 pb-3 pt-9 transition-opacity duration-200 ease-in-out" style={{ opacity: !demo ? 0 : frame.dim ? 0.35 : 1 }}>
+            {demo && <BoardStage pins={demo.pins} trace={trace} t={frame.t} scenario={demo.scenario} chips={chips} />}
           </div>
         </div>
         <button
