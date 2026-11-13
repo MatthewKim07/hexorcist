@@ -371,3 +371,54 @@ body {
     opacity: 0;
   }
 }
+
+/* Landing scroll story: one quiet pane at a time, board does the talking. */
+main:has(.story) {
+  container-type: size;
+  scroll-snap-type: y proximity;
+}
+.story-pane {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100cqh;
+  min-height: 100cqh;
+  scroll-snap-align: start;
+  padding: 1.5rem 0 2rem;
+}
+.story-pane > * {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 480ms var(--ease-out), transform 480ms var(--ease-out);
+}
+.story-pane[data-in] > * {
+  opacity: 1;
+  transform: none;
+}
+.story-hint {
+  animation: hint-pulse 1.8s var(--ease-in-out) infinite;
+}
+@keyframes hint-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.15);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main:has(.story) {
+    scroll-snap-type: none;
+  }
+  .story-pane > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .story-hint {
+    animation: none;
+  }
+}

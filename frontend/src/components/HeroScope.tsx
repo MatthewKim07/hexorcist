@@ -63,7 +63,7 @@ function caption(demo: Demo): string {
 }
 
 /** The landing's scope screen: the thermostat replay looping quietly, before the fix and after it. */
-export function HeroScope() {
+export function HeroScope({ quiet = false }: { quiet?: boolean }) {
   const [demo, setDemo] = useState<Demo | null>(null);
   const [playing, setPlaying] = useState(() => !reducedMotion());
   const [visible, setVisible] = useState(true);
@@ -138,7 +138,11 @@ export function HeroScope() {
           <Icon name={playing ? "pause" : "play"} className="h-3.5 w-3.5" />
         </button>
       </div>
-      <figcaption className="mt-3 min-h-[80px] text-sm text-muted sm:min-h-[60px]">{demo ? caption(demo) : "Replay of a finished run."}</figcaption>
+      {quiet ? (
+        <figcaption className="sr-only">{demo ? caption(demo) : "Replay of a finished run."}</figcaption>
+      ) : (
+        <figcaption className="mt-3 min-h-[80px] text-sm text-muted sm:min-h-[60px]">{demo ? caption(demo) : "Replay of a finished run."}</figcaption>
+      )}
     </figure>
   );
 }

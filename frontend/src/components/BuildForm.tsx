@@ -12,7 +12,7 @@ export function BuildForm({ onStarted }: { onStarted: (id: string) => void }) {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  useStripText(busy ? "Starting" : description.trim() ? "Ready to build" : "Describe a device to start");
+  useStripText(busy ? "Starting" : description.trim() ? "Ready" : "Describe a device");
 
   const start = async () => {
     setBusy(true);
@@ -32,7 +32,7 @@ export function BuildForm({ onStarted }: { onStarted: (id: string) => void }) {
         <h1 id="build-title" className="text-lg font-semibold tracking-tight text-screen-ink">
           Describe a device
         </h1>
-        <p className="mt-1 text-sm text-screen-muted">It writes the firmware from your description, then attacks it in the same sandbox.</p>
+        <p className="mt-1 text-sm text-screen-muted">It writes the firmware, then tries to break it.</p>
         <textarea
           aria-label="Device description"
           rows={7}

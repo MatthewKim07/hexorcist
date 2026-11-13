@@ -112,8 +112,8 @@ export function Chassis({ mode, onMode, health, healthError, historyOpen, onHist
   const [text, setText] = useState("");
   return (
     <StripText.Provider value={setText}>
-      <div className="min-h-screen sm:bg-bench sm:p-4 lg:p-6">
-        <div className="chassis mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1120px] flex-col bg-bg sm:rounded-2xl sm:border sm:border-line lg:min-h-[calc(100vh-3rem)]">
+      <div className="h-dvh sm:bg-bench sm:p-4 lg:p-6">
+        <div className="chassis mx-auto flex h-full max-w-[1120px] flex-col bg-bg sm:rounded-2xl sm:border sm:border-line">
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pb-2 pt-4 sm:px-6 sm:pt-5">
             <a href="#/" aria-label="Hexorcist, home" className="flex items-center gap-2 rounded text-ink">
               <Logo size={20} />
@@ -121,7 +121,7 @@ export function Chassis({ mode, onMode, health, healthError, historyOpen, onHist
             </a>
             <ModeSwitch mode={mode} onMode={onMode} />
           </div>
-          <main className="flex-1 px-4 pb-8 pt-3 sm:px-6">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-3 sm:px-6">{children}</main>
           <StatusStrip health={health} healthError={healthError} text={text} onHistory={() => onHistory(true)} />
         </div>
         <button onClick={() => onHistory(true)} className="history-handle fixed right-0 top-1/2 z-30 hidden -translate-y-1/2 rounded-l-md border border-r-0 border-line bg-raised px-1.5 py-4 text-xs text-muted hover:text-ink sm:block" aria-label="Open history">

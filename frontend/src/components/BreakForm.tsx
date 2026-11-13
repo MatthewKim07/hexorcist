@@ -90,7 +90,7 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
   const mentioned = useMemo(() => mentionedPins(s.firmware), [s.firmware]);
   const unwired = mentioned.filter((m) => !s.pins.some((p) => p.pin === m.pin));
 
-  useStripText(busy ? "Starting" : !hasSketch ? "Paste a sketch to start" : !s.behaviour.trim() ? "Say what the sketch must do" : !llm ? "No model configured" : "Ready to run");
+  useStripText(busy ? "Starting" : !hasSketch ? "Paste a sketch" : !s.behaviour.trim() ? "Say what it must do" : !llm ? "No model" : "Ready");
 
   const load = (p: Preset) => {
     setS({
@@ -201,8 +201,8 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
         ]}
         end={
           <>
-            <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted" hint="One extra model call with no emulator, shown beside the measured results">
-              Add a plain LLM review
+            <Checkbox checked={compare} onChange={setCompare} className="text-sm text-muted" hint="Extra guess with no emulator, shown next to the measured results">
+              Also ask the model
             </Checkbox>
             <button className="btn-primary" disabled={!canRun} onClick={start}>
               {busy ? "Starting" : "Run"}
@@ -227,9 +227,9 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
                 </div>
               ) : (
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-                  <p className="max-w-[48ch] text-muted">No sketch yet. It compiles for an Arduino Uno and runs only inside a sealed sandbox.</p>
+                  <p className="text-muted">No sketch yet.</p>
                   <button className="btn-primary" onClick={() => setSheet(true)}>
-                    Paste your sketch
+                    Paste a sketch
                   </button>
                 </div>
               )}
@@ -239,7 +239,7 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
 
           {panel === "wiring" && (
             <div className="space-y-4">
-              <p className="max-w-[62ch] text-muted">Click a header pin on the board to say what is connected to it. Inputs get driven by the test scenarios; outputs are what the checks watch.</p>
+              <p className="text-muted">Tap a pin on the board to wire it.</p>
               {unwired.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="mr-1">The sketch uses {listOf(unwired.map((m) => m.pin))}:</span>
@@ -271,12 +271,12 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
           {panel === "checks" && (
             <div className="space-y-4">
               {s.checks && fresh && (
-                <p className="max-w-[66ch] text-muted">
-                  {s.source === "example" ? `These ${shown.length} checks come with the example, as a finished run read them from its text.` : `${shown.length} check${shown.length === 1 ? "" : "s"} read from your text by ${s.readBy}.`} The run measures exactly these, plus a crash check. Click one on the board to change its numbers.
+                <p className="text-muted">
+                  {s.source === "example" ? `${shown.length} checks from the example.` : `${shown.length} from your text · ${s.readBy}.`} Tap a chip to edit.
                 </p>
               )}
-              {s.checks && !fresh && <p className="max-w-[66ch]">The text or wiring changed after these checks were read. Preview again to see the new ones, or run, and the checks are read again during the run.</p>}
-              {!s.checks && <p className="max-w-[66ch] text-muted">Say what the sketch must do, with numbers. Preview checks turns the text into checks you can see on the board and change before the run.</p>}
+              {s.checks && !fresh && <p>Text changed. Preview again, or run and they will be read during the run.</p>}
+              {!s.checks && <p className="text-muted">Say what it must do, with numbers. Then preview the checks.</p>}
               {warnings.length > 0 && fresh && (
                 <ul className="space-y-1 text-muted">
                   {warnings.map((w) => (
@@ -296,7 +296,7 @@ export function BreakForm({ health, onStarted }: { health: Health | null; onStar
                   <button className="btn-outline" disabled={!s.behaviour.trim() || previewing || !llm} onClick={preview}>
                     {previewing ? "Reading the text" : fresh ? "Preview checks again" : "Preview checks"}
                   </button>
-                  <span className="text-xs text-muted">One model call. Nothing compiles or runs.</span>
+                  <span className="text-xs text-muted">One model call. Nothing runs yet.</span>
                 </div>
               )}
               {previewError && <p className="text-fail">{previewError}</p>}

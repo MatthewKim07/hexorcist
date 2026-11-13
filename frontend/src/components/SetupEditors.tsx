@@ -168,7 +168,7 @@ export function SketchSheet({ open, onOpenChange, firmware, onFirmware, presets,
             <RDialog.Close className="btn-outline ml-auto !py-1.5">{empty ? "Close" : "Done"}</RDialog.Close>
           </div>
           <RDialog.Description className={empty ? "px-5 pt-4 text-sm text-muted" : "sr-only"}>
-            {empty ? "Paste an Arduino Uno sketch into the editor, or start from an example. It compiles and runs only inside a sealed sandbox." : "The Arduino sketch under test."}
+            {empty ? "Paste a sketch, or pick an example." : "The sketch under test."}
           </RDialog.Description>
           {empty && presets.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 px-5 pt-3">
