@@ -54,15 +54,15 @@ export function ContainedRow({ report }: { report: Report }) {
 
 function Row({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
+    <div className="flex items-center justify-between gap-4 border-b border-line py-2">
       <dt className="text-muted">{label}</dt>
       <dd className={`num text-sm ${ok ? "text-ink" : "text-fail"}`}>{value}</dd>
     </div>
   );
 }
 
-/** Everything behind the Containment tab: what the sandbox enforced, read back from docker inspect. */
-export function ContainmentDetails({ records, report, guard }: { records: ContainmentRecord[]; report: Report | null; guard?: Guard | null }) {
+/** What the sandbox enforced, read back from docker inspect. Behind a tab on normal runs, and shown in place on the containment run (`inline`). */
+export function ContainmentDetails({ records, report, guard, inline = false }: { records: ContainmentRecord[]; report: Report | null; guard?: Guard | null; inline?: boolean }) {
   const contained = report?.contained;
   if (!records.length) {
     return <p className="py-8 text-muted">No sandbox records.</p>;
@@ -76,29 +76,32 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
   const reasons = guard && !guard.allowed ? guard.reasons : [];
 
   return (
-    <div className="space-y-8 py-6">
-      <dl className="grid gap-x-12 md:grid-cols-2">
-        <div>
-          <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
-          <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
-          <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
-          <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
-          <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
-        </div>
-        <div>
-          <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
-          <Row label="User" value={String(limits.user ?? "?")} />
-          <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
-          <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
-          {killed.map((r) => (
-            <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
-          ))}
-        </div>
-      </dl>
+    <div className={inline ? "space-y-8" : "space-y-8 py-6"}>
+      <div className="space-y-1">
+        {inline && <h2 className="label">Sandbox limits</h2>}
+        <dl className="grid gap-x-12 md:grid-cols-2">
+          <div>
+            <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
+            <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
+            <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
+            <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
+            <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
+          </div>
+          <div>
+            <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
+            <Row label="User" value={String(limits.user ?? "?")} />
+            <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
+            <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
+            {killed.map((r) => (
+              <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
+            ))}
+          </div>
+        </dl>
+      </div>
 
       {contained && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium">What the attacker got</h3>
+        <div className="space-y-3">
+          {inline ? <h2 className="label">What the attacker got</h2> : <h3 className="text-sm font-medium">What the attacker got</h3>}
           <p>{contained.what_the_attacker_got.note}</p>
           <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
             <dt className="num text-muted">/etc/passwd</dt>
@@ -112,24 +115,25 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
         </div>
       )}
 
-      {reasons.length > 0 && (
-        <Fold title={`Guard reasons (${reasons.length})`}>
-          <ul className="space-y-1.5 pl-5 text-xs text-muted">
-            {reasons.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        </Fold>
-      )}
+      <div className={inline ? "space-y-4" : "space-y-8"}>
+        {reasons.length > 0 && (
+          <Fold title={`Guard reasons (${reasons.length})`}>
+            <ul className="space-y-1.5 pl-5 text-xs text-muted">
+              {reasons.map((r) => (
+                <li key={r}>{r}</li>
+              ))}
+            </ul>
+          </Fold>
+        )}
 
-      {contained && (
-        <Fold title="Compiler output from the attack" contentClassName="space-y-3">
-          <pre className="scroll max-h-48 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.hostile_compile_log}</pre>
-          <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.exfil_compile_log}</pre>
-        </Fold>
-      )}
+        {contained && (
+          <Fold title="Compiler output from the attack" contentClassName="space-y-3">
+            <pre className="scroll max-h-48 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.hostile_compile_log}</pre>
+            <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.exfil_compile_log}</pre>
+          </Fold>
+        )}
 
-      <Fold title={`Sandbox records (${records.length})`}>
+        <Fold title={`Sandbox records (${records.length})`}>
           <div className="scroll overflow-x-auto">
             <table className="w-full min-w-[560px] text-left text-xs">
               <thead className="text-muted">
@@ -156,7 +160,8 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
               </tbody>
             </table>
           </div>
-      </Fold>
+        </Fold>
+      </div>
     </div>
   );
 }

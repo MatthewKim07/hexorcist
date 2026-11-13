@@ -113,7 +113,7 @@ export function RunView({ runId }: { runId: string }) {
     if (hasBoard) {
       tabs.push({ value: "scenarios", label: "Scenarios" }, { value: "checks", label: "Checks" });
     }
-    if (records.length) {
+    if (records.length && !report?.contained) {
       tabs.push({ value: "containment", label: "Containment" });
     }
     if (comparable) {
@@ -155,7 +155,12 @@ export function RunView({ runId }: { runId: string }) {
         )}
       </header>
 
-      {report?.contained && <ContainedRow report={report} />}
+      {report?.contained && (
+        <>
+          <ContainedRow report={report} />
+          <ContainmentDetails records={records} report={report} guard={guard} inline />
+        </>
+      )}
 
       {status === "blocked" && guard && !guard.allowed && (
         <section aria-label="Guard reasons">
