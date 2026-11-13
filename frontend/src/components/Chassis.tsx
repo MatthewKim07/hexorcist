@@ -38,8 +38,8 @@ function StatusStrip({ health, healthError, text, onHistory }: { health: Health 
   const [code, setCode] = useState(getPasscode());
   const ready = health?.ok && health.llm_configured;
   return (
-    <footer className="sticky bottom-0 z-20 border-t border-line bg-bg/95 backdrop-blur-sm sm:rounded-b-[15px]">
-      <div className="flex min-h-[48px] flex-wrap items-center gap-x-5 gap-y-2 px-4 py-2 text-xs text-muted sm:px-6">
+    <footer className="sticky bottom-0 z-20 border-t border-line bg-bg/95 backdrop-blur-sm">
+      <div className="flex min-h-[48px] flex-wrap items-center gap-x-5 gap-y-2 px-5 py-2 text-xs text-muted sm:px-8">
         {healthError && (
           <span className="flex items-center gap-2 text-fail">
             <span className="h-1.5 w-1.5 rounded-full bg-fail" />
@@ -112,18 +112,16 @@ export function Chassis({ mode, onMode, health, healthError, historyOpen, onHist
   const [text, setText] = useState("");
   return (
     <StripText.Provider value={setText}>
-      <div className="h-dvh sm:bg-bench sm:p-4 lg:p-6">
-        <div className="chassis mx-auto flex h-full max-w-[1120px] flex-col bg-bg sm:rounded-2xl sm:border sm:border-line">
-          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 pb-2 pt-4 sm:px-6 sm:pt-5">
-            <a href="#/" aria-label="Hexorcist, home" className="flex items-center gap-2 rounded text-ink">
-              <Logo size={20} />
-              <span className="text-sm font-semibold tracking-tight">Hexorcist</span>
-            </a>
-            <ModeSwitch mode={mode} onMode={onMode} />
-          </div>
-          <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-3 sm:px-6">{children}</main>
-          <StatusStrip health={health} healthError={healthError} text={text} onHistory={() => onHistory(true)} />
+      <div className="chassis flex h-dvh flex-col bg-bg">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-5 pb-2 pt-4 sm:px-8 sm:pt-5">
+          <a href="#/" aria-label="Hexorcist, home" className="flex items-center gap-2 rounded text-ink">
+            <Logo size={20} />
+            <span className="text-sm font-semibold tracking-tight">Hexorcist</span>
+          </a>
+          <ModeSwitch mode={mode} onMode={onMode} />
         </div>
+        <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-3 sm:px-8">{children}</main>
+        <StatusStrip health={health} healthError={healthError} text={text} onHistory={() => onHistory(true)} />
         <button onClick={() => onHistory(true)} className="history-handle fixed right-0 top-1/2 z-30 hidden -translate-y-1/2 rounded-l-md border border-r-0 border-line bg-raised px-1.5 py-4 text-xs text-muted hover:text-ink sm:block" aria-label="Open history">
           <span className="[writing-mode:vertical-rl]">History</span>
         </button>

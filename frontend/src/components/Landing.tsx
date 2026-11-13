@@ -76,7 +76,7 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
   };
 
   return (
-    <div ref={scroller} className="story -mx-4 -mb-8 -mt-3 sm:-mx-6">
+    <div ref={scroller} className="story -mx-5 -mb-8 -mt-3 sm:-mx-8">
       <Pane className="relative items-center justify-center text-center">
         <h1 className="text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-none tracking-[-0.04em] text-ink">Hexorcist</h1>
         <p className="mt-5 max-w-[22ch] text-base text-muted sm:text-lg">Casts the bugs out of your firmware.</p>
