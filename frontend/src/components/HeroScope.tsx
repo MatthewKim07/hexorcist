@@ -7,25 +7,30 @@ import { VirtualBoard } from "./VirtualBoard";
 
 /** One finished run's stored traces, exported to public/demo so the landing works with an empty history. */
 interface Demo {
-  source: { run: string; title: string; scenario: string };
+  source: { run: string; title: string; scenario: string; scenario_name: string };
   pins: PinSpec[];
   scenario: Scenario;
+  /** What the input did, as a phrase: "the sensor held at the 30 °C switch-on point, with noise". */
+  input: string;
   evidence: { before: string; after: string };
+  /** When the fixed firmware's fan is on, in simulated ms. */
+  after_on: { from_ms: number; to_ms: number };
   before: Trace;
   after: Trace;
 }
 
 type Side = "before" | "after";
 
-// Simulated milliseconds to play for each side. The fan starts chattering at 1.4 s.
+// Simulated milliseconds to play for each side. Before chatters the whole run; after switches on at 1.5 s and holds,
+// so its window starts once the fan is already on.
 const LOOP: { side: Side; from: number; to: number }[] = [
-  { side: "before", from: 1000, to: 6000 },
-  { side: "after", from: 1000, to: 5000 },
+  { side: "before", from: 2000, to: 7000 },
+  { side: "after", from: 2500, to: 7500 },
 ];
 const HOLD = 900;
 const FADE = 200;
 // Under reduced motion: one frame mid-chatter, with the fan on.
-const STILL = { side: "before" as Side, t: 5200 };
+const STILL = { side: "before" as Side, t: 5770 };
 const FRAME_MS = 33;
 
 /** Where the loop is after `elapsed` ms: which side, its simulated time, and whether the board is fading between sides. */
@@ -40,6 +45,16 @@ function at(elapsed: number): { side: Side; t: number; dim: boolean } {
     left -= span;
   }
   return { side: "before", t: LOOP[0].from, dim: false };
+}
+
+/** Only what the run measured: the before count from its evidence, and the after switches counted from its trace. */
+function caption(demo: Demo): string {
+  const fan = demo.pins.find((p) => p.type === "digital_output");
+  const name = `the ${(fan?.role ?? "output").toLowerCase()}`;
+  const before = keyFact(demo.evidence.before).replace(new RegExp(`^${fan?.pin ?? ""} `), `${name} `);
+  const switches = demo.after.pin_events.filter((e) => e.pin === fan?.pin).length;
+  const after = switches === 1 ? "came on once and held steady to the end of the run" : `switched ${switches}× and held steady`;
+  return `Replay of a finished run: ${demo.input}. Before the fix, ${before}. After it, ${name} ${after}.`;
 }
 
 /** The landing's scope screen: the thermostat replay looping quietly, before the fix and after it. */
@@ -115,9 +130,7 @@ export function HeroScope() {
           <Icon name={playing ? "pause" : "play"} className="h-3.5 w-3.5" />
         </button>
       </div>
-      <figcaption className="mt-3 min-h-[60px] text-sm text-muted sm:min-h-10">
-        {demo ? `Replay of a finished run. Before the fix, ${keyFact(demo.evidence.before)}. After it, ${keyFact(demo.evidence.after)}.` : "Replay of a finished run."}
-      </figcaption>
+      <figcaption className="mt-3 min-h-[80px] text-sm text-muted sm:min-h-[60px]">{demo ? caption(demo) : "Replay of a finished run."}</figcaption>
     </figure>
   );
 }

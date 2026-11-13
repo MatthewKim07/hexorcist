@@ -59,7 +59,7 @@ Left-aligned single column, max 960 px of content, as before. The transport (pla
  ━━━━━━━━━
 ```
 
-- **Landing.** The name, tagline and two buttons sit beside one screen that loops a finished thermostat run: about five seconds of Before (the fan chattering, its toggle count climbing), then After (steady), labelled with a pass or fail lamp. The traces are a stored snapshot in `frontend/public/demo/`, so it needs no run and no model. It pauses off screen and has a pause key; with reduced motion it shows one still frame.
+- **Landing.** The name, tagline and two buttons sit beside one screen that loops a finished thermostat run: the sensor held at the 30 °C switch point with noise, about five seconds of Before (the fan flickering, its toggle count climbing), then After (the fan on and spinning steadily, one switch in the whole run), labelled with a pass or fail lamp. The traces are a stored snapshot in `frontend/public/demo/`, so it needs no run and no model. It pauses off screen and has a pause key; with reduced motion it shows one still frame.
 - **Containment run.** It has no board, so its hero is a row of six indicator lamps (guard, LLM, network, secrets, timeout kill, containers removed) under the verdict, on a small screen of their own. That screen replaces the board screen, so there is still only one lit surface per page. The sandbox limits and what the attacker got follow directly on the faceplate, with no tab.
 - **Live run.** The five stages are a row of lamps: off, lit and breathing while running, steady when done, red on failure.
 - **Code editor.** Stays on the faceplate: Key background, a quiet low-contrast syntax theme. It is not a second screen.
