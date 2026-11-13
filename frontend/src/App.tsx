@@ -46,22 +46,22 @@ export default function App() {
     <TipProvider>
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-line bg-bg">
-        <div className="mx-auto flex min-h-[57px] max-w-[1008px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 sm:px-6">
-          <a href="#/" className="flex items-center gap-2.5">
+        <div className="mx-auto flex min-h-[57px] max-w-[1008px] flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:gap-x-6 sm:px-6">
+          <a href="#/" aria-label="Hexorcist" className="flex items-center gap-2.5">
             <Logo size={22} />
-            <span className="text-sm font-semibold tracking-tight">Hexorcist</span>
+            <span className="hidden text-sm font-semibold tracking-tight sm:inline">Hexorcist</span>
           </a>
           <nav className="flex gap-1" aria-label="Main">
             {tab("#/", "Break", route === "break")}
             {tab("#/build", "Build", route === "build")}
             {tab("#/runs", "History", route === "runs")}
           </nav>
-          <div className="ml-auto flex items-center gap-4 text-xs text-muted">
+          <div className="ml-auto flex items-center gap-3 text-xs text-muted sm:gap-4">
             {health?.passcode_required && (
               <input
                 aria-label="Demo passcode"
                 type="password"
-                className="field w-32 py-1.5 text-xs"
+                className="field w-24 py-1.5 text-xs sm:w-32"
                 placeholder="Passcode"
                 value={code}
                 onChange={(e) => {
