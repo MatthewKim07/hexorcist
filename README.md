@@ -54,7 +54,7 @@ A modern model reading the code does find most of these problems. What it cannot
 
 All user-supplied and AI-written code compiles and runs only inside per-task containers, never in the backend or on the host. The UI reports the limits as read back from `docker inspect`, not as requested.
 
-![The containment demo: Contained, with six checks in one row (guard flagged it, LLM never saw it, no network, no secrets, timeout kill, containers removed) and the Containment tab open](docs/containment.png)
+![The containment demo: Contained, with six checks in one row (guard flagged it, LLM never saw it, no network, no secrets, timeout kill, containers removed), with the sandbox limits and what the attacker got below](docs/containment.png)
 
 | Measured | Result |
 | --- | --- |
