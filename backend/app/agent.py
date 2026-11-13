@@ -12,7 +12,7 @@ import logging
 import re
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -42,6 +42,9 @@ from .models import (
 from .sandbox import CompileResult, ContainmentRecord, SandboxError, SandboxRunner
 from .scenario_lib import builtin_scenarios, fill_defaults, idle_level
 from .store import Store
+
+if TYPE_CHECKING:
+    from .checks import CheckSet
 
 log = logging.getLogger("hexorcist.agent")
 
@@ -331,33 +334,45 @@ class Pipeline:
 
     # ---------------------------------------------------------- break mode
 
-    async def run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict] = None) -> tuple[str, dict]:
+    async def run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict] = None, checks: Optional["CheckSet"] = None) -> tuple[str, dict]:
         bus = self.bus
 
         # 1. UNDERSTAND
         await bus.step("understand", "running", "Reading the firmware and specification")
         device_model = prompts.DeviceModel()
         spec_checked = True
-        try:
-            reply = await self.llm.json(prompts.UNDERSTAND_SYSTEM, prompts.understand_user(firmware, spec), prompts.UnderstandReply, "understand")
-            device_model = reply.device_model
-            assertions, warnings = normalize_assertions(reply.assertions, spec)
+        reused = ""
+        if checks is not None:
+            # Checks the user already saw, from a preview or an example. Validated again exactly like the model's output.
+            device_model = checks.device_model or prompts.DeviceModel()
+            assertions, warnings = normalize_assertions(checks.assertions, spec)
             for w in warnings:
                 await self._warn(w)
             if len(assertions) <= 1:
-                await self._warn("The LLM produced no usable assertions, so only baseline crash and chatter checks are running.")
+                await self._warn("No checks besides the crash check were kept, so only crashes and deadlocks are tested.")
+                spec_checked = False
+            reused = ", previewed before the run" if checks.source == "preview" else ", from the example"
+        else:
+            try:
+                reply = await self.llm.json(prompts.UNDERSTAND_SYSTEM, prompts.understand_user(firmware, spec), prompts.UnderstandReply, "understand")
+                device_model = reply.device_model
+                assertions, warnings = normalize_assertions(reply.assertions, spec)
+                for w in warnings:
+                    await self._warn(w)
+                if len(assertions) <= 1:
+                    await self._warn("The LLM produced no usable assertions, so only baseline crash and chatter checks are running.")
+                    assertions = fallback_assertions(spec)
+                    spec_checked = False
+            except LLMError as exc:
+                if not self.settings.llm_configured:
+                    await bus.step("understand", "failed", str(exc))
+                    return "error", self._report("error", firmware, spec, error=str(exc), extra=extra_report)
+                await self._warn(f"Could not derive assertions from the spec, so only baseline crash and chatter checks are running: {exc}")
                 assertions = fallback_assertions(spec)
                 spec_checked = False
-        except LLMError as exc:
-            if not self.settings.llm_configured:
-                await bus.step("understand", "failed", str(exc))
-                return "error", self._report("error", firmware, spec, error=str(exc), extra=extra_report)
-            await self._warn(f"Could not derive assertions from the spec, so only baseline crash and chatter checks are running: {exc}")
-            assertions = fallback_assertions(spec)
-            spec_checked = False
         await bus.emit("device_model", device_model=device_model.model_dump())
         await bus.emit("assertions", assertions=[a.model_dump(exclude_none=True) for a in assertions])
-        await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions")
+        await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions{reused}")
 
         # 2. COMPILE
         await bus.step("compile", "running", "Compiling in a sandbox")
@@ -857,7 +872,7 @@ def _result_brief(r: AssertionResult) -> dict:
     return {"status": r.status, "evidence": r.evidence, "metrics": r.metrics}
 
 
-async def execute_run(pipeline: Pipeline, mode: str, firmware: str, spec: DeviceSpec, description: str, verdict: dict) -> None:
+async def execute_run(pipeline: Pipeline, mode: str, firmware: str, spec: DeviceSpec, description: str, verdict: dict, checks: Optional["CheckSet"] = None) -> None:
     """Run the pipeline to completion. Always leaves the run in a final state and closes the stream."""
     bus = pipeline.bus
     store = pipeline.store
@@ -875,7 +890,7 @@ async def execute_run(pipeline: Pipeline, mode: str, firmware: str, spec: Device
         elif mode == "build":
             status, report = await pipeline.run_build(description, spec.pins)
         else:
-            status, report = await pipeline.run_break(firmware, spec)
+            status, report = await pipeline.run_break(firmware, spec, checks=checks)
         await bus.step("report", "done" if status != "error" else "failed", status)
     except SandboxError as exc:
         log.warning("sandbox failure in run %s: %s", run_id, exc)

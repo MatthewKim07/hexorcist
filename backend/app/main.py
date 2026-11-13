@@ -16,6 +16,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from .agent import Pipeline, execute_run
+from .checks import CheckSet, read_checks
 from .config import Settings, load_settings
 from .events import BusRegistry
 from .guard import screen_request
@@ -38,6 +39,14 @@ class RunRequest(BaseModel):
     description: str = ""
     # Also ask the model for a plain code review (one extra call) to show beside the measured results.
     compare: bool = False
+    # Checks from a preview or an example. The run evaluates these instead of reading the spec again.
+    checks: Optional[CheckSet] = None
+
+
+class ChecksRequest(BaseModel):
+    firmware: str = ""
+    pins: list[dict] = Field(default_factory=list, max_length=20)
+    behaviour: str = ""
 
 
 # Guessing the passcode must cost the guesser something, so failures are limited per address.
@@ -73,6 +82,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     limiter = RateLimiter(cfg.rate_limit_per_hour)
     guesses = RateLimiter(PASSCODE_FAILURES_PER_HOUR)
     review_limiter = RateLimiter(cfg.rate_limit_per_hour)
+    checks_limiter = RateLimiter(cfg.rate_limit_per_hour)
     tasks: set[asyncio.Task] = set()
     reviews_pending: set[str] = set()
     review_errors: dict[str, str] = {}
@@ -138,18 +148,41 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     async def presets() -> list[dict]:
         return PRESETS
 
-    @app.post("/api/runs", status_code=201)
-    async def create_run(body: RunRequest, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
-        check_passcode(request, x_demo_passcode)
-        if len(body.firmware.encode()) > cfg.max_firmware_bytes:
+    def checked_upload(firmware: str, texts: dict[str, str], raw_pins: list[dict]) -> list[PinSpec]:
+        if len(firmware.encode()) > cfg.max_firmware_bytes:
             raise HTTPException(413, f"Firmware is larger than {cfg.max_firmware_bytes} bytes.")
-        for name, text in (("behaviour", body.behaviour), ("description", body.description)):
+        for name, text in texts.items():
             if len(text.encode()) > cfg.max_text_bytes:
                 raise HTTPException(413, f"The {name} text is longer than {cfg.max_text_bytes} bytes.")
         try:
-            pins = [PinSpec(**p) for p in body.pins]
+            return [PinSpec(**p) for p in raw_pins]
         except (ValidationError, TypeError) as exc:
             raise HTTPException(422, f"Invalid pin map: {exc}") from exc
+
+    @app.post("/api/checks")
+    async def preview_checks(body: ChecksRequest, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
+        """The run's UNDERSTAND step on its own: one LLM call that turns the behaviour text into the checks a run would evaluate."""
+        check_passcode(request, x_demo_passcode)
+        pins = checked_upload(body.firmware, {"behaviour": body.behaviour}, body.pins)
+        if not body.behaviour.strip():
+            raise HTTPException(422, "Describe the intended behaviour, so there is something to read checks from.")
+        if not cfg.llm_configured:
+            raise HTTPException(503, "The LLM is not configured.")
+        spec = DeviceSpec(pins=pins, behaviour=body.behaviour)
+        verdict = await asyncio.to_thread(screen_request, body.firmware, "\n".join([body.behaviour] + [f"{p.role} {p.scale}" for p in pins]))
+        if not verdict["allowed"]:
+            raise HTTPException(422, "The input guard flagged this upload, so the model was not asked. Run it to see the guard's reasons and the containment report.")
+        if not checks_limiter.allow(client_ip(request)):
+            raise HTTPException(429, "Rate limit reached for check previews from this address. Try again later.")
+        try:
+            return await read_checks(cfg, body.firmware, spec)
+        except LLMError as exc:
+            raise HTTPException(502, f"The model could not be reached: {str(exc)[:200]}") from exc
+
+    @app.post("/api/runs", status_code=201)
+    async def create_run(body: RunRequest, request: Request, x_demo_passcode: Optional[str] = Header(default=None)) -> dict:
+        check_passcode(request, x_demo_passcode)
+        pins = checked_upload(body.firmware, {"behaviour": body.behaviour, "description": body.description}, body.pins)
         if body.mode == "break":
             if not body.firmware.strip():
                 raise HTTPException(422, "Paste a sketch to attack.")
@@ -176,7 +209,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             start_review(run_id, body.firmware, spec)
 
         pipeline = Pipeline(run_id, cfg, runner, store, bus)
-        task = asyncio.create_task(execute_run(pipeline, body.mode, body.firmware, spec, body.description, dict(verdict)))
+        task = asyncio.create_task(execute_run(pipeline, body.mode, body.firmware, spec, body.description, dict(verdict), body.checks if body.mode == "break" else None))
         tasks.add(task)
         task.add_done_callback(tasks.discard)
         return {"run_id": run_id, "guard": verdict}
