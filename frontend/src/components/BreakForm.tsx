@@ -5,6 +5,7 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import { api, PinSpec, Preset, RunSummary } from "../api";
+import { HeroScope } from "./HeroScope";
 import { PinTable } from "./PinTable";
 import { Checkbox, Choices } from "./ui";
 
@@ -93,18 +94,25 @@ export function BreakForm({ onStarted }: { onStarted: (id: string) => void }) {
 
   return (
     <div>
-      <section className="flex min-h-[calc(100svh-57px-80px)] flex-col items-center justify-center py-12 text-center">
-        <h1 className="text-[48px] font-semibold leading-none tracking-[-0.03em]">Hexorcist</h1>
-        <p className="mt-4 max-w-lg text-base text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <button className="btn-primary" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
-            {busy ? "Starting" : "Try the thermostat"}
-          </button>
-          <button className="btn-outline" onClick={toForm}>
-            Paste your own firmware
-          </button>
+      <section className="grid min-h-[calc(100svh-57px-80px)] content-center items-center gap-x-12 gap-y-8 py-12 [grid-template-areas:'copy''scope''actions'] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:[grid-template-areas:'copy_scope''actions_scope']">
+        <div className="[grid-area:copy] lg:self-end">
+          <h1 className="text-[48px] font-semibold leading-none tracking-[-0.03em]">Hexorcist</h1>
+          <p className="mt-4 max-w-sm text-base text-muted">An AI QA engineer that breaks your firmware, then proves the fix.</p>
         </div>
-        {error && <p className="mt-6 text-fail">{error}</p>}
+        <div className="[grid-area:scope]">
+          <HeroScope />
+        </div>
+        <div className="[grid-area:actions] lg:self-start">
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="btn-primary" disabled={busy || !thermostat} onClick={() => thermostat && start(thermostat)}>
+              {busy ? "Starting" : "Try the thermostat"}
+            </button>
+            <button className="btn-outline" onClick={toForm}>
+              Paste your own firmware
+            </button>
+          </div>
+          {error && <p className="mt-6 text-fail">{error}</p>}
+        </div>
       </section>
 
       <section id="paste" className="scroll-mt-20 border-t border-line pt-10">

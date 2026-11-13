@@ -41,7 +41,7 @@ function niceRange(lo: number, hi: number): [number, number] {
   return [Math.floor(lo / step - 0.5) * step, Math.ceil(hi / step + 0.5) * step];
 }
 
-export function VirtualBoard({ pins, trace, t, scenario, tag }: { pins: PinSpec[]; trace: Trace | null; t: number; scenario?: Scenario; tag?: string }) {
+export function VirtualBoard({ pins, trace, t, scenario, tag, className = "mx-auto block max-h-[420px] w-full" }: { pins: PinSpec[]; trace: Trace | null; t: number; scenario?: Scenario; tag?: string; className?: string }) {
   const tracks = useMemo(() => {
     if (!trace) {
       return null;
@@ -102,7 +102,7 @@ export function VirtualBoard({ pins, trace, t, scenario, tag }: { pins: PinSpec[
   const d13 = live.find((l) => l.pin.pin === "D13");
 
   return (
-    <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className="mx-auto block max-h-[420px] w-full" role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
+    <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className={className} role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
 
       {[...top, ...bottom].map(({ item, x, y }) => {
         const p = pinXY(item.pin.pin);
