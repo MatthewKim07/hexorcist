@@ -1,4 +1,5 @@
 import { RunState, StepName } from "../useRun";
+import { Lamp } from "./ui";
 
 const STAGES: { label: string; steps: StepName[] }[] = [
   { label: "Understand", steps: ["write", "understand", "compile"] },
@@ -41,24 +42,29 @@ export function Stepper({ state, total }: { state: RunState; total: number }) {
   const done = Object.keys(state.results[latest] ?? {}).length;
 
   return (
-    <div aria-label="Progress">
+    <div aria-label="Progress" className="screen rounded-xl border border-[#0b0f0e] bg-screen px-5 py-5 text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
       <ol className="grid grid-cols-5 gap-2" aria-label="Agent steps">
         {stages.map((s, i) => (
-          <li key={s.label} aria-current={i === current ? "step" : undefined}>
-            <div className={`h-0.5 rounded-full ${s.status === "done" ? "bg-accent" : s.status === "failed" ? "bg-fail" : s.status === "running" ? "pulse-soft bg-accent" : s.status === "skipped" ? "bg-line" : "bg-line"}`} />
-            <div className={`mt-2 text-[12px] ${s.status === "pending" || s.status === "skipped" ? "text-faint" : s.status === "failed" ? "text-fail" : "text-ink"}`}>{s.label}</div>
+          <li key={s.label} aria-current={i === current ? "step" : undefined} className="flex flex-col items-center gap-3 text-center">
+            <Lamp tone={s.status === "failed" ? "fail" : s.status === "done" || s.status === "running" ? "trace" : "off"} breathing={s.status === "running"} />
+            <span className={`text-xs ${s.status === "pending" || s.status === "skipped" ? "text-screen-muted" : s.status === "failed" ? "text-fail-lit" : "text-screen-ink"}`}>
+              {s.label}
+              <span className="sr-only">, {s.status}</span>
+            </span>
           </li>
         ))}
       </ol>
-      <p className="mt-6 text-[16px]" aria-live="polite">
-        {line}
-      </p>
-      {total > 0 && (
-        <p className="num mt-2 text-faint">
-          Scenarios {done} / {total}
-          {state.bugs.length > 0 && <span className="ml-4">Bugs {state.bugs.length}</span>}
+      <div className="mt-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-t border-screen-line pt-4">
+        <p className="text-sm" aria-live="polite">
+          {line}
         </p>
-      )}
+        {total > 0 && (
+          <p className="num text-xs text-screen-muted">
+            Scenarios {done} of {total}
+            {state.bugs.length > 0 && <span className="ml-4">Bugs {state.bugs.length}</span>}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { ContainmentRecord, Guard, Report } from "../api";
-import { Icon } from "./Common";
+import { Collapsible, Fold, Lamp } from "./ui";
 
 function mb(bytes?: number): string {
   return bytes ? `${Math.round(bytes / 1048576)} MiB` : "?";
 }
 
-/** The six containment checks as one compact row. A click shows the measured detail for one of them. */
+/** The six containment checks as a row of lamps on the page's one screen. A lamp opens the measured detail behind it. */
 export function ContainedRow({ report }: { report: Report }) {
   const [open, setOpen] = useState<string | null>(null);
   const c = report.contained;
@@ -25,18 +25,29 @@ export function ContainedRow({ report }: { report: Report }) {
   ];
   const shown = items.find((i) => i.label === open);
   return (
-    <section aria-label="What was contained">
-      <ul className="flex flex-wrap gap-x-6 gap-y-3">
+    <section aria-label="What was contained" className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+      <ul className="grid grid-cols-3 gap-y-2 px-2 py-5 sm:grid-cols-6">
         {items.map((i) => (
           <li key={i.label}>
-            <button aria-expanded={open === i.label} onClick={() => setOpen(open === i.label ? null : i.label)} className={`flex items-center gap-2 text-[14px] transition-colors ${open === i.label ? "text-ink" : "text-muted hover:text-ink"}`}>
-              <Icon name={i.ok ? "check" : "x"} className={i.ok ? "text-pass" : "text-fail"} />
+            <button
+              aria-pressed={open === i.label}
+              aria-label={`${i.label}: ${i.ok ? "held" : "failed"}`}
+              onClick={() => setOpen(open === i.label ? null : i.label)}
+              className={`key flex w-full flex-col items-center gap-3 rounded-md px-2 py-3 text-center text-xs !font-normal transition-colors hover:text-screen-ink ${open === i.label ? "bg-screen-raised text-screen-ink" : "text-screen-muted"}`}
+            >
+              <Lamp tone={i.ok ? "pass" : "fail"} />
               {i.label}
             </button>
           </li>
         ))}
       </ul>
-      {shown && <p className="mt-4 text-[14px] text-muted">{shown.detail}</p>}
+      <Collapsible.Root open={!!shown}>
+        <Collapsible.Content className="fold">
+          <p aria-live="polite" className="border-t border-screen-line px-5 py-3.5 text-sm text-screen-ink">
+            {shown?.detail}
+          </p>
+        </Collapsible.Content>
+      </Collapsible.Root>
     </section>
   );
 }
@@ -45,17 +56,16 @@ function Row({ label, value, ok = true }: { label: string; value: string; ok?: b
   return (
     <div className="flex items-center justify-between gap-4 border-b border-line py-2.5">
       <dt className="text-muted">{label}</dt>
-      <dd className={`num ${ok ? "text-ink" : "text-fail"}`}>{value}</dd>
+      <dd className={`num text-sm ${ok ? "text-ink" : "text-fail"}`}>{value}</dd>
     </div>
   );
 }
 
 /** Everything behind the Containment tab: what the sandbox enforced, read back from docker inspect. */
 export function ContainmentDetails({ records, report, guard }: { records: ContainmentRecord[]; report: Report | null; guard?: Guard | null }) {
-  const [all, setAll] = useState(false);
   const contained = report?.contained;
   if (!records.length) {
-    return <p className="py-8 text-faint">No sandbox records.</p>;
+    return <p className="py-8 text-muted">No sandbox records.</p>;
   }
   const limits = records[0].limits ?? {};
   const secrets = records.reduce((n, r) => n + r.secrets_found, 0);
@@ -88,14 +98,14 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
 
       {contained && (
         <div className="space-y-4">
-          <h3 className="label">What the attacker got</h3>
+          <h3 className="text-sm font-medium">What the attacker got</h3>
           <p>{contained.what_the_attacker_got.note}</p>
-          <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-[13px]">
-            <dt className="num text-faint">/etc/passwd</dt>
+          <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
+            <dt className="num text-muted">/etc/passwd</dt>
             <dd className="num break-words text-muted">{contained.what_the_attacker_got.etc_passwd_users.join(" ")}</dd>
-            <dt className="num text-faint">/proc/self/environ</dt>
+            <dt className="num text-muted">/proc/self/environ</dt>
             <dd className="num break-words text-muted">{contained.what_the_attacker_got.environ_names.join(" ")} (names only)</dd>
-            <dt className="num text-faint">~/.ssh/id_rsa</dt>
+            <dt className="num text-muted">~/.ssh/id_rsa</dt>
             <dd className="num break-words text-muted">{contained.what_the_attacker_got.ssh_key}</dd>
           </dl>
           {contained.runaway.ran && <p className="text-muted">{contained.runaway.note}</p>}
@@ -103,36 +113,26 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
       )}
 
       {reasons.length > 0 && (
-        <details className="group">
-          <summary className="flex cursor-pointer items-center gap-2 text-muted hover:text-ink">
-            <Icon name="chevron" className="h-3 w-3 transition-transform group-open:rotate-90" /> Guard reasons ({reasons.length})
-          </summary>
-          <ul className="mt-3 space-y-1.5 pl-5 text-[13px] text-muted">
+        <Fold title={`Guard reasons (${reasons.length})`}>
+          <ul className="space-y-1.5 pl-5 text-xs text-muted">
             {reasons.map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
-        </details>
+        </Fold>
       )}
 
       {contained && (
-        <details className="group">
-          <summary className="flex cursor-pointer items-center gap-2 text-muted hover:text-ink">
-            <Icon name="chevron" className="h-3 w-3 transition-transform group-open:rotate-90" /> Compiler output from the attack
-          </summary>
-          <pre className="mt-3 max-h-48 overflow-auto rounded-md bg-raised p-3 font-mono text-[12px] text-muted">{contained.hostile_compile_log}</pre>
-          <pre className="mt-3 max-h-64 overflow-auto rounded-md bg-raised p-3 font-mono text-[12px] text-muted">{contained.exfil_compile_log}</pre>
-        </details>
+        <Fold title="Compiler output from the attack" contentClassName="space-y-3">
+          <pre className="scroll max-h-48 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.hostile_compile_log}</pre>
+          <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{contained.exfil_compile_log}</pre>
+        </Fold>
       )}
 
-      <div>
-        <button className="flex items-center gap-2 text-muted hover:text-ink" aria-expanded={all} onClick={() => setAll(!all)}>
-          <Icon name="chevron" className={`h-3 w-3 transition-transform ${all ? "rotate-90" : ""}`} /> Sandbox records ({records.length})
-        </button>
-        {all && (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-[13px]">
-              <thead className="text-faint">
+      <Fold title={`Sandbox records (${records.length})`}>
+          <div className="scroll overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-xs">
+              <thead className="text-muted">
                 <tr>
                   <th className="py-2 pr-4 font-normal">Task</th>
                   <th className="py-2 pr-4 font-normal">Container</th>
@@ -145,7 +145,7 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
                 {records.map((r, i) => (
                   <tr key={`${r.container_id}-${i}`} className="border-t border-line">
                     <td className="py-2 pr-4">{r.label}</td>
-                    <td className="num py-2 pr-4 text-faint">{r.container_id}</td>
+                    <td className="num py-2 pr-4 text-muted">{r.container_id}</td>
                     <td className="num py-2 pr-4 text-right">{(r.duration_ms / 1000).toFixed(1)} s</td>
                     <td className="num py-2 pr-4 text-right">{r.exit_code ?? "?"}</td>
                     <td className="py-2 text-muted">
@@ -156,8 +156,7 @@ export function ContainmentDetails({ records, report, guard }: { records: Contai
               </tbody>
             </table>
           </div>
-        )}
-      </div>
+      </Fold>
     </div>
   );
 }
