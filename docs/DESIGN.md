@@ -39,7 +39,7 @@ Left-aligned single column, max 960 px of content, as before. The transport (pla
 ```text
  Hexorcist   Break  Build  History                       deepseek-chat
  ─────────────────────────────────────────────────────────────────────
- Thermostat, no hysteresis                                  1 min 27 s
+ Thermostat without hysteresis                              1 min 27 s
  ✓ 2 bugs found, both fixed and verified
 
  [ Threshold hover with noise (A0)  ⌄ ]               [ Before | After ]

@@ -132,7 +132,7 @@ void loop()
 PRESETS = [
     {
         "id": "thermostat",
-        "title": "Thermostat — no hysteresis",
+        "title": "Thermostat without hysteresis",
         "summary": "Fan controller with no hysteresis and no sensor fault check.",
         "firmware": THERMOSTAT,
         "pins": [
@@ -148,7 +148,7 @@ PRESETS = [
     },
     {
         "id": "button",
-        "title": "Button — no debounce",
+        "title": "Button without debounce",
         "summary": "Button-toggled LED with no debounce.",
         "firmware": BUTTON,
         "pins": [
@@ -162,7 +162,7 @@ PRESETS = [
     },
     {
         "id": "logger",
-        "title": "Sensor logger — wrong units",
+        "title": "Sensor logger with wrong units",
         "summary": "Sensor logger with a wrong unit conversion.",
         "firmware": LOGGER,
         "pins": [
@@ -175,7 +175,7 @@ PRESETS = [
     },
     {
         "id": "alarm",
-        "title": "Alarm — blocking delay",
+        "title": "Alarm with blocking delay",
         "summary": "Alarm whose long blocking delay() misses short button presses.",
         "firmware": ALARM,
         "pins": [
