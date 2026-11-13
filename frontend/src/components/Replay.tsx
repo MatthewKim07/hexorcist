@@ -21,12 +21,14 @@ interface Props {
   hasAfter: boolean;
   violations: Violation[];
   evidence: { before: string; after: string } | null;
+  /** Where the board opens, paused, for each scenario. Null until it is known. */
+  startAt: number | null;
 }
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 
 /** The board replay: one scenario, one firmware version at a time, and the single number that shows the difference. */
-export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, side, onSide, hasAfter, violations, evidence }: Props) {
+export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, side, onSide, hasAfter, violations, evidence, startAt }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -36,13 +38,27 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const end = trace?.sim_ms || scenario?.duration_ms || 1000;
 
+  const placed = useRef<string | null>(null);
   useEffect(() => {
-    setT(0);
+    if (placed.current === scenarioId) {
+      return;
+    }
+    setT(startAt ?? 0);
     setPlaying(false);
-  }, [scenarioId]);
+    if (startAt !== null) {
+      placed.current = scenarioId;
+    }
+  }, [scenarioId, startAt]);
 
   const tRef = useRef(t);
   tRef.current = t;
+  const switchSide = (next: "before" | "after") => {
+    if (startAt !== null && (tRef.current <= 0 || tRef.current >= end)) {
+      setT(startAt);
+      setPlaying(false);
+    }
+    onSide(next);
+  };
   useEffect(() => {
     if (!playing) {
       return;
@@ -76,7 +92,7 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
           <Segmented
             label="Firmware version"
             value={side}
-            onChange={onSide}
+            onChange={switchSide}
             options={[
               { value: "before", label: "Before" },
               { value: "after", label: "After" },

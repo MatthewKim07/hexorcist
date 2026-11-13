@@ -14,6 +14,9 @@ import { Fold, TabStrip, Ticking } from "./ui";
 
 type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
 
+/** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
+const LEAD_MS = 300;
+
 function headline(report: Report | null, status: string, firstWarning: string): { title: string; sub: string } {
   const s = report?.score;
   const n = s?.bugs_found ?? 0;
@@ -79,6 +82,20 @@ export function RunView({ runId }: { runId: string }) {
   const { trace, error: traceError } = useTrace(runId, iteration, scenarioId, ready);
   const results = useMemo(() => report?.matrix?.[String(iteration)]?.[scenarioId ?? ""] ?? [], [report, iteration, scenarioId]);
   const violations = useMemo(() => results.filter((r) => r.status === "fail").flatMap((r) => r.violations), [results]);
+  const startAt = useMemo(() => {
+    const failing = (report?.matrix?.["0"]?.[scenarioId ?? ""] ?? []).filter((r) => r.status === "fail");
+    const bug = bugs.find((b) => b.scenario_id === scenarioId);
+    const own = failing.filter((r) => r.assertion_id === bug?.assertion_id);
+    const first = (own.length ? own : failing).flatMap((r) => r.violations).sort((a, b) => a.t_start - b.t_start)[0];
+    if (first && first.t_start < LEAD_MS) {
+      return Math.ceil(first.t_end / 100) * 100;
+    }
+    const anchor = first?.t_start ?? trace?.pin_events.find((e) => e.dir === "out")?.t_ms;
+    if (anchor === undefined) {
+      return trace ? 0 : null;
+    }
+    return Math.max(0, Math.floor((anchor - LEAD_MS) / 100) * 100);
+  }, [report, bugs, scenarioId, trace]);
 
   const showReplay = () => {
     const el = document.getElementById("replay");
@@ -197,6 +214,7 @@ export function RunView({ runId }: { runId: string }) {
           hasAfter={afterIteration !== null}
           violations={violations}
           evidence={evidence}
+          startAt={startAt}
         />
       )}
 
