@@ -13,7 +13,7 @@ This pass is about feel, not content. The layout and the order of information st
 | Enclosure | `#E3E5E0` | Page background. A cool, slightly green grey, like an instrument case. Not white, not cream. |
 | Key | `#EEF0EC` | Raised surfaces: fields, select triggers, segment and tab tracks, open rows, the code editor. Lines are `#C4C8C1`. |
 | Graphite | `#202427` | Text, primary keys, the selected segment, the tab indicator. Secondary text is `#5A615D` (5.0:1). There is no third grey for text. |
-| Screen | `#121816` | Only the replay screen: board, transport, signal trace. Text on it is `#C9D1CC`, secondary `#8A958F`. |
+| Screen | `#121816` | Only the one screen per page: board replay, transport, signal trace, or lamps. Text on it is `#C9D1CC`, secondary `#8A958F`. |
 | Trace | `#E8C15A` | Channel 1 yellow: lit outputs, the playhead, the scrubber fill. Only inside the screen. |
 | Pass, Fail | `#1E6B43`, `#B0382F` on the faceplate; `#5CC98A`, `#F0766B` on the screen | Verdicts only. |
 
@@ -23,7 +23,7 @@ Focus is a 2 px probe-cyan ring (`#1C6884`) with a 2 px offset, the same everywh
 
 - **Geist** for all interface text. Weights 400, 500, 600.
 - **Geist Mono** only for measured values (`23×`, `5.20 s`, `304 mV`) and code (the editor, diffs, logs). Never for labels or metadata. Mono means "this was measured". Geist Mono shares Geist's metrics, so a readout sits inside a sentence without jumping. Readouts use tabular figures.
-- Both self-hosted from npm.
+- Both self-hosted from npm, Latin subset only, five faces (Geist 400/500/600, Mono 400/500). Geist 400 and 500 are preloaded, every face uses `font-display: optional`, and the app waits up to 1.2 s for the rest before its first render, so a face is either there at first paint or skipped for that visit. Text never swaps.
 - Scale: 12 secondary, 14 body and UI, 16 lead, 20 section, 28 verdict, plus 48 for the product name on the landing page only. At most three sizes on one screen. Line height 1.5 for body, 1.2 for headings. Lines under 72 characters.
 
 ### Space and shape
@@ -59,7 +59,8 @@ Left-aligned single column, max 960 px of content, as before. The transport (pla
  ━━━━━━━━━
 ```
 
-- **Containment run.** It has no board, so its hero is a row of six indicator lamps (guard, LLM, network, secrets, timeout kill, containers removed) under the verdict, on a small screen of their own. That screen replaces the board screen, so there is still only one lit surface per page.
+- **Landing.** The name, tagline and two buttons sit beside one screen that loops a finished thermostat run: about five seconds of Before (the fan chattering, its toggle count climbing), then After (steady), labelled with a pass or fail lamp. The traces are a stored snapshot in `frontend/public/demo/`, so it needs no run and no model. It pauses off screen and has a pause key; with reduced motion it shows one still frame.
+- **Containment run.** It has no board, so its hero is a row of six indicator lamps (guard, LLM, network, secrets, timeout kill, containers removed) under the verdict, on a small screen of their own. That screen replaces the board screen, so there is still only one lit surface per page. The sandbox limits and what the attacker got follow directly on the faceplate, with no tab.
 - **Live run.** The five stages are a row of lamps: off, lit and breathing while running, steady when done, red on failure.
 - **Code editor.** Stays on the faceplate: Key background, a quiet low-contrast syntax theme. It is not a second screen.
 
