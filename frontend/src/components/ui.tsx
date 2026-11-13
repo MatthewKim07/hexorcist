@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ReactNode, SyntheticEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as RCheckbox from "@radix-ui/react-checkbox";
 import * as RCollapsible from "@radix-ui/react-collapsible";
 import * as RSelect from "@radix-ui/react-select";
@@ -125,29 +125,40 @@ export function TabStrip<T extends string>({ tabs, value, onChange, label, closa
   const remember = (id: T) => () => {
     wasActive.current = value === id;
   };
+  // Radix focuses the trigger from script on mousedown, which Chrome can treat as keyboard focus and ring.
+  const pointer = (on: boolean) => (e: SyntheticEvent<HTMLElement>) => {
+    e.currentTarget.toggleAttribute("data-pointer", on);
+  };
   return (
     <RTabs.Root value={value ?? ""} onValueChange={(v) => onChange(v as T)}>
-      <div ref={box} className="relative">
-        <RTabs.List aria-label={label} onScroll={replace} className="scroll flex gap-6 overflow-x-auto border-b border-line">
+      <div ref={box} className="relative border-b border-line">
+        <RTabs.List aria-label={label} onScroll={replace} className="scroll -mx-1.5 flex gap-6 overflow-x-auto px-1.5">
           {tabs.map((t) => (
             <RTabs.Trigger
               key={t.value}
               value={t.value}
-              onPointerDownCapture={remember(t.value)}
-              onKeyDownCapture={remember(t.value)}
+              onPointerDownCapture={(e) => {
+                remember(t.value)();
+                pointer(true)(e);
+              }}
+              onKeyDownCapture={(e) => {
+                remember(t.value)();
+                pointer(false)(e);
+              }}
+              onBlur={pointer(false)}
               onClick={() => {
                 if (closable && wasActive.current) {
                   onChange(null);
                 }
                 wasActive.current = false;
               }}
-              className="hover-ink whitespace-nowrap py-3 text-sm text-muted transition-colors focus-visible:outline-offset-[-2px] data-[state=active]:text-ink"
+              className="hover-ink -mx-1.5 whitespace-nowrap rounded px-1.5 py-3 text-sm text-muted transition-colors focus-visible:outline-offset-[-2px] data-[pointer]:outline-none data-[state=active]:text-ink"
             >
               {t.label}
             </RTabs.Trigger>
           ))}
         </RTabs.List>
-        <span aria-hidden="true" className={`pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-ink ${pos.animate ? "indicator" : ""}`} style={{ transform: `translateX(${pos.x}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }} />
+        <span aria-hidden="true" className={`pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-ink ${pos.animate ? "indicator" : ""}`} style={{ transform: `translateX(${pos.x + 6}px)`, width: Math.max(0, pos.w - 12), opacity: pos.ready ? 1 : 0 }} />
       </div>
       {value && (
         <RTabs.Content value={value} className="outline-none" tabIndex={-1}>
