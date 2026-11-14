@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { visualizer } from "rollup-plugin-visualizer";
 
 // The two faces most of the page is set in. Their built names are hashed, so the preload links are added after bundling.
 const PRELOAD = /geist-sans-latin-(400|500)-normal-[\w-]+\.woff2$/;
@@ -22,7 +23,11 @@ function preloadFonts(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), preloadFonts()],
+  plugins: [
+    react(),
+    preloadFonts(),
+    process.env.ANALYZE === "1" && visualizer({ filename: "dist/stats.html", gzipSize: true, template: "treemap" }),
+  ].filter(Boolean) as Plugin[],
   server: {
     port: 5173,
     proxy: { "/api": { target: process.env.API_URL ?? "http://127.0.0.1:8000", changeOrigin: true } },

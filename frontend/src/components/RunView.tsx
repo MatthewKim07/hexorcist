@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, Loader2, LucideIcon, ShieldCheck, Wand2, WifiOff } from "lucide-react";
 import { Bug as BugType, PinSpec } from "../api";
 import { displayTitle, keyFact, rankBugs, shortDuration } from "../format";
@@ -8,19 +8,20 @@ import { hasAttackResults, hasVerifyResults } from "../reportStats";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
-import { BugList } from "./BugList";
-import { ComparePanel } from "./ComparePanel";
 import { STATUS_META, Tone, TONE_TEXT } from "./Common";
 import { ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
-import { FirmwareCard } from "./FirmwareCard";
-import { Replay } from "./Replay";
 import { ReportTabs, ReportTabId } from "./ReportTabs";
 import { ReportVerdict } from "./ReportVerdict";
 import { RunPipeline } from "./RunPipeline";
 import { Fold, reducedMotion } from "./ui";
 import { NotFound } from "./NotFound";
 import { RunPageSkeleton } from "./Skeletons";
+
+const Replay = lazy(() => import("./Replay").then((m) => ({ default: m.Replay })));
+const BugList = lazy(() => import("./BugList").then((m) => ({ default: m.BugList })));
+const FirmwareCard = lazy(() => import("./FirmwareCard").then((m) => ({ default: m.FirmwareCard })));
+const ComparePanel = lazy(() => import("./ComparePanel").then((m) => ({ default: m.ComparePanel })));
 
 /** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
 const LEAD_MS = 300;
@@ -242,57 +243,59 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         <pre className="scroll max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>
       )}
 
-      {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
+      <Suspense fallback={null}>
+        {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
 
-      {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
+        {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
 
-      {hasBoard && (
-        <Replay
-          pins={pins}
-          scenarios={emulated}
-          scenarioId={scenarioId}
-          onScenario={setScenarioId}
-          trace={trace}
-          error={traceError}
-          ready={ready}
-          side={side}
-          onSide={setSide}
-          hasAfter={showBeforeAfter}
-          violations={violations}
-          evidence={evidence}
-          startAt={startAt}
-          chips={report ? chips : undefined}
-          onChip={onChip}
-          activeChip={activeChip}
-        />
-      )}
+        {hasBoard && (
+          <Replay
+            pins={pins}
+            scenarios={emulated}
+            scenarioId={scenarioId}
+            onScenario={setScenarioId}
+            trace={trace}
+            error={traceError}
+            ready={ready}
+            side={side}
+            onSide={setSide}
+            hasAfter={showBeforeAfter}
+            violations={violations}
+            evidence={evidence}
+            startAt={startAt}
+            chips={report ? chips : undefined}
+            onChip={onChip}
+            activeChip={activeChip}
+          />
+        )}
 
-      {!contained && attacked && bugs.length > 0 && (
-        <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} buildMode={isBuild} />
-      )}
+        {!contained && attacked && bugs.length > 0 && (
+          <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} buildMode={isBuild} />
+        )}
 
-      {tabs.length > 0 && (
-        <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
-          {activeTab === "scenarios" && (
-            <ScenariosTab
-              scenarios={emulated}
-              beforeResults={beforeResults}
-              afterResults={afterResults}
-              beforeMatrix={beforeMatrix}
-              afterMatrix={afterMatrix}
-              assertions={assertions}
-              pins={pins}
-              selected={scenarioId}
-              onSelect={replayTo}
-              buildMode={isBuild}
-            />
-          )}
-          {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={isBuild ? "run" : side} />}
-          {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
-          {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
-          {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}
-        </ReportTabs>
-      )}
+        {tabs.length > 0 && (
+          <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
+            {activeTab === "scenarios" && (
+              <ScenariosTab
+                scenarios={emulated}
+                beforeResults={beforeResults}
+                afterResults={afterResults}
+                beforeMatrix={beforeMatrix}
+                afterMatrix={afterMatrix}
+                assertions={assertions}
+                pins={pins}
+                selected={scenarioId}
+                onSelect={replayTo}
+                buildMode={isBuild}
+              />
+            )}
+            {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={isBuild ? "run" : side} />}
+            {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
+            {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
+            {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}
+          </ReportTabs>
+        )}
+      </Suspense>
     </div>
   );
 }

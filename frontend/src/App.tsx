@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { api, Health } from "./api";
 import { Chassis } from "./components/Chassis";
 import { Landing } from "./components/Landing";
-import { NewRun } from "./components/NewRun";
 import { NotFound } from "./components/NotFound";
-import { RunsPage } from "./components/RunsPage";
-import { RunView } from "./components/RunView";
 import { TipProvider } from "./components/ui";
+
+const NewRun = lazy(() => import("./components/NewRun").then((m) => ({ default: m.NewRun })));
+const RunsPage = lazy(() => import("./components/RunsPage").then((m) => ({ default: m.RunsPage })));
+const RunView = lazy(() => import("./components/RunView").then((m) => ({ default: m.RunView })));
 
 function useHash(): string {
   const [hash, setHash] = useState(location.hash);
@@ -57,9 +58,11 @@ export default function App() {
           </p>
         )}
         {route === "landing" && <Landing health={health} onStarted={started} />}
-        {route === "runs" && <RunsPage backendDown={healthError} />}
-        {route === "new" && <NewRun key={newMode} health={health} onStarted={started} initialMode={newMode} />}
-        {route === "run" && runMatch && <RunView key={runMatch[1]} runId={runMatch[1]} />}
+        <Suspense fallback={<p className="pt-8 text-sm text-muted">Loading…</p>}>
+          {route === "runs" && <RunsPage backendDown={healthError} />}
+          {route === "new" && <NewRun key={newMode} health={health} onStarted={started} initialMode={newMode} />}
+          {route === "run" && runMatch && <RunView key={runMatch[1]} runId={runMatch[1]} />}
+        </Suspense>
         {route === "notfound" && <NotFound />}
       </Chassis>
     </TipProvider>
