@@ -133,7 +133,8 @@ export function chipEvidence(type: string, evidence: string | undefined | null, 
       }
       const whole = /^(\w+) toggled (\d+) time\(s\) in ([\d.]+) ?s/.exec(evidence);
       if (whole) {
-        return `${whole[2]} / ${seconds(parseFloat(whole[3]) * 1000)}`;
+        const n = Number(whole[2]);
+        return `${n} switch${n === 1 ? "" : "es"} / ${seconds(parseFloat(whole[3]) * 1000)}`;
       }
       break;
     }

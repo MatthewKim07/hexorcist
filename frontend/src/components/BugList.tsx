@@ -78,10 +78,12 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
                 {fixed ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className={`mt-0.5 shrink-0 ${report ? "text-fail" : "text-muted"}`} />}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-medium text-ink">{bug.title}</h3>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {evidenceChip("Before", beforeN || "—", "fail")}
-                    <ArrowRight {...iconProps} className="text-muted" />
-                    {afterN ? evidenceChip("After", afterN, "pass") : <span className="font-mono text-xs text-muted">After —</span>}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                    <span className="inline-flex items-center gap-2">
+                      {evidenceChip("Before", beforeN || "—", "fail")}
+                      <ArrowRight {...iconProps} className="shrink-0 text-muted" aria-hidden="true" />
+                    </span>
+                    {afterN ? evidenceChip("After", afterN, "pass") : <span className="font-mono text-xs text-muted">After: —</span>}
                   </div>
                   {rule && (
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
