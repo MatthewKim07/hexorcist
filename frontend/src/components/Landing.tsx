@@ -55,10 +55,10 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
           const busy = busyId === p.id;
           const disabled = !!busyId || !canRun;
           return (
-            <article key={p.id} className="preset-card flex flex-col border border-line bg-white p-5 transition-[border-color] duration-150">
+            <article key={p.id} className="preset-card flex h-full flex-col border border-line bg-white p-5 transition-[border-color] duration-150">
               <h2 className="text-sm font-medium text-ink">{p.title}</h2>
               <p className="mt-1.5 text-sm text-muted">{card.blurb}</p>
-              <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="mt-auto flex items-center justify-between gap-3 pt-4">
                 <span className="font-mono text-xs text-muted">{card.tag}</span>
                 <button type="button" className="key shrink-0 border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50" style={{ borderRadius: 8 }} disabled={disabled} onClick={() => run(p)}>
                   {busy ? "Starting…" : "Run"}

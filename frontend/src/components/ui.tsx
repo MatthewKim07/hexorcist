@@ -83,8 +83,8 @@ export function Select<T extends string>({ value, onChange, options, label, mono
 export function Checkbox({ checked, onChange, children, className = "", hint }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string; hint?: string }) {
   // A tooltip trigger takes over data-state, so the checked look keys off aria-checked.
   const box = (
-    <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-[#9aa098] bg-raised aria-checked:border-ink aria-checked:bg-ink">
-      <RCheckbox.Indicator className="text-bg">
+    <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-line bg-white aria-checked:border-ink aria-checked:bg-ink">
+      <RCheckbox.Indicator className="text-white">
         <Icon name="check" className="h-3 w-3" />
       </RCheckbox.Indicator>
     </RCheckbox.Root>
@@ -104,14 +104,14 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   const { box, pos } = useIndicator('[aria-checked="true"]', [value]);
   return (
     <RToggle.Root type="single" value={value} onValueChange={(v) => v && onChange(v as T)} aria-label={label} asChild>
-      <div ref={box} className="relative flex rounded-md border border-line bg-raised p-0.5">
+      <div ref={box} className="relative flex rounded-md border border-line bg-white p-0.5">
         <span
           aria-hidden="true"
-          className={`absolute bottom-0.5 left-0 top-0.5 rounded bg-ink ${pos.animate ? "indicator" : ""}`}
+          className={`absolute bottom-0.5 left-0 top-0.5 rounded-[5px] bg-ink ${pos.animate ? "indicator" : ""}`}
           style={{ transform: `translateX(${pos.x}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }}
         />
         {options.map((o) => (
-          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded px-5 py-1.5 !font-normal text-muted aria-checked:text-white">
+          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded-[5px] px-5 py-1.5 !font-normal text-muted aria-checked:text-white">
             {o.label}
           </RToggle.Item>
         ))}
