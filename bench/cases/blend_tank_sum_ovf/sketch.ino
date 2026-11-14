@@ -3,7 +3,7 @@
 
 const int CONC_PIN = A4;
 const int SAMPLE_BTN = 5;
-const int WINDOW = 80;
+const int WINDOW = 50;
 const float MV_PER_PCT = 10.0f;
 const unsigned long IDLE_MS = 20;
 const unsigned long STATUS_MS = 1000;

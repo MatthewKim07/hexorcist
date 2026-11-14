@@ -23,13 +23,13 @@
       "type": "safe_state_on_fault",
       "fault_when": {
         "pin": "A1",
-        "op": ">",
-        "value": 120
+        "op": "<",
+        "value": 5
       },
       "output_pin": "D6",
       "safe_value": 0,
       "within_ms": 500,
-      "description": "Overrange closes valve",
+      "description": "Underrange closes valve",
       "covers": "If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms"
     },
     {
@@ -49,8 +49,8 @@
   ],
   "scenarios": [
     {
-      "id": "s_runaway",
-      "name": "Normal then overrange",
+      "id": "s_underrange",
+      "name": "Warm then sensor underrange",
       "seed": 4,
       "duration_ms": 7000,
       "analog": [
@@ -63,7 +63,7 @@
             },
             {
               "t_ms": 2500,
-              "mv": 1300
+              "mv": 0
             }
           ],
           "noise_mv": 5,

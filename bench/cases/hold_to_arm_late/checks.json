@@ -36,7 +36,7 @@
   "scenarios": [
     {
       "id": "s_hold",
-      "name": "Hold 520 ms",
+      "name": "Hold 1100 ms",
       "seed": 1,
       "duration_ms": 4000,
       "analog": [],
@@ -53,7 +53,7 @@
               "bounce_count": 0
             },
             {
-              "t_ms": 820,
+              "t_ms": 1400,
               "value": 1,
               "bounce_ms": 0,
               "bounce_count": 0

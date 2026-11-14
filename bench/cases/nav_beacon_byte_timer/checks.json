@@ -13,10 +13,10 @@
       "id": "a_max",
       "type": "max_toggles",
       "pin": "D12",
-      "max_toggles": 4,
+      "max_toggles": 5,
       "window_ms": 2000,
       "description": "Blink rate cap",
-      "covers": "Beacon must not change state more than 4 times in any 2000 ms window"
+      "covers": "Beacon must not change state more than 5 times in any 2000 ms window"
     },
     {
       "id": "a_no_crash",

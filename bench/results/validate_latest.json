@@ -1,10 +1,10 @@
 {
-  "ok": 39,
+  "ok": 40,
   "failed": 0,
   "failed_ids": [],
   "per_category": {
     "blocking_delay": 3,
-    "correct": 10,
+    "correct": 11,
     "integer_overflow": 2,
     "inverted_pullup": 3,
     "millis_rollover": 2,
@@ -20,52 +20,7 @@
   },
   "rows": [
     {
-      "id": "beacon_millis_wrap",
-      "ok": true,
-      "categories": [
-        "millis_rollover"
-      ],
-      "sketch_fail": [
-        "a_period"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_period"
-      ],
-      "problems": []
-    },
-    {
-      "id": "blink_offbyone",
-      "ok": true,
-      "categories": [
-        "off_by_one_timing"
-      ],
-      "sketch_fail": [
-        "a_pulse"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_pulse"
-      ],
-      "problems": []
-    },
-    {
-      "id": "boiler_failsafe",
-      "ok": true,
-      "categories": [
-        "missing_failsafe"
-      ],
-      "sketch_fail": [
-        "a_fault"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_fault"
-      ],
-      "problems": []
-    },
-    {
-      "id": "brine_ph_scale",
+      "id": "aquarium_ph_scale",
       "ok": true,
       "categories": [
         "wrong_unit_scaling"
@@ -80,24 +35,52 @@
       "problems": []
     },
     {
-      "id": "cabin_latch_debounce",
+      "id": "attic_vent_hyst",
       "ok": true,
       "categories": [
-        "missing_debounce"
+        "missing_hysteresis"
       ],
       "sketch_fail": [
-        "a_burst",
-        "a_tpp"
+        "a_chatter"
       ],
       "ref_fail": [],
       "truth": [
-        "a_burst",
-        "a_tpp"
+        "a_chatter"
       ],
       "problems": []
     },
     {
-      "id": "correct_beacon",
+      "id": "bench_led_miswire",
+      "ok": true,
+      "categories": [
+        "wrong_pin"
+      ],
+      "sketch_fail": [
+        "a_follow"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_follow"
+      ],
+      "problems": []
+    },
+    {
+      "id": "blend_tank_sum_ovf",
+      "ok": true,
+      "categories": [
+        "integer_overflow"
+      ],
+      "sketch_fail": [
+        "a_val"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_val"
+      ],
+      "problems": []
+    },
+    {
+      "id": "boiler_ok",
       "ok": true,
       "categories": [
         "correct"
@@ -108,7 +91,52 @@
       "problems": []
     },
     {
-      "id": "correct_brine_ph",
+      "id": "boiler_valve_failsafe",
+      "ok": true,
+      "categories": [
+        "missing_failsafe"
+      ],
+      "sketch_fail": [
+        "a_fault"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_fault"
+      ],
+      "problems": []
+    },
+    {
+      "id": "cabin_heater_mul_ovf",
+      "ok": true,
+      "categories": [
+        "integer_overflow"
+      ],
+      "sketch_fail": [
+        "a_follow"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_follow"
+      ],
+      "problems": []
+    },
+    {
+      "id": "cellar_pump_hyst",
+      "ok": true,
+      "categories": [
+        "missing_hysteresis"
+      ],
+      "sketch_fail": [
+        "a_chatter"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_chatter"
+      ],
+      "problems": []
+    },
+    {
+      "id": "cooler_ok",
       "ok": true,
       "categories": [
         "correct"
@@ -119,95 +147,7 @@
       "problems": []
     },
     {
-      "id": "correct_cabin_latch",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_duct_fan",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_fridge",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_heater",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_limit",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_pulse",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_serial_temp",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "correct_washer",
-      "ok": true,
-      "categories": [
-        "correct"
-      ],
-      "sketch_fail": [],
-      "ref_fail": [],
-      "truth": [],
-      "problems": []
-    },
-    {
-      "id": "drip_counter_millis",
+      "id": "drip_scheduler_u8",
       "ok": true,
       "categories": [
         "millis_rollover"
@@ -222,7 +162,263 @@
       "problems": []
     },
     {
-      "id": "dual_block_scale",
+      "id": "foyer_lamp_debounce",
+      "ok": true,
+      "categories": [
+        "missing_debounce"
+      ],
+      "sketch_fail": [
+        "a_tpp"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_tpp"
+      ],
+      "problems": []
+    },
+    {
+      "id": "glue_solenoid_short",
+      "ok": true,
+      "categories": [
+        "timed_pulse_length"
+      ],
+      "sketch_fail": [
+        "a_pulse"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_pulse"
+      ],
+      "problems": []
+    },
+    {
+      "id": "greenhouse_dual",
+      "ok": true,
+      "categories": [
+        "missing_hysteresis",
+        "missing_failsafe"
+      ],
+      "sketch_fail": [
+        "a_chatter",
+        "a_fault"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_chatter",
+        "a_fault"
+      ],
+      "problems": []
+    },
+    {
+      "id": "greenhouse_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "hoist_estop_invert",
+      "ok": true,
+      "categories": [
+        "inverted_pullup"
+      ],
+      "sketch_fail": [
+        "a_follow"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_follow"
+      ],
+      "problems": []
+    },
+    {
+      "id": "hold_to_arm_late",
+      "ok": true,
+      "categories": [
+        "off_by_one_timing"
+      ],
+      "sketch_fail": [
+        "a_follow"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_follow"
+      ],
+      "problems": []
+    },
+    {
+      "id": "inject_pulse_short",
+      "ok": true,
+      "categories": [
+        "off_by_one_timing"
+      ],
+      "sketch_fail": [
+        "a_pulse"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_pulse"
+      ],
+      "problems": []
+    },
+    {
+      "id": "kiln_door_block",
+      "ok": true,
+      "categories": [
+        "blocking_delay"
+      ],
+      "sketch_fail": [
+        "a_hb",
+        "a_resp"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_hb",
+        "a_resp"
+      ],
+      "problems": []
+    },
+    {
+      "id": "lab_ph_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "laundry_cycle_stuck",
+      "ok": true,
+      "categories": [
+        "stuck_state_machine"
+      ],
+      "sketch_fail": [
+        "a_motor"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_motor"
+      ],
+      "problems": []
+    },
+    {
+      "id": "laundry_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "lobby_lamp_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "lock_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "loft_fan_ok",
+      "ok": true,
+      "categories": [
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "mist_injector_long",
+      "ok": true,
+      "categories": [
+        "timed_pulse_length"
+      ],
+      "sketch_fail": [
+        "a_pulse"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_pulse"
+      ],
+      "problems": []
+    },
+    {
+      "id": "nav_beacon_byte_timer",
+      "ok": true,
+      "categories": [
+        "millis_rollover"
+      ],
+      "sketch_fail": [
+        "a_max",
+        "a_period"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_max",
+        "a_period"
+      ],
+      "problems": []
+    },
+    {
+      "id": "panel_dual_debounce_edge",
+      "ok": true,
+      "categories": [
+        "missing_debounce",
+        "inverted_pullup"
+      ],
+      "sketch_fail": [
+        "a_tpp"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_tpp"
+      ],
+      "problems": []
+    },
+    {
+      "id": "porch_gate_block",
+      "ok": true,
+      "categories": [
+        "blocking_delay"
+      ],
+      "sketch_fail": [
+        "a_hb",
+        "a_resp"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_hb",
+        "a_resp"
+      ],
+      "problems": []
+    },
+    {
+      "id": "process_dual_block_scale",
       "ok": true,
       "categories": [
         "wrong_unit_scaling",
@@ -242,10 +438,24 @@
       "problems": []
     },
     {
-      "id": "dual_debounce_invert",
+      "id": "rail_limit_invert",
       "ok": true,
       "categories": [
-        "inverted_pullup",
+        "inverted_pullup"
+      ],
+      "sketch_fail": [
+        "a_follow"
+      ],
+      "ref_fail": [],
+      "truth": [
+        "a_follow"
+      ],
+      "problems": []
+    },
+    {
+      "id": "shop_estop_debounce",
+      "ok": true,
+      "categories": [
         "missing_debounce"
       ],
       "sketch_fail": [
@@ -258,149 +468,46 @@
       "problems": []
     },
     {
-      "id": "dual_hyst_failsafe",
+      "id": "solenoid_ok",
       "ok": true,
       "categories": [
-        "missing_hysteresis",
-        "missing_failsafe"
+        "correct"
+      ],
+      "sketch_fail": [],
+      "ref_fail": [],
+      "truth": [],
+      "problems": []
+    },
+    {
+      "id": "spindle_rpm_prefix",
+      "ok": true,
+      "categories": [
+        "serial_format"
       ],
       "sketch_fail": [
-        "a_chatter",
-        "a_fault"
+        "a_period",
+        "a_val"
       ],
       "ref_fail": [],
       "truth": [
-        "a_chatter",
-        "a_fault"
+        "a_period",
+        "a_val"
       ],
       "problems": []
     },
     {
-      "id": "duct_fan_hyst",
+      "id": "studio_siren_ok",
       "ok": true,
       "categories": [
-        "missing_hysteresis"
+        "correct"
       ],
-      "sketch_fail": [
-        "a_chatter"
-      ],
+      "sketch_fail": [],
       "ref_fail": [],
-      "truth": [
-        "a_chatter"
-      ],
+      "truth": [],
       "problems": []
     },
     {
-      "id": "estop_pullup_invert",
-      "ok": true,
-      "categories": [
-        "inverted_pullup"
-      ],
-      "sketch_fail": [
-        "a_follow"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_follow"
-      ],
-      "problems": []
-    },
-    {
-      "id": "fridge_failsafe",
-      "ok": true,
-      "categories": [
-        "missing_failsafe"
-      ],
-      "sketch_fail": [
-        "a_fault"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_fault"
-      ],
-      "problems": []
-    },
-    {
-      "id": "gate_alarm_block",
-      "ok": true,
-      "categories": [
-        "blocking_delay"
-      ],
-      "sketch_fail": [
-        "a_hb",
-        "a_resp"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_hb",
-        "a_resp"
-      ],
-      "problems": []
-    },
-    {
-      "id": "heater_duty_ovf",
-      "ok": true,
-      "categories": [
-        "integer_overflow"
-      ],
-      "sketch_fail": [
-        "a_follow"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_follow"
-      ],
-      "problems": []
-    },
-    {
-      "id": "hold_offbyone",
-      "ok": true,
-      "categories": [
-        "off_by_one_timing"
-      ],
-      "sketch_fail": [
-        "a_follow"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_follow"
-      ],
-      "problems": []
-    },
-    {
-      "id": "kiln_siren_block",
-      "ok": true,
-      "categories": [
-        "blocking_delay"
-      ],
-      "sketch_fail": [
-        "a_hb",
-        "a_resp"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_hb",
-        "a_resp"
-      ],
-      "problems": []
-    },
-    {
-      "id": "limit_switch_invert",
-      "ok": true,
-      "categories": [
-        "inverted_pullup"
-      ],
-      "sketch_fail": [
-        "a_follow"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_follow"
-      ],
-      "problems": []
-    },
-    {
-      "id": "lock_stuck_sm",
+      "id": "vault_lock_stuck",
       "ok": true,
       "categories": [
         "stuck_state_machine"
@@ -415,69 +522,22 @@
       "problems": []
     },
     {
-      "id": "mix_tank_int_ovf",
+      "id": "walk_in_cooler_failsafe",
       "ok": true,
       "categories": [
-        "integer_overflow"
+        "missing_failsafe"
       ],
       "sketch_fail": [
-        "a_val"
+        "a_fault"
       ],
       "ref_fail": [],
       "truth": [
-        "a_val"
+        "a_fault"
       ],
       "problems": []
     },
     {
-      "id": "panel_key_debounce",
-      "ok": true,
-      "categories": [
-        "missing_debounce"
-      ],
-      "sketch_fail": [
-        "a_burst",
-        "a_tpp"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_burst",
-        "a_tpp"
-      ],
-      "problems": []
-    },
-    {
-      "id": "pulse_too_long",
-      "ok": true,
-      "categories": [
-        "timed_pulse_length"
-      ],
-      "sketch_fail": [
-        "a_pulse"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_pulse"
-      ],
-      "problems": []
-    },
-    {
-      "id": "pulse_too_short",
-      "ok": true,
-      "categories": [
-        "timed_pulse_length"
-      ],
-      "sketch_fail": [
-        "a_pulse"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_pulse"
-      ],
-      "problems": []
-    },
-    {
-      "id": "serial_fmt_rpm",
+      "id": "weather_line_prefix",
       "ok": true,
       "categories": [
         "serial_format"
@@ -494,39 +554,18 @@
       "problems": []
     },
     {
-      "id": "serial_fmt_temp",
+      "id": "weather_ok",
       "ok": true,
       "categories": [
-        "serial_format"
+        "correct"
       ],
-      "sketch_fail": [
-        "a_period",
-        "a_val"
-      ],
+      "sketch_fail": [],
       "ref_fail": [],
-      "truth": [
-        "a_period",
-        "a_val"
-      ],
+      "truth": [],
       "problems": []
     },
     {
-      "id": "sump_pump_hyst",
-      "ok": true,
-      "categories": [
-        "missing_hysteresis"
-      ],
-      "sketch_fail": [
-        "a_chatter"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_chatter"
-      ],
-      "problems": []
-    },
-    {
-      "id": "tank_pressure_scale",
+      "id": "workshop_kpa_scale",
       "ok": true,
       "categories": [
         "wrong_unit_scaling"
@@ -541,37 +580,7 @@
       "problems": []
     },
     {
-      "id": "washer_stuck_sm",
-      "ok": true,
-      "categories": [
-        "stuck_state_machine"
-      ],
-      "sketch_fail": [
-        "a_motor"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_motor"
-      ],
-      "problems": []
-    },
-    {
-      "id": "wrongpin_led",
-      "ok": true,
-      "categories": [
-        "wrong_pin"
-      ],
-      "sketch_fail": [
-        "a_follow"
-      ],
-      "ref_fail": [],
-      "truth": [
-        "a_follow"
-      ],
-      "problems": []
-    },
-    {
-      "id": "wrongpin_relay",
+      "id": "yard_relay_miswire",
       "ok": true,
       "categories": [
         "wrong_pin"

@@ -4,7 +4,8 @@
     "category": "serial_format",
     "description": "Prints rpm: with space instead of RPM:",
     "check_ids": [
-      "a_period"
+      "a_period",
+      "a_val"
     ]
   }
 ]

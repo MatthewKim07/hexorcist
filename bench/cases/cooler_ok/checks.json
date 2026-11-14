@@ -21,11 +21,15 @@
     {
       "id": "a_fault",
       "type": "safe_state_on_fault",
-      "floating_pin": "A3",
+      "fault_when": {
+        "pin": "A3",
+        "op": ">",
+        "value": 60
+      },
       "output_pin": "D7",
       "safe_value": 0,
       "within_ms": 500,
-      "description": "Float forces OFF",
+      "description": "Overrange forces OFF",
       "covers": "If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms"
     },
     {
@@ -46,7 +50,7 @@
   "scenarios": [
     {
       "id": "s_warm",
-      "name": "Warm then float",
+      "name": "Warm then overrange",
       "seed": 2,
       "duration_ms": 8000,
       "analog": [
@@ -56,6 +60,10 @@
             {
               "t_ms": 0,
               "mv": 120
+            },
+            {
+              "t_ms": 3000,
+              "mv": 700
             }
           ],
           "noise_mv": 5,
@@ -69,13 +77,7 @@
           "events": []
         }
       ],
-      "floating": [
-        {
-          "pin": "A3",
-          "from_ms": 3000,
-          "to_ms": 7000
-        }
-      ]
+      "floating": []
     }
   ]
 }

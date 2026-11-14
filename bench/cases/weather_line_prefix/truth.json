@@ -4,7 +4,8 @@
     "category": "serial_format",
     "description": "Prints temp= instead of Temp: ",
     "check_ids": [
-      "a_period"
+      "a_period",
+      "a_val"
     ]
   }
 ]
