@@ -260,3 +260,11 @@ deploy/.tunnel-passcode
 
 # UI review screenshots (local only)
 docs/screenshots/ui-restart/
+bench/cache/*
+!bench/cache/.gitkeep
+bench/judgements/*
+!bench/judgements/.gitkeep
+bench/results/*
+!bench/results/validate_latest.json
+!bench/results/.gitkeep
+bench/dropped/
