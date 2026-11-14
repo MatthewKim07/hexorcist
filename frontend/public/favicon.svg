@@ -1,6 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <clipPath id="hx"><path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z"/></clipPath>
+    <clipPath id="hl"><ellipse cx="375" cy="179.32" rx="150" ry="45"/></clipPath>
+  </defs>
   <rect width="64" height="64" rx="12" fill="#202427"/>
-  <polygon points="32,13 50.84,23.88 50.84,45.63 32,56.5 13.16,45.63 13.16,23.88"
-           fill="none" stroke="#E3E5E0" stroke-width="6" stroke-linejoin="miter"/>
-  <ellipse cx="32" cy="13" rx="15.1" ry="5.5" fill="none" stroke="#E8C15A" stroke-width="5"/>
+  <g transform="translate(32 32) scale(0.122) translate(-375 -375)">
+    <path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z" fill="none" stroke="#E3E5E0" stroke-width="96" clip-path="url(#hx)"/>
+    <ellipse cx="375" cy="179.32" rx="150" ry="45" fill="none" stroke="#E8C15A" stroke-width="64" clip-path="url(#hl)"/>
+  </g>
 </svg>

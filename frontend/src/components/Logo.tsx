@@ -1,10 +1,24 @@
-/** The hex mark from the favicon tile: stroke follows text color, gold halo only. */
+import { useId } from "react";
+
+/** Nav mark from brand/hexorcist-mark.svg. Hex stroke follows text color; gold halo stays fixed. */
 export function Logo({ size = 22 }: { size?: number }) {
-  // Cropped to the mark so a 22px box is filled; the favicon tile padding is left out.
+  const uid = useId().replace(/:/g, "");
+  const hx = `${uid}-hx`;
+  const hl = `${uid}-hl`;
+  // viewBox "178 125 394 500" → width scales with the 394:500 aspect.
+  const width = (size * 394) / 500;
   return (
-    <svg width={size} height={size} viewBox="8 4 48 56" fill="none" aria-hidden="true" className="block shrink-0">
-      <polygon points="32,13 50.84,23.88 50.84,45.63 32,56.5 13.16,45.63 13.16,23.88" stroke="currentColor" strokeWidth="6" strokeLinejoin="miter" />
-      <ellipse cx="32" cy="13" rx="15.1" ry="5.5" stroke="#E8C15A" strokeWidth="5" />
+    <svg xmlns="http://www.w3.org/2000/svg" width={width} height={size} viewBox="178 125 394 500" aria-hidden="true" className="block shrink-0">
+      <defs>
+        <clipPath id={hx}>
+          <path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z" />
+        </clipPath>
+        <clipPath id={hl}>
+          <ellipse cx="375" cy="179.32" rx="150" ry="45" />
+        </clipPath>
+      </defs>
+      <path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z" fill="none" stroke="currentColor" strokeWidth="60" clipPath={`url(#${hx})`} />
+      <ellipse cx="375" cy="179.32" rx="150" ry="45" fill="none" stroke="#E8C15A" strokeWidth="60" clipPath={`url(#${hl})`} />
     </svg>
   );
 }
