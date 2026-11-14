@@ -21,7 +21,7 @@ function StatusStrip({ health, healthError, text, onHistory }: { health: Health 
   const [code, setCode] = useState(getPasscode());
   const ready = health?.ok && health.llm_configured;
   return (
-    <footer className="border-t border-line bg-bg">
+    <footer className="border-t border-line bg-white">
       <div className="mx-auto flex min-h-[48px] max-w-[1100px] flex-wrap items-center gap-x-5 gap-y-2 px-6 py-2 text-xs text-muted">
         {healthError && (
           <span className="flex items-center gap-2 text-fail">
@@ -75,7 +75,7 @@ function HistoryDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (v
     <RDialog.Root open={open} onOpenChange={onOpenChange}>
       <RDialog.Portal>
         <RDialog.Overlay className="scrim fixed inset-0 z-40 bg-ink/20" />
-        <RDialog.Content className="drawer fixed inset-y-0 right-0 z-50 flex w-[min(440px,100vw)] flex-col border-l border-line bg-bg shadow-[-12px_0_32px_rgba(23,23,23,0.12)] outline-none">
+        <RDialog.Content className="drawer fixed inset-y-0 right-0 z-50 flex w-[min(440px,100vw)] flex-col border-l border-line bg-white shadow-[-12px_0_32px_rgba(23,23,23,0.12)] outline-none">
           <div className="flex items-center justify-between border-b border-line px-5 py-4">
             <RDialog.Title className="text-base font-semibold">History</RDialog.Title>
             <RDialog.Close className="btn-ghost -mr-2 text-sm">Close</RDialog.Close>
@@ -95,12 +95,12 @@ export function Chassis({ health, healthError, historyOpen, onHistory, children 
   const [text, setText] = useState("");
   return (
     <StripText.Provider value={setText}>
-      <div className="flex min-h-dvh flex-col bg-bg text-ink">
-        <header className="sticky top-0 z-30 h-14 border-b border-line bg-bg">
+      <div className="flex min-h-dvh flex-col bg-white text-ink">
+        <header className="sticky top-0 z-30 h-14 border-b border-line bg-white">
           <div className="mx-auto flex h-full max-w-[1100px] items-center justify-between px-6">
-            <a href="#/" aria-label="Hexorcist, home" className="flex items-center gap-2.5 text-ink">
+            <a href="#/" aria-label="Hexorcist, home" className="flex items-center gap-2 text-ink">
               <Logo size={22} />
-              <span className="text-sm font-semibold tracking-tight">Hexorcist</span>
+              <span className="text-sm font-semibold leading-none tracking-tight">Hexorcist</span>
             </a>
             <nav className="flex items-center gap-5 text-sm text-muted">
               <a href="#/runs" className="hover-ink transition-colors">
@@ -112,7 +112,7 @@ export function Chassis({ health, healthError, historyOpen, onHistory, children 
             </nav>
           </div>
         </header>
-        <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 pb-16 pt-10">{children}</main>
+        <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 pb-16 pt-16">{children}</main>
         <StatusStrip health={health} healthError={healthError} text={text} onHistory={() => onHistory(true)} />
       </div>
       <HistoryDrawer open={historyOpen} onOpenChange={onHistory} />
