@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="frontend/public/brand/hexorcist-dark.svg" />
-    <img src="frontend/public/brand/hexorcist-light.svg" alt="" height="72" />
+    <img src="frontend/public/brand/hexorcist-light.svg" alt="Hexorcist logo" height="72" />
   </picture>
 </p>
 
@@ -13,11 +13,16 @@
   <img src="docs/images/hero.png" alt="Finished thermostat report: verdict, stats, and board replay" width="900" />
 </p>
 
+## Why
+
+Firmware bugs like a fan that chatters at a threshold or a button that double-toggles often compile cleanly and look plausible when you only read the sketch. A code review can guess; Hexorcist compiles the firmware, runs it on an emulated chip under adversarial inputs, and measures what happened.
+
 ## What it does
 
 - Finds bugs by compiling the sketch and running it under adversarial conditions on an emulated ATmega328P.
 - Reports measured evidence from the emulator trace, for example `D9 toggled 23 times in a 5000 ms window (limit 2)`.
 - Writes a minimal patch and only calls the run fixed after re-running the full scenario suite with nothing new broken.
+- Write firmware mode: generates a sketch from a description, then has to survive the same attacks before it is accepted.
 
 ## How it works
 
@@ -40,17 +45,15 @@ The LLM invents assertions, scenarios, root-cause notes, and patches. Every pass
 
 ## Results
 
-Stored runs against the five presets, model `deepseek-chat` (DeepSeek). The model designs part of the attack, so scenario names and exact timings vary run to run; the verdicts below do not.
+Three runs of each buggy preset through the live API on 2026-11-14, model `deepseek-chat` (DeepSeek), via `python -m scripts.run_presets --repeat 3`. Out of 3 runs per preset, all 12 reached a verified fix. Containment was run once (11/11 checks). Scenario names and patch sizes still vary because the model designs part of the attack.
 
-| Preset | Bug type | Bugs found | Fixed and verified | Typical time |
+| Preset | Bug type | Bugs found | Fixed and verified (runs) | Median time |
 | --- | --- | ---: | ---: | ---: |
-| Thermostat without hysteresis | No hysteresis; no sensor fault check | 2 | 2 | ~85 s |
-| Button without debounce | No debounce | 1 | 1 | ~40 s |
-| Sensor logger with wrong units | Wrong unit conversion | 1 | 1 | ~74 s |
-| Alarm with blocking delay | Blocking `delay()` | 3 | 3 | ~53 s |
-| Containment test | Hostile upload | — | 11/11 checks | ~33 s |
-
-Sources: compose DB runs `50117ab35f8e` (thermostat), `e42af353ac65` (button), `e0b0031ca150` (logger), `966d7c0d788d` (alarm), `9bb0859892d5` (containment).
+| Thermostat without hysteresis | No hysteresis; no sensor fault check | 2 | 3/3 | 116 s |
+| Button without debounce | No debounce | 1 | 3/3 | 43 s |
+| Sensor logger with wrong units | Wrong unit conversion | 1 | 3/3 | 79 s |
+| Alarm with blocking delay | Blocking `delay()` | 3 | 3/3 | 59 s |
+| Containment test | Hostile upload | — | 1/1 (11/11 checks) | 32 s |
 
 ## Sandbox
 
@@ -70,7 +73,7 @@ Every compile and every scenario run gets a fresh container that is always remov
   <img src="docs/images/containment.png" alt="Containment report: 11/11 checks, 0 secrets, containers removed" width="900" />
 </p>
 
-The containment demo is a hostile sketch and a prompt-injection spec. It never calls the LLM; the last stored run passed **11/11** checks in 33 s (`9bb0859892d5`).
+The containment demo is a hostile sketch and a prompt-injection spec. It never calls the LLM; the measured run above passed 11/11 checks in 32 s.
 
 ## Prompt-injection guard
 
@@ -102,15 +105,18 @@ A fine-tuned MiniLM scored higher recall but flagged **17%** of real Arduino lib
 
 ## Run it locally
 
-Prerequisites: Docker (Compose v2).
+Prerequisites: Docker with Compose v2.
 
 ```bash
+git clone https://github.com/MatthewKim07/hexorcist.git
+cd hexorcist
 cp .env.example .env
 # Set LLM_BASE_URL, LLM_API_KEY, and LLM_MODEL to any OpenAI-compatible endpoint.
+# Compose builds the sandbox image (arduino-cli + simavr), then the backend and frontend.
 docker compose up --build
 ```
 
-Open [http://localhost:8080](http://localhost:8080) (or the port in `HEXORCIST_PORT`).
+Open [http://localhost:8080](http://localhost:8080) (or the port in `HEXORCIST_PORT`). `GET /api/health` should return `"ok": true`. Without an API key the UI still loads; Break/Build runs that need the model will fail until one is set. The containment preset does not need a model.
 
 ## Tech stack
 
@@ -125,7 +131,7 @@ Open [http://localhost:8080](http://localhost:8080) (or the port in `HEXORCIST_P
 - Arduino Uno (ATmega328P) only
 - Sensors modelled as pin voltages; no I2C or SPI peripherals
 - Prompts tuned mainly on one chat model
-- Emulation about 1.5× realtime on one Apple Silicon core; long scenarios must fit the 30 s wall-clock kill
+- Emulation measured at about **1.3× real time** alone on this machine (`scripts/measure_speed`: 8000 ms simulated in 6033 ms wall-clock); long scenarios must still fit the 30 s wall-clock kill
 - The input guard catches under half of held-out attacks
 
 ## License
