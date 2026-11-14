@@ -4,6 +4,7 @@ import { Bug as BugType, PinSpec } from "../api";
 import { displayTitle, keyFact, rankBugs, shortDuration } from "../format";
 import { iconCardProps, iconProps } from "../icons";
 import { runIcon } from "../presetIcons";
+import { hasAttackResults, hasVerifyResults } from "../reportStats";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
@@ -168,18 +169,20 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
   const guard = state.guard ?? state.run!.guard;
   const warnings = report?.warnings ?? state.warnings;
-  const hasBoard = status !== "compile_failed" && emulated.length > 0 && pins.length > 0;
-  const comparable = state.run!.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
+  const isBuild = state.run!.mode === "build";
+  const attacked = hasAttackResults(report);
+  const hasBoard = status !== "compile_failed" && attacked && emulated.length > 0 && pins.length > 0;
+  const comparable = !isBuild && !!guard?.allowed && attacked && ["fixed", "partial", "unfixed", "clean"].includes(status);
   const records = report?.containment?.records ?? state.records;
   const focus = bugs.find((b) => b.scenario_id === scenarioId) ?? null;
   const scenario = scenarios.find((s) => s.id === scenarioId);
-  const evidence = focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
+  const showBeforeAfter = !isBuild && hasVerifyResults(report);
+  const evidence = showBeforeAfter && focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
   const beforeResults = state.results[0] ?? {};
-  const afterResults = afterIteration !== null ? (state.results[afterIteration] ?? {}) : null;
+  const afterResults = showBeforeAfter && afterIteration !== null ? (state.results[afterIteration] ?? {}) : null;
   const beforeMatrix = report?.matrix?.["0"];
-  const afterMatrix = afterIteration !== null ? report?.matrix?.[String(afterIteration)] : undefined;
+  const afterMatrix = showBeforeAfter && afterIteration !== null ? report?.matrix?.[String(afterIteration)] : undefined;
   const contained = !!report?.contained;
-  const isBuild = state.run!.mode === "build";
   const firmware = (report?.firmware || state.firmware || state.run!.firmware || "").trim();
 
   const tabs: ReportTabId[] = [];
@@ -189,7 +192,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   if (records.length && !contained) {
     tabs.push("containment");
   }
-  if (state.run!.mode === "break" && !contained && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status)) {
+  if (comparable) {
     tabs.push("compare");
   }
   if (report && !contained && (trace || (report.compile_log && status !== "compile_failed") || warnings.length || report.device_model || (report.llm?.calls ?? 0) > 0)) {
@@ -214,7 +217,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
   return (
     <div className="space-y-8">
-      <ReportVerdict report={report} status={status} firstWarning={warnings[0] ?? ""} createdAt={state.run!.created_at} finishedAt={state.run!.finished_at} />
+      <ReportVerdict report={report} status={status} firstWarning={warnings[0] ?? ""} createdAt={state.run!.created_at} finishedAt={state.run!.finished_at} mode={state.run!.mode} />
 
       {status === "blocked" && guard && !guard.allowed && (
         <section aria-label="Guard reasons">
@@ -252,7 +255,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
           ready={ready}
           side={side}
           onSide={setSide}
-          hasAfter={afterIteration !== null}
+          hasAfter={showBeforeAfter}
           violations={violations}
           evidence={evidence}
           startAt={startAt}
@@ -262,7 +265,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         />
       )}
 
-      {!contained && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
+      {!contained && attacked && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
 
       {tabs.length > 0 && (
         <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
@@ -277,9 +280,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
               pins={pins}
               selected={scenarioId}
               onSelect={replayTo}
+              buildMode={isBuild}
             />
           )}
-          {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
+          {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={isBuild ? "run" : side} />}
           {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
           {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
           {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}

@@ -40,7 +40,7 @@ function SideIcon({ results, assertions, pins }: { results: AssertionResult[] | 
   );
 }
 
-/** Scenarios with Before/After icon columns; failing-before first; both-passed collapsed. */
+/** Scenarios table: Before/After for break+verify, single Result for build or attack-only. */
 export function ScenariosTab({
   scenarios,
   beforeResults,
@@ -51,6 +51,7 @@ export function ScenariosTab({
   pins,
   selected,
   onSelect,
+  buildMode = false,
 }: {
   scenarios: Scenario[];
   beforeResults: RunState["results"][number];
@@ -61,9 +62,11 @@ export function ScenariosTab({
   pins: PinSpec[];
   selected: string | null;
   onSelect: (id: string) => void;
+  buildMode?: boolean;
 }) {
   const [showPassed, setShowPassed] = useState(false);
-  const hasAfter = !!afterMatrix || !!afterResults;
+  const hasAfter = !buildMode && (!!afterMatrix || !!afterResults);
+  const resultLabel = buildMode || !hasAfter ? "Result" : "Before";
 
   const rank = (s: Scenario) => {
     const before = beforeResults[s.id];
@@ -86,6 +89,19 @@ export function ScenariosTab({
   });
   const other = sorted.filter((s) => !failedBefore.includes(s) && !passedBoth.includes(s));
   const primary = [...failedBefore, ...other];
+
+  const summary = (() => {
+    if (buildMode) {
+      return failedBefore.length ? `${scenarios.length} scenarios, ${failedBefore.length} failed` : `${scenarios.length} scenarios`;
+    }
+    if (hasAfter) {
+      return `${scenarios.length} scenarios${failedBefore.length ? `, ${failedBefore.length} failed before` : ", all passing"}`;
+    }
+    return failedBefore.length ? `${scenarios.length} scenarios, ${failedBefore.length} failed` : `${scenarios.length} scenarios`;
+  })();
+
+  const collapsedLabel = buildMode || !hasAfter ? `${passedBoth.length} passed` : `${passedBoth.length} passed before and after`;
+  const colSpan = hasAfter ? 3 : 2;
 
   const row = (s: Scenario) => (
     <tr
@@ -113,14 +129,12 @@ export function ScenariosTab({
 
   return (
     <div className="pt-4">
-      <p className="mb-3 text-xs text-muted">
-        {scenarios.length} scenarios{failedBefore.length ? `, ${failedBefore.length} failed before` : ", all passing"}
-      </p>
+      <p className="mb-3 text-xs text-muted">{summary}</p>
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-line text-xs text-muted">
             <th className="pb-2 pr-4 font-normal">Name</th>
-            <th className="w-14 pb-2 text-center font-normal">Before</th>
+            <th className="w-14 pb-2 text-center font-normal">{resultLabel}</th>
             {hasAfter && <th className="w-14 pb-2 text-center font-normal">After</th>}
           </tr>
         </thead>
@@ -129,12 +143,10 @@ export function ScenariosTab({
           {passedBoth.length > 0 && (
             <>
               <tr className="border-b border-line">
-                <td colSpan={hasAfter ? 3 : 2} className="py-0">
+                <td colSpan={colSpan} className="py-0">
                   <button type="button" className="flex w-full items-center gap-2 py-2.5 text-left text-sm text-muted hover:text-ink" aria-expanded={showPassed} onClick={() => setShowPassed((v) => !v)}>
                     <CircleCheck {...iconProps} className="text-pass" />
-                    <span className="flex-1">
-                      {passedBoth.length} passed before and after
-                    </span>
+                    <span className="flex-1">{collapsedLabel}</span>
                     <ChevronDown {...iconProps} className={`transition-transform ${showPassed ? "rotate-180" : ""}`} />
                   </button>
                 </td>

@@ -4,6 +4,7 @@ import { AssertionDef, Bug, PinSpec, Report } from "../api";
 import { anchorOf, chipLabel, shortRole } from "../checks";
 import { chipEvidence } from "../format";
 import { iconProps } from "../icons";
+import { hasVerifyResults } from "../reportStats";
 import { DiffView } from "./Common";
 import { Collapsible, Tooltip } from "./ui";
 
@@ -30,7 +31,7 @@ function evidenceChip(label: string, text: string, tone: "fail" | "pass") {
 
 /** One card per bug: title, before→after chips, rule, expandable cause + patch hunk. */
 export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open, onOpen }: Props) {
-  const fix = report?.fix;
+  const fix = hasVerifyResults(report) ? report?.fix : undefined;
   const [patchOpen, setPatchOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 

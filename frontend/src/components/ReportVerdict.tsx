@@ -1,11 +1,12 @@
 import { ReactNode } from "react";
-import { Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, FileDiff, FlaskConical, LucideIcon, ShieldCheck } from "lucide-react";
+import { Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, FileCode, FileDiff, FlaskConical, ListChecks, LucideIcon, ShieldCheck } from "lucide-react";
 import { Report } from "../api";
-import { shortDuration } from "../format";
 import { iconProps } from "../icons";
+import { shortDuration } from "../format";
+import { StatTile, statTilesForReport } from "../reportStats";
 import { Tone, TONE_TEXT } from "./Common";
 
-function verdictMeta(status: string): { Icon: LucideIcon; tone: Tone; spin?: boolean } {
+function verdictMeta(status: string): { Icon: LucideIcon; tone: Tone } {
   switch (status) {
     case "fixed":
     case "clean":
@@ -71,70 +72,51 @@ function Stat({ Icon, value, label }: { Icon: LucideIcon; value: ReactNode; labe
   );
 }
 
-function failingScenarioCount(matrix: Report["matrix"] | undefined, iteration: string): number {
-  const row = matrix?.[iteration];
-  if (!row) {
-    return 0;
+const TILE_ICON: Record<string, LucideIcon> = {
+  bugs: Bug,
+  fixed: CircleCheck,
+  failing: FlaskConical,
+  patch: FileDiff,
+  checks: ListChecks,
+  scenarios: FlaskConical,
+  firmware: FileCode,
+  secrets: ShieldCheck,
+  containers: Box,
+};
+
+function tileIcon(tile: StatTile, contained: boolean): LucideIcon {
+  if (contained && tile.key === "checks") {
+    return CircleCheck;
   }
-  return Object.values(row).filter((rs) => rs.some((r) => r.status === "fail")).length;
+  return TILE_ICON[tile.key] ?? CircleCheck;
 }
 
-/** Verdict heading + four stat tiles under the header card. */
+/** Verdict heading + stat tiles under the header card. */
 export function ReportVerdict({
   report,
   status,
   firstWarning,
   createdAt,
   finishedAt,
+  mode = "break",
 }: {
   report: Report | null;
   status: string;
   firstWarning: string;
   createdAt: number;
   finishedAt: number | null;
+  mode?: string;
 }) {
   const { title, detail } = verdictText(report, status, firstWarning);
   const meta = verdictMeta(status);
   const color = TONE_TEXT[meta.tone];
-  const score = report?.score;
   const contained = !!report?.contained;
   const dur = shortDuration(createdAt, finishedAt) || "—";
 
-  const tiles: { Icon: LucideIcon; value: ReactNode; label: string }[] = contained
-    ? [
-        { Icon: CircleCheck, value: `${score?.checks_passed ?? 0}/${score?.checks_total ?? 0}`, label: "checks passed" },
-        { Icon: ShieldCheck, value: report?.containment?.secrets_found ?? 0, label: "secrets found" },
-        { Icon: Box, value: `${report?.containment?.removed ?? 0}/${report?.containment?.total ?? 0}`, label: "containers removed" },
-        { Icon: Clock, value: dur, label: "duration" },
-      ]
-    : status === "compile_failed"
-      ? []
-      : (() => {
-          const found = score?.bugs_found ?? 0;
-          const verified = score?.bugs_verified ?? 0;
-          const beforeFail = failingScenarioCount(report?.matrix, "0");
-          const afterIter = report?.fix?.iteration;
-          const afterFail = afterIter !== undefined && afterIter !== null ? failingScenarioCount(report?.matrix, String(afterIter)) : beforeFail;
-          const out: { Icon: LucideIcon; value: ReactNode; label: string }[] = [{ Icon: Bug, value: found, label: "Bugs found" }];
-          if (found > 0 || verified > 0) {
-            out.push({ Icon: CircleCheck, value: `${verified}/${found || verified}`, label: "Fixed" });
-          }
-          if (report?.matrix && Object.keys(report.matrix).length > 0) {
-            out.push({
-              Icon: FlaskConical,
-              value: (
-                <>
-                  {beforeFail} <span className="text-muted">→</span> {afterFail}
-                </>
-              ),
-              label: "Failing scenarios",
-            });
-          }
-          if (report?.fix?.diff) {
-            out.push({ Icon: FileDiff, value: `+${report.fix.diff.added} −${report.fix.diff.removed}`, label: "Patch" });
-          }
-          return out;
-        })();
+  const tiles = statTilesForReport(report, status, mode);
+  if (contained) {
+    tiles.push({ key: "duration", value: dur, label: "duration" });
+  }
 
   return (
     <section aria-label="Verdict">
@@ -144,9 +126,9 @@ export function ReportVerdict({
       </h2>
       {detail && <p className={`mt-2 text-sm ${meta.tone === "fail" ? "text-fail" : "text-muted"}`}>{detail}</p>}
       {tiles.length > 0 && (
-        <div className={`mt-6 grid gap-3 ${tiles.length >= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {tiles.map((t) => (
-            <Stat key={t.label} Icon={t.Icon} value={t.value} label={t.label} />
+            <Stat key={t.key} Icon={t.key === "duration" ? Clock : tileIcon(t, contained)} value={t.value} label={t.label} />
           ))}
         </div>
       )}
