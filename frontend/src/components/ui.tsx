@@ -2,7 +2,6 @@ import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } 
 import * as RCheckbox from "@radix-ui/react-checkbox";
 import * as RCollapsible from "@radix-ui/react-collapsible";
 import * as RSelect from "@radix-ui/react-select";
-import * as RTabs from "@radix-ui/react-tabs";
 import * as RToggle from "@radix-ui/react-toggle-group";
 import * as RTooltip from "@radix-ui/react-tooltip";
 import { Icon } from "./Common";
@@ -120,58 +119,6 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   );
 }
 
-/* -------------------------------------------------------------------- Tabs */
-
-export interface PanelKey<T extends string> {
-  value: T;
-  label: string;
-  /** A step lamp: lit once the step is done. Left out for keys that are not steps. */
-  lamp?: boolean;
-}
-
-/** The row of keys under the screen. Each opens its panel below; with `closable`, pressing the open key closes it. */
-export function KeyRow<T extends string>({ keys, value, onChange, onPress, label, closable = false, end, children }: { keys: PanelKey<T>[]; value: T | null; onChange: (v: T | null) => void; onPress?: (v: T, wasOpen: boolean) => void; label: string; closable?: boolean; end?: ReactNode; children?: ReactNode }) {
-  const wasActive = useRef(false);
-  return (
-    <RTabs.Root value={value ?? ""} onValueChange={(v) => onChange(v as T)} activationMode="manual">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
-        <RTabs.List aria-label={label} className="flex flex-wrap gap-2">
-          {keys.map((k) => (
-            <RTabs.Trigger
-              key={k.value}
-              value={k.value}
-              onPointerDownCapture={() => {
-                wasActive.current = value === k.value;
-              }}
-              onKeyDownCapture={() => {
-                wasActive.current = value === k.value;
-              }}
-              onClick={() => {
-                if (closable && wasActive.current) {
-                  onChange(null);
-                }
-                onPress?.(k.value, wasActive.current);
-                wasActive.current = false;
-              }}
-              className="panel-key"
-            >
-              {k.lamp !== undefined && <span aria-hidden="true" className={`step-lamp ${k.lamp ? "is-lit" : ""}`} />}
-              {k.label}
-              {k.lamp !== undefined && <span className="sr-only">{k.lamp ? ", done" : ", not done"}</span>}
-            </RTabs.Trigger>
-          ))}
-        </RTabs.List>
-        {end && <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">{end}</div>}
-      </div>
-      {value && (
-        <RTabs.Content value={value} className="outline-none" tabIndex={-1}>
-          {children}
-        </RTabs.Content>
-      )}
-    </RTabs.Root>
-  );
-}
-
 /* ----------------------------------------------------------------- Tooltip */
 
 export function TipProvider({ children }: { children: ReactNode }) {
@@ -222,14 +169,6 @@ export function Fold({ title, children, defaultOpen = false, className = "", con
 }
 
 export const Collapsible = RCollapsible;
-
-/* -------------------------------------------------------------------- Lamp */
-
-/** An indicator lamp: lit green when the check held, red when it did not. */
-export function Lamp({ tone, breathing = false }: { tone: "pass" | "fail" | "trace" | "off"; breathing?: boolean }) {
-  const colour = { pass: "bg-pass-lit shadow-[0_0_0_4px_rgba(92,201,138,0.14)]", fail: "bg-fail-lit shadow-[0_0_0_4px_rgba(240,118,107,0.16)]", trace: "bg-trace shadow-[0_0_0_4px_rgba(232,193,90,0.14)]", off: "bg-screen-line" }[tone];
-  return <span aria-hidden="true" className={`block h-2.5 w-2.5 rounded-full ${colour} ${breathing ? "breathe" : ""}`} />;
-}
 
 /* ----------------------------------------------------------------- Counter */
 

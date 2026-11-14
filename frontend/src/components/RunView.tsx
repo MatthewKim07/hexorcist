@@ -168,7 +168,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
   const guard = state.guard ?? state.run!.guard;
   const warnings = report?.warnings ?? state.warnings;
-  const hasBoard = emulated.length > 0 && pins.length > 0;
+  const hasBoard = status !== "compile_failed" && emulated.length > 0 && pins.length > 0;
   const comparable = state.run!.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
   const records = report?.containment?.records ?? state.records;
   const focus = bugs.find((b) => b.scenario_id === scenarioId) ?? null;
@@ -237,7 +237,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
       {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
 
-      {isBuild && firmware && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
+      {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
 
       {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
 

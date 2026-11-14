@@ -107,32 +107,34 @@ export function ReportVerdict({
         { Icon: Box, value: `${report?.containment?.removed ?? 0}/${report?.containment?.total ?? 0}`, label: "containers removed" },
         { Icon: Clock, value: dur, label: "duration" },
       ]
-    : (() => {
-        const found = score?.bugs_found ?? 0;
-        const verified = score?.bugs_verified ?? 0;
-        const beforeFail = failingScenarioCount(report?.matrix, "0");
-        const afterIter = report?.fix?.iteration;
-        const afterFail = afterIter !== undefined && afterIter !== null ? failingScenarioCount(report?.matrix, String(afterIter)) : beforeFail;
-        const out: { Icon: LucideIcon; value: ReactNode; label: string }[] = [{ Icon: Bug, value: found, label: "Bugs found" }];
-        if (found > 0 || verified > 0) {
-          out.push({ Icon: CircleCheck, value: `${verified}/${found || verified}`, label: "Fixed" });
-        }
-        if (report?.matrix) {
-          out.push({
-            Icon: FlaskConical,
-            value: (
-              <>
-                {beforeFail} <span className="text-muted">→</span> {afterFail}
-              </>
-            ),
-            label: "Failing scenarios",
-          });
-        }
-        if (report?.fix?.diff) {
-          out.push({ Icon: FileDiff, value: `+${report.fix.diff.added} −${report.fix.diff.removed}`, label: "Patch" });
-        }
-        return out;
-      })();
+    : status === "compile_failed"
+      ? []
+      : (() => {
+          const found = score?.bugs_found ?? 0;
+          const verified = score?.bugs_verified ?? 0;
+          const beforeFail = failingScenarioCount(report?.matrix, "0");
+          const afterIter = report?.fix?.iteration;
+          const afterFail = afterIter !== undefined && afterIter !== null ? failingScenarioCount(report?.matrix, String(afterIter)) : beforeFail;
+          const out: { Icon: LucideIcon; value: ReactNode; label: string }[] = [{ Icon: Bug, value: found, label: "Bugs found" }];
+          if (found > 0 || verified > 0) {
+            out.push({ Icon: CircleCheck, value: `${verified}/${found || verified}`, label: "Fixed" });
+          }
+          if (report?.matrix && Object.keys(report.matrix).length > 0) {
+            out.push({
+              Icon: FlaskConical,
+              value: (
+                <>
+                  {beforeFail} <span className="text-muted">→</span> {afterFail}
+                </>
+              ),
+              label: "Failing scenarios",
+            });
+          }
+          if (report?.fix?.diff) {
+            out.push({ Icon: FileDiff, value: `+${report.fix.diff.added} −${report.fix.diff.removed}`, label: "Patch" });
+          }
+          return out;
+        })();
 
   return (
     <section aria-label="Verdict">

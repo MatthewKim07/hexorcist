@@ -1,57 +1,10 @@
-import { useState } from "react";
 import { CircleCheck, CircleX } from "lucide-react";
 import { ContainmentRecord, Guard, Report } from "../api";
 import { iconProps } from "../icons";
-import { Collapsible, Fold, Lamp } from "./ui";
+import { Fold } from "./ui";
 
 function mb(bytes?: number): string {
   return bytes ? `${Math.round(bytes / 1048576)} MiB` : "?";
-}
-
-/** The six containment checks as a row of lamps on the page's one screen. A lamp opens the measured detail behind it. */
-export function ContainedRow({ report }: { report: Report }) {
-  const [open, setOpen] = useState<string | null>(null);
-  const c = report.contained;
-  if (!c) {
-    return null;
-  }
-  const ok = (label: string) => c.checks.find((x) => x.label === label)?.ok ?? false;
-  const total = report.containment.total;
-  const items = [
-    { label: "Guard flagged it", ok: ok("Input guard flagged the upload"), detail: `${c.guard.reasons.length} red flags, risk score ${c.guard.score.toFixed(1)}. Blocked before any model saw it.` },
-    { label: "LLM never saw it", ok: ok("LLM never contacted"), detail: "0 LLM calls. The prompt injection reached no model." },
-    { label: "No network", ok: ok("Network disabled"), detail: `Connect ${c.probe.network}, DNS ${c.probe.dns}. NetworkMode none on all ${total} containers.` },
-    { label: "No secrets", ok: ok("No control-plane secrets in any output") && ok("No secrets in the sandbox environment"), detail: `${report.containment.secrets_found} found. The API key and passcode were searched for in all ${total} outputs.` },
-    { label: "Timeout kill", ok: ok("Runaway firmware killed by wall clock"), detail: c.runaway.ran ? `SIGKILL at ${c.runaway.duration_s} s, limit ${c.runaway.timeout_s} s.` : "Not run." },
-    { label: "Containers removed", ok: ok("Every container removed"), detail: `${report.containment.removed} of ${total} removed. A fresh container per task, none left behind.` },
-  ];
-  const shown = items.find((i) => i.label === open);
-  return (
-    <section aria-label="What was contained" className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-      <ul className="grid grid-cols-3 gap-y-2 px-2 py-5 sm:grid-cols-6">
-        {items.map((i) => (
-          <li key={i.label}>
-            <button
-              aria-pressed={open === i.label}
-              aria-label={`${i.label}: ${i.ok ? "held" : "failed"}`}
-              onClick={() => setOpen(open === i.label ? null : i.label)}
-              className={`key flex w-full flex-col items-center gap-3 rounded-md px-2 py-3 text-center text-xs !font-normal transition-colors hover:text-screen-ink ${open === i.label ? "bg-screen-raised text-screen-ink" : "text-screen-muted"}`}
-            >
-              <Lamp tone={i.ok ? "pass" : "fail"} />
-              {i.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-      <Collapsible.Root open={!!shown}>
-        <Collapsible.Content className="fold">
-          <p aria-live="polite" className="border-t border-screen-line px-5 py-3.5 text-sm text-screen-ink">
-            {shown?.detail}
-          </p>
-        </Collapsible.Content>
-      </Collapsible.Root>
-    </section>
-  );
 }
 
 function Row({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
