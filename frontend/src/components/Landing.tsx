@@ -1,21 +1,57 @@
 import { useEffect, useState } from "react";
+import { Activity, Loader2, LucideIcon, Play, ShieldCheck, Siren, Thermometer, ToggleLeft } from "lucide-react";
 import { api, Health, Preset, RunSummary } from "../api";
+import { iconCardProps, iconProps } from "../icons";
 import { usePasscodeGate } from "./Chassis";
 import { RunsTable } from "./RunsTable";
+import { Tooltip } from "./ui";
 
 /** A run of an example, with the checks the example ships, so the run measures exactly what its chips say. */
 export function startPreset(p: Preset, compare = false) {
   return api.start({ mode: "break", title: p.title, firmware: p.firmware, pins: p.pins, behaviour: p.behaviour, compare, ...(p.checks ? { checks: p.checks } : {}) });
 }
 
-/** Short card copy for each preset. Tags stay short and mono. */
-const CARD: Record<string, { blurb: string; tag: string }> = {
-  thermostat: { blurb: "Fan chatters near the threshold", tag: "hysteresis" },
-  button: { blurb: "One press toggles the LED many times", tag: "debounce" },
-  logger: { blurb: "Printed temperature is scaled wrong", tag: "units" },
-  alarm: { blurb: "Short presses never reach the siren", tag: "blocking delay" },
-  containment: { blurb: "Uploads hostile code. Nothing should escape.", tag: "security demo" },
+/** Short card copy for each preset. Tags stay short and mono. Blurb is the icon tooltip. */
+const CARD: Record<string, { blurb: string; tag: string; Icon: LucideIcon }> = {
+  thermostat: { blurb: "Fan chatters near the threshold", tag: "hysteresis", Icon: Thermometer },
+  button: { blurb: "One press toggles the LED many times", tag: "debounce", Icon: ToggleLeft },
+  logger: { blurb: "Printed temperature is scaled wrong", tag: "units", Icon: Activity },
+  alarm: { blurb: "Short presses never reach the siren", tag: "blocking delay", Icon: Siren },
+  containment: { blurb: "Uploads hostile code. Nothing should escape.", tag: "security demo", Icon: ShieldCheck },
 };
+
+function DeviceIcon({ id, blurb }: { id: string; blurb: string }) {
+  const Icon = CARD[id]?.Icon ?? Activity;
+  return (
+    <Tooltip content={blurb}>
+      <span
+        tabIndex={0}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-[#FAFAFA] text-ink outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+        aria-label={blurb}
+      >
+        <Icon {...iconCardProps} />
+      </span>
+    </Tooltip>
+  );
+}
+
+function RunButton({ title, busy, disabled, onClick }: { title: string; busy: boolean; disabled: boolean; onClick: () => void }) {
+  const label = busy ? `Starting ${title}` : `Run ${title}`;
+  return (
+    <Tooltip content={busy ? "Starting…" : `Run ${title}`}>
+      <button
+        type="button"
+        aria-label={label}
+        className="key inline-flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-white text-ink disabled:opacity-50"
+        style={{ borderRadius: 8 }}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {busy ? <Loader2 {...iconProps} className="animate-spin" /> : <Play {...iconProps} />}
+      </button>
+    </Tooltip>
+  );
+}
 
 export function Landing({ health, onStarted }: { health: Health | null; onStarted: (id: string) => void }) {
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -61,18 +97,16 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
 
       <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {bugs.map((p) => {
-          const card = CARD[p.id] ?? { blurb: p.summary, tag: p.id };
+          const card = CARD[p.id] ?? { blurb: p.summary, tag: p.id, Icon: Activity };
           const busy = busyId === p.id;
           const disabled = !!busyId || !canRun;
           return (
             <article key={p.id} className="preset-card flex h-full flex-col border border-line bg-white p-5 transition-[border-color] duration-150">
-              <h2 className="text-sm font-medium text-ink">{p.title}</h2>
-              <p className="mt-1.5 text-sm text-muted">{card.blurb}</p>
+              <DeviceIcon id={p.id} blurb={card.blurb} />
+              <h2 className="mt-3 text-sm font-medium text-ink">{p.title}</h2>
               <div className="mt-auto flex items-center justify-between gap-3 pt-4">
                 <span className="font-mono text-xs text-muted">{card.tag}</span>
-                <button type="button" className="key shrink-0 border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50" style={{ borderRadius: 8 }} disabled={disabled} onClick={() => run(p)}>
-                  {busy ? "Starting…" : "Run"}
-                </button>
+                <RunButton title={p.title} busy={busy} disabled={disabled} onClick={() => run(p)} />
               </div>
             </article>
           );
@@ -83,33 +117,21 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
         <div className="mt-8">
           <p className="mb-3 text-xs text-muted">Security</p>
           <article className="preset-card flex flex-col gap-3 border border-line bg-white p-5 transition-[border-color] duration-150 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="text-sm font-medium text-ink">{containment.title}</h2>
-                <span className="font-mono text-xs text-muted">{CARD.containment.tag}</span>
+            <div className="flex min-w-0 items-start gap-3">
+              <DeviceIcon id="containment" blurb={CARD.containment.blurb} />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <h2 className="text-sm font-medium text-ink">{containment.title}</h2>
+                  <span className="font-mono text-xs text-muted">{CARD.containment.tag}</span>
+                </div>
               </div>
-              <p className="mt-1.5 text-sm text-muted">{CARD.containment.blurb}</p>
             </div>
-            <button
-              type="button"
-              className="key shrink-0 self-end border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50 sm:self-center"
-              style={{ borderRadius: 8 }}
-              disabled={!!busyId}
-              onClick={() => run(containment)}
-            >
-              {busyId === containment.id ? "Starting…" : "Run"}
-            </button>
+            <RunButton title={containment.title} busy={busyId === containment.id} disabled={!!busyId} onClick={() => run(containment)} />
           </article>
         </div>
       )}
 
       {error && <p className="mt-4 text-sm text-fail">{error}</p>}
-
-      <p className="mt-10">
-        <a href="#/new" className="text-sm text-muted transition-colors hover:text-ink">
-          Use your own sketch →
-        </a>
-      </p>
 
       {recentRows.length > 0 && (
         <section className="mt-12">
