@@ -257,3 +257,6 @@ smoke-results-*.txt
 
 # Generated demo passcode for deploy/tunnel.sh
 deploy/.tunnel-passcode
+
+# UI review screenshots (local only)
+docs/screenshots/ui-restart/
