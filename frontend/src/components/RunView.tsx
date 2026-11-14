@@ -238,7 +238,9 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         </section>
       )}
 
-      {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
+      {status === "compile_failed" && report?.compile_log && (
+        <pre className="scroll max-h-96 overflow-auto whitespace-pre-wrap break-all rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>
+      )}
 
       {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
 

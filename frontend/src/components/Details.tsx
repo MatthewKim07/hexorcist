@@ -231,7 +231,7 @@ export function LogsTab({
       )}
       {!hideCompile && report?.compile_log && (
         <Fold title="Compiler output" contentClassName="pl-5">
-          <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] text-muted">{report.compile_log}</pre>
+          <pre className="scroll max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] text-muted">{report.compile_log}</pre>
         </Fold>
       )}
       {warnings.length > 0 && (
