@@ -25,7 +25,7 @@ function LabelHint({ htmlFor, children, hint }: { htmlFor?: string; children: st
         <span className="form-label">{children}</span>
       )}
       <Tooltip content={hint}>
-        <button type="button" aria-label={hint} className="inline-flex text-muted outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/20">
+        <button type="button" aria-label={hint} className="inline-flex rounded-sm text-muted hover:text-ink">
           <Info {...iconProps} />
         </button>
       </Tooltip>

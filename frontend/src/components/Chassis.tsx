@@ -113,7 +113,7 @@ function HealthDot({ health, healthError, onPasscode }: { health: Health | null;
   return (
     <RPopover.Root>
       <RPopover.Trigger asChild>
-        <button type="button" aria-label={summary} className="flex h-6 w-6 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ink/20">
+        <button type="button" aria-label={summary} className="flex h-6 w-6 items-center justify-center rounded-full">
           <span className={`h-2 w-2 rounded-full ${color}`} />
         </button>
       </RPopover.Trigger>

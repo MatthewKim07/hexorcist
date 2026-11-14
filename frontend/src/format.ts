@@ -123,6 +123,12 @@ export function duration(from: number, to: number | null): string {
   return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
 }
 
+/** Display a run title with the first letter capitalized. */
+export function displayTitle(title: string | null | undefined): string {
+  const t = (title ?? "").trim() || "Untitled";
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 /** Compact run duration for tables: "33s", "1m 23s", "1h 16m". */
 export function shortDuration(from: number, to: number | null): string {
   if (to === null) {

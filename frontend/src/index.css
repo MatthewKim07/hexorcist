@@ -77,9 +77,8 @@ body {
 
 /* One focus ring for every control on the page. */
 :focus-visible {
-  outline: 2px solid #1c6884;
+  outline: 2px solid #171717;
   outline-offset: 2px;
-  border-radius: 4px;
 }
 .screen :focus-visible {
   outline-color: #7cc4dc;
@@ -122,8 +121,7 @@ body {
     transition: border-color 150ms ease;
   }
   .field:focus-visible {
-    border-color: color-mix(in srgb, var(--ink) 40%, transparent);
-    outline-offset: 0;
+    border-color: #171717;
   }
   /* Keys: they press. */
   .key {
@@ -194,8 +192,8 @@ body {
 
 .form-input:focus-visible {
   border-color: #171717;
-  box-shadow: 0 0 0 1px #171717;
-  outline: none;
+  outline: 2px solid #171717;
+  outline-offset: 2px;
 }
 
 @media (hover: hover) and (pointer: fine) {

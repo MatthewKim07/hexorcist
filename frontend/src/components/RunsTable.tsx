@@ -1,7 +1,7 @@
 import { KeyboardEvent } from "react";
 import { Bug, CircleCheck, CircleHelp, CircleX, Loader2, LucideIcon, ShieldCheck, Wand2 } from "lucide-react";
 import { RunSummary } from "../api";
-import { shortDuration } from "../format";
+import { displayTitle, shortDuration } from "../format";
 import { iconProps } from "../icons";
 import { Tone, TONE_TEXT } from "./Common";
 import { Tooltip } from "./ui";
@@ -56,7 +56,7 @@ function ModeCell({ mode }: { mode: string }) {
   const Icon = build ? Wand2 : Bug;
   return (
     <Tooltip content={label}>
-      <span aria-label={label} className="inline-flex text-muted">
+      <span aria-label={label} className="inline-flex items-center justify-center text-muted">
         <Icon {...iconProps} />
       </span>
     </Tooltip>
@@ -78,14 +78,21 @@ function onRowKey(e: KeyboardEvent<HTMLTableRowElement>, id: string) {
 export function RunsTable({ runs }: { runs: RunSummary[] }) {
   return (
     <div className="w-full">
-      <table className="w-full border-collapse text-left text-sm">
+      <table className="w-full table-fixed border-collapse text-left text-sm">
+        <colgroup>
+          <col className="w-7 sm:w-[130px]" />
+          <col />
+          <col className="hidden sm:table-column sm:w-12" />
+          <col className="hidden sm:table-column sm:w-[90px]" />
+          <col className="w-[90px]" />
+        </colgroup>
         <thead>
           <tr className="border-b border-line text-xs text-muted">
-            <th className="pb-2 pr-3 font-normal sm:pr-4">Status</th>
-            <th className="pb-2 pr-3 font-normal sm:pr-4">Name</th>
-            <th className="hidden w-10 pb-2 pr-3 font-normal sm:table-cell sm:pr-4">Mode</th>
-            <th className="hidden pb-2 pr-3 font-normal sm:table-cell sm:pr-4">Duration</th>
-            <th className="pb-2 text-right font-normal sm:text-left">Time</th>
+            <th className="pb-2 pr-2 font-normal sm:pr-4">Status</th>
+            <th className="pb-2 pr-2 font-normal sm:pr-4">Name</th>
+            <th className="hidden pb-2 pr-2 text-center font-normal sm:table-cell sm:pr-4">Mode</th>
+            <th className="hidden pb-2 pr-2 font-normal sm:table-cell sm:pr-4">Duration</th>
+            <th className="pb-2 text-right font-normal">Time</th>
           </tr>
         </thead>
         <tbody>
@@ -94,19 +101,21 @@ export function RunsTable({ runs }: { runs: RunSummary[] }) {
               key={run.id}
               role="link"
               tabIndex={0}
-              className="cursor-pointer border-b border-line transition-colors last:border-b-0 hover:bg-[#FAFAFA] focus-visible:bg-[#FAFAFA] focus-visible:outline-none"
+              className="cursor-pointer border-b border-line transition-colors last:border-b-0 hover:bg-[#FAFAFA] focus-visible:bg-[#FAFAFA]"
               onClick={() => openRun(run.id)}
               onKeyDown={(e) => onRowKey(e, run.id)}
             >
-              <td className="py-3 pr-3 sm:pr-4">
+              <td className="align-middle py-3 pr-2 sm:pr-4">
                 <StatusCell status={run.status} />
               </td>
-              <td className="max-w-[1px] truncate py-3 pr-3 text-ink sm:pr-4">{run.title || "Untitled"}</td>
-              <td className="hidden py-3 pr-3 sm:table-cell sm:pr-4">
+              <td className="align-middle py-3 pr-2 sm:pr-4">
+                <span className="block truncate text-ink">{displayTitle(run.title)}</span>
+              </td>
+              <td className="hidden align-middle py-3 pr-2 text-center sm:table-cell sm:pr-4">
                 <ModeCell mode={run.mode} />
               </td>
-              <td className="num hidden py-3 pr-3 text-muted sm:table-cell sm:pr-4">{shortDuration(run.created_at, run.finished_at) || "—"}</td>
-              <td className="whitespace-nowrap py-3 text-right text-muted sm:text-left">{ago(run.created_at)}</td>
+              <td className="num hidden align-middle py-3 pr-2 text-muted sm:table-cell sm:pr-4">{shortDuration(run.created_at, run.finished_at) || "—"}</td>
+              <td className="align-middle whitespace-nowrap py-3 text-right text-muted">{ago(run.created_at)}</td>
             </tr>
           ))}
         </tbody>

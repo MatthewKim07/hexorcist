@@ -26,7 +26,7 @@ function DeviceIcon({ id, blurb }: { id: string; blurb: string }) {
     <Tooltip content={blurb}>
       <span
         tabIndex={0}
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-[#FAFAFA] text-ink outline-none focus-visible:ring-2 focus-visible:ring-ink/20"
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-[#FAFAFA] text-ink"
         aria-label={blurb}
       >
         <Icon {...iconCardProps} />
@@ -116,17 +116,17 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
       {containment && (
         <div className="mt-8">
           <p className="mb-3 text-xs text-muted">Security</p>
-          <article className="preset-card flex flex-col gap-3 border border-line bg-white p-5 transition-[border-color] duration-150 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-            <div className="flex min-w-0 items-start gap-3">
-              <DeviceIcon id="containment" blurb={CARD.containment.blurb} />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="text-sm font-medium text-ink">{containment.title}</h2>
+          <article className="preset-card flex items-center gap-3 border border-line bg-white p-5 transition-[border-color] duration-150">
+            <DeviceIcon id="containment" blurb={CARD.containment.blurb} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-sm font-medium text-ink">{containment.title}</h2>
                   <span className="font-mono text-xs text-muted">{CARD.containment.tag}</span>
                 </div>
+                <RunButton title={containment.title} busy={busyId === containment.id} disabled={!!busyId} onClick={() => run(containment)} />
               </div>
             </div>
-            <RunButton title={containment.title} busy={busyId === containment.id} disabled={!!busyId} onClick={() => run(containment)} />
           </article>
         </div>
       )}
