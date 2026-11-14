@@ -13,11 +13,10 @@ import { STATUS_META, Tone, TONE_TEXT } from "./Common";
 import { ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
 import { Replay } from "./Replay";
+import { ReportTabs, ReportTabId } from "./ReportTabs";
 import { ReportVerdict } from "./ReportVerdict";
 import { RunPipeline } from "./RunPipeline";
-import { Fold, KeyRow, reducedMotion } from "./ui";
-
-type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
+import { Fold, reducedMotion } from "./ui";
 
 /** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
 const LEAD_MS = 300;
@@ -110,13 +109,13 @@ function RunHeader({ title, mode, status, createdAt, finishedAt, sandboxCount, c
   );
 }
 
-/** Finished-run report: existing board / bugs / details UI, unchanged for now. */
+/** Finished-run report: verdict, replay, bugs, patch, detail tabs. */
 function FinishedReport({ runId, state, status }: { runId: string; state: ReturnType<typeof useRun>; status: string }) {
   const report = state.run?.report ?? null;
   const pins: PinSpec[] = report?.spec?.pins ?? state.spec?.pins ?? state.run?.spec?.pins ?? [];
   const [chosenId, setScenarioId] = useState<string | null>(null);
   const [side, setSide] = useState<"before" | "after">("before");
-  const [tab, setTab] = useState<TabId | null>(null);
+  const [tab, setTab] = useState<ReportTabId | null>(null);
   const [openBug, setOpenBug] = useState<string | null>(null);
 
   const scenarios = report?.scenarios?.length ? report.scenarios : state.scenarios;
@@ -180,19 +179,20 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   const emulatedResults = state.results[iteration] ?? {};
   const contained = !!report?.contained;
 
-  const tabs: { value: TabId; label: string }[] = [];
+  const tabs: ReportTabId[] = [];
   if (hasBoard) {
-    tabs.push({ value: "scenarios", label: "Scenarios" }, { value: "checks", label: "Checks" });
+    tabs.push("scenarios", "checks");
   }
   if (records.length && !contained) {
-    tabs.push({ value: "containment", label: "Containment" });
+    tabs.push("containment");
   }
   if (comparable) {
-    tabs.push({ value: "compare", label: "Compare with plain LLM" });
+    tabs.push("compare");
   }
   if (report && !contained) {
-    tabs.push({ value: "logs", label: "Logs" });
+    tabs.push("logs");
   }
+  const activeTab = tab && tabs.includes(tab) ? tab : tabs[0] ?? null;
 
   const onFocus = (bug: BugType) => {
     setScenarioId(bug.scenario_id);
@@ -260,17 +260,13 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
       {!contained && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
 
       {tabs.length > 0 && (
-        <section>
-          <KeyRow label="Details" closable keys={tabs} value={tab} onChange={setTab}>
-            <div className="mt-5">
-              {tab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
-              {tab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
-              {tab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
-              {tab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
-              {tab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
-            </div>
-          </KeyRow>
-        </section>
+        <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
+          {activeTab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
+          {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
+          {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
+          {activeTab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
+          {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
+        </ReportTabs>
       )}
     </div>
   );

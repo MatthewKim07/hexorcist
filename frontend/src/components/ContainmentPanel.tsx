@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { ContainmentRecord, Guard, Report } from "../api";
+import { iconProps } from "../icons";
 import { Collapsible, Fold, Lamp } from "./ui";
 
 function mb(bytes?: number): string {
@@ -76,32 +78,52 @@ export function ContainmentDetails({ records, report, guard, inline = false }: {
   const reasons = guard && !guard.allowed ? guard.reasons : [];
 
   return (
-    <div className={inline ? "space-y-8" : "space-y-8 py-6"}>
-      <div className="space-y-1">
-        {inline && <h2 className="label">Sandbox limits</h2>}
-        <dl className="grid gap-x-12 md:grid-cols-2">
-          <div>
-            <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
-            <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
-            <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
-            <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
-            <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
-          </div>
-          <div>
-            <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
-            <Row label="User" value={String(limits.user ?? "?")} />
-            <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
-            <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
-            {killed.map((r) => (
-              <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
+    <div className={inline ? "space-y-6" : "space-y-8 pt-4"}>
+      {inline && contained && (
+        <div className="space-y-4">
+          <ul className="space-y-2">
+            {contained.checks.map((c) => (
+              <li key={c.label} className="flex items-start gap-2 text-sm text-ink">
+                {c.ok ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className="mt-0.5 shrink-0 text-fail" />}
+                <span>
+                  <span className="font-medium">{c.label}</span>
+                  {c.detail && <span className="mt-0.5 block text-xs text-muted">{c.detail}</span>}
+                </span>
+              </li>
             ))}
-          </div>
-        </dl>
-      </div>
+          </ul>
+          <p className="text-sm text-muted">
+            What the attacker got: <span className="text-ink">nothing</span>
+          </p>
+        </div>
+      )}
 
-      {contained && (
+      {!inline && (
+        <div className="space-y-1">
+          <dl className="grid gap-x-12 md:grid-cols-2">
+            <div>
+              <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
+              <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
+              <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
+              <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
+              <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
+            </div>
+            <div>
+              <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
+              <Row label="User" value={String(limits.user ?? "?")} />
+              <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
+              <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
+              {killed.map((r) => (
+                <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
+              ))}
+            </div>
+          </dl>
+        </div>
+      )}
+
+      {!inline && contained && (
         <div className="space-y-3">
-          {inline ? <h2 className="label">What the attacker got</h2> : <h3 className="text-sm font-medium">What the attacker got</h3>}
+          <h3 className="text-sm font-medium">What the attacker got</h3>
           <p>{contained.what_the_attacker_got.note}</p>
           <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
             <dt className="num text-muted">/etc/passwd</dt>

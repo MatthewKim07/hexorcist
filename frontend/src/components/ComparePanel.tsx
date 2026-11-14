@@ -191,16 +191,16 @@ export function ComparePanel({ runId, bugs, report, finished }: { runId: string;
   const waiting = asking || state.pending;
 
   return (
-    <div id="compare" className="py-6">
+    <div id="compare" className="pt-4">
       {state.review ? (
         <Comparison review={state.review} bugs={bugs} report={report} />
       ) : (
         <div className="space-y-3">
-          <button className="btn-outline" onClick={ask} disabled={waiting}>
+          <button type="button" className="inline-flex h-9 items-center rounded-md border border-line bg-white px-3 text-sm text-ink hover:bg-[#FAFAFA]" onClick={ask} disabled={waiting}>
             {waiting ? "Asking the model" : "Run a plain LLM review"}
           </button>
-          <p className="label">One extra LLM call. No compiler, no emulator.</p>
-          {error && <p className="text-fail">{error}</p>}
+          <p className="text-xs text-muted">One extra LLM call. No compiler, no emulator.</p>
+          {error && <p className="text-sm text-fail">{error}</p>}
         </div>
       )}
     </div>
