@@ -94,7 +94,7 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
                       </>
                     )}
                   </div>
-                  {rule && (
+                  {rule && chipLabel(rule, pins) && (
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
                       <Ruler {...iconProps} className="shrink-0" />
                       <span className="min-w-0 truncate">{chipLabel(rule, pins)}</span>
@@ -122,12 +122,15 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
       {report && held.length > 0 && (
         <p className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
           <span>Held in every scenario</span>
-          {held.map((a) => (
-            <span key={a.id} className="inline-flex items-center gap-1.5 text-ink">
-              <CircleCheck {...iconProps} className="text-pass" />
-              {chipLabel(a, pins)}
-            </span>
-          ))}
+          {held.map((a) => {
+            const label = chipLabel(a, pins);
+            return label ? (
+              <span key={a.id} className="inline-flex items-center gap-1.5 text-ink">
+                <CircleCheck {...iconProps} className="text-pass" />
+                {label}
+              </span>
+            ) : null;
+          })}
         </p>
       )}
 

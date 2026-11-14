@@ -12,7 +12,19 @@ function trim(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
 }
 
+function finite(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n);
+}
+
+/** True when a label would leak a missing parameter into the UI. */
+export function looksBroken(text: string): boolean {
+  return /\b(?:undefined|NaN)\b/i.test(text);
+}
+
 export function ms(n: number): string {
+  if (!finite(n)) {
+    return "";
+  }
   return n >= 1000 ? `${trim(n / 1000)} s` : `${trim(n)} ms`;
 }
 
@@ -43,6 +55,9 @@ function condition(c: Condition, pins: PinSpec[]): string {
     const pressed = (c.op === "==" && c.value === pressedLevel) || (c.op === "!=" && c.value !== pressedLevel);
     return pressed ? "pressed" : "released";
   }
+  if (!finite(c.value)) {
+    return "";
+  }
   const unit = unitOf(pins, c.pin);
   return `${OPS[c.op] ?? c.op} ${trim(c.value)}${unit ? ` ${unit}` : ""}`;
 }
@@ -52,12 +67,17 @@ function serialText(pattern: string): string {
   return /[[\](){}*+?\\|.]/.test(plain) ? "A line" : `"${plain}"`;
 }
 
-/** The chip text: "≤ 2 switches / 5 s", "Fan ON if < 2 °C", "\"hb\" every 500 ms". */
-export function chipLabel(c: Check, pins: PinSpec[]): string {
+function fromParams(c: Check, pins: PinSpec[]): string {
   switch (c.type) {
     case "output_follows": {
       if (c.mode === "edge" && c.high_when) {
+        if (!finite(c.within_ms)) {
+          return "";
+        }
         const when = condition(c.high_when, pins);
+        if (!when) {
+          return "";
+        }
         return when === "pressed" ? `ON within ${ms(c.within_ms)} of a press` : `ON within ${ms(c.within_ms)} at ${when}`;
       }
       const on = c.high_when ? condition(c.high_when, pins) : "";
@@ -65,32 +85,69 @@ export function chipLabel(c: Check, pins: PinSpec[]): string {
       if (on && off) {
         return on === "pressed" ? "ON while pressed" : `ON ${on}, OFF ${off}`;
       }
-      return on ? `ON while ${on}` : `OFF while ${off}`;
+      if (on) {
+        return `ON while ${on}`;
+      }
+      if (off) {
+        return `OFF while ${off}`;
+      }
+      return "";
     }
-    case "max_toggles":
+    case "max_toggles": {
+      if (!finite(c.max_toggles) || !finite(c.window_ms)) {
+        return "";
+      }
       return `≤ ${c.max_toggles} switch${c.max_toggles === 1 ? "" : "es"} / ${ms(c.window_ms)}`;
+    }
     case "safe_state_on_fault": {
-      const out = shortRole(pinOf(pins, c.output_pin), c.output_pin);
+      const out = shortRole(pinOf(pins, c.output_pin), c.output_pin || "");
       const state = c.safe_value ? "ON" : "OFF";
-      return c.fault_when ? `${out} ${state} if ${condition(c.fault_when, pins)}` : `${out} ${state} if ${c.floating_pin} floats`;
+      if (c.fault_when) {
+        const when = condition(c.fault_when, pins);
+        return when ? `${out} ${state} if ${when}` : "";
+      }
+      if (c.floating_pin) {
+        return `${out} ${state} if ${c.floating_pin} floats`;
+      }
+      return "";
     }
     case "toggle_per_press":
       return "1 toggle per press";
     case "timed_pulse":
-      return `ON ${ms(c.duration_ms)} per press`;
+      return finite(c.duration_ms) ? `ON ${ms(c.duration_ms)} per press` : "";
     case "serial_period":
-      return `${serialText(c.pattern ?? "")} every ${ms(c.period_ms)}`;
+      return finite(c.period_ms) ? `${serialText(c.pattern ?? "")} every ${ms(c.period_ms)}` : "";
     case "serial_value_matches": {
+      if (!finite(c.tolerance) || !c.input_pin) {
+        return "";
+      }
       const unit = unitOf(pins, c.input_pin);
       return `Prints ${c.input_pin} within ±${trim(c.tolerance)}${unit ? ` ${unit}` : ""}`;
     }
     case "responsive":
-      return `Never silent > ${ms(c.max_gap_ms)}`;
+      return finite(c.max_gap_ms) ? `Never silent > ${ms(c.max_gap_ms)}` : "";
     case "no_crash":
       return "No crash or hang";
     default:
-      return c.type.replace(/_/g, " ");
+      return "";
   }
+}
+
+/**
+ * The chip text: "≤ 2 switches / 5 s", "Fan ON if < 2 °C", "\"hb\" every 500 ms".
+ * Falls back to the assertion description when parameters are missing; never returns "undefined"/"NaN".
+ */
+export function chipLabel(c: Check, pins: PinSpec[]): string {
+  const built = fromParams(c, pins);
+  if (built && !looksBroken(built)) {
+    return built;
+  }
+  const description = (c.description || "").trim();
+  if (description && !looksBroken(description)) {
+    return description;
+  }
+  const typeLabel = (c.type || "").replace(/_/g, " ").trim();
+  return typeLabel && !looksBroken(typeLabel) ? typeLabel : "";
 }
 
 /** Where the check sits on the board: beside the part it constrains, or beside the USB port for serial and timing. */
@@ -162,6 +219,7 @@ export function withField(c: Check, path: string[], value: number, pins: PinSpec
   }
   at[path[path.length - 1]] = value;
   const subject = anchorOf(next) === "usb" ? "Firmware" : shortRole(pinOf(pins, anchorOf(next)), anchorOf(next));
-  next.description = `${subject}: ${chipLabel(next, pins)}`;
+  const label = chipLabel(next, pins);
+  next.description = label ? `${subject}: ${label}` : subject || label;
   return next;
 }

@@ -47,6 +47,9 @@ type ChipProps = { chip: StageChip; pins: PinSpec[]; active?: boolean; as?: "but
 export const RuleChip = forwardRef<HTMLButtonElement, ChipProps>(function RuleChip({ chip, pins, active = false, as = "button", ...rest }, ref) {
   const lamp = { pass: "bg-pass-lit", fail: "bg-fail-lit", off: "bg-screen-muted/50", idle: "border border-screen-muted bg-transparent" }[chip.tone];
   const label = chipLabel(chip.check, pins);
+  if (!label) {
+    return null;
+  }
   const body = (
     <>
       <span aria-hidden="true" className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${lamp} ${chip.flash ? "chip-flash" : ""}`} />
