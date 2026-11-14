@@ -176,22 +176,31 @@ export function KeyRow<T extends string>({ keys, value, onChange, onPress, label
 
 export function TipProvider({ children }: { children: ReactNode }) {
   return (
-    <RTooltip.Provider delayDuration={400} skipDelayDuration={300}>
+    <RTooltip.Provider delayDuration={150} skipDelayDuration={300}>
       {children}
     </RTooltip.Provider>
   );
 }
 
-export function Tip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" }) {
+/** Dark accessible tooltip. Prefer this for new UI; Tip is the same. */
+export function Tooltip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" | "left" | "right" }) {
   return (
     <RTooltip.Root>
       <RTooltip.Trigger asChild>{children}</RTooltip.Trigger>
       <RTooltip.Portal>
-        <RTooltip.Content side={side} sideOffset={6} collisionPadding={12} className="pop z-50 max-w-[280px] rounded-md bg-ink px-2.5 py-1.5 text-xs text-bg">
+        <RTooltip.Content side={side} sideOffset={6} collisionPadding={12} className="pop z-50 max-w-[280px] rounded-md bg-ink px-2.5 py-1.5 text-[12px] leading-snug text-white">
           {content}
         </RTooltip.Content>
       </RTooltip.Portal>
     </RTooltip.Root>
+  );
+}
+
+export function Tip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" }) {
+  return (
+    <Tooltip content={content} side={side}>
+      {children}
+    </Tooltip>
   );
 }
 
