@@ -265,7 +265,9 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         />
       )}
 
-      {!contained && attacked && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
+      {!contained && attacked && bugs.length > 0 && (
+        <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} buildMode={isBuild} />
+      )}
 
       {tabs.length > 0 && (
         <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>

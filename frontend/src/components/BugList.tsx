@@ -19,6 +19,8 @@ interface Props {
   /** The row whose cause is showing. A red rule on the board opens its row too. */
   open: string | null;
   onOpen: (id: string | null) => void;
+  /** Write-firmware reports: single result chip, no Before/After wording. */
+  buildMode?: boolean;
 }
 
 function evidenceChip(label: string, text: string, tone: "fail" | "pass") {
@@ -30,7 +32,7 @@ function evidenceChip(label: string, text: string, tone: "fail" | "pass") {
 }
 
 /** One card per bug: title, before→after chips, rule, expandable cause + patch hunk. */
-export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open, onOpen }: Props) {
+export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open, onOpen, buildMode = false }: Props) {
   const fix = hasVerifyResults(report) ? report?.fix : undefined;
   const [patchOpen, setPatchOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -80,11 +82,17 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-medium text-ink">{bug.title}</h3>
                   <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-                    <span className="inline-flex items-center gap-2">
-                      {evidenceChip("Before", beforeN || "—", "fail")}
-                      <ArrowRight {...iconProps} className="shrink-0 text-muted" aria-hidden="true" />
-                    </span>
-                    {afterN ? evidenceChip("After", afterN, "pass") : <span className="font-mono text-xs text-muted">After: —</span>}
+                    {buildMode ? (
+                      evidenceChip("Result", beforeN || "—", fixed ? "pass" : "fail")
+                    ) : (
+                      <>
+                        <span className="inline-flex items-center gap-2">
+                          {evidenceChip("Before", beforeN || "—", "fail")}
+                          <ArrowRight {...iconProps} className="shrink-0 text-muted" aria-hidden="true" />
+                        </span>
+                        {afterN ? evidenceChip("After", afterN, "pass") : <span className="font-mono text-xs text-muted">After: —</span>}
+                      </>
+                    )}
                   </div>
                   {rule && (
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
