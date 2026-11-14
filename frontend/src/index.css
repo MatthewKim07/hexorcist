@@ -167,6 +167,9 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .preset-card:hover {
+    border-color: #d4d4d4;
+  }
   .btn-primary:hover:not(:disabled) {
     background: #33383c;
   }
