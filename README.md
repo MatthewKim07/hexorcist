@@ -131,7 +131,7 @@ Open [http://localhost:8080](http://localhost:8080) (or the port in `HEXORCIST_P
 - Arduino Uno (ATmega328P) only
 - Sensors modelled as pin voltages; no I2C or SPI peripherals
 - Prompts tuned mainly on one chat model
-- Emulation measured at about **1.3× real time** alone on this machine (`scripts/measure_speed`: 8000 ms simulated in 6033 ms wall-clock); long scenarios must still fit the 30 s wall-clock kill
+- Emulation runs about **1.3× faster than real time** on one core (8 s of firmware time in ~6 s; `scripts/measure_speed`); long scenarios must still fit the 30 s wall-clock kill
 - The input guard catches under half of held-out attacks
 
 ## License
