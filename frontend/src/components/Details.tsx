@@ -188,25 +188,36 @@ export function ChecksTab({ results, assertions, scenarioName, side }: { results
 }
 
 /** Serial output, compiler output, warnings and run details. */
-export function LogsTab({ trace, report, warnings, deviceModel }: { trace: Trace | null; report: Report | null; warnings: string[]; deviceModel: Report["device_model"] }) {
+export function LogsTab({
+  trace,
+  report,
+  warnings,
+  deviceModel,
+  hideCompile = false,
+}: {
+  trace: Trace | null;
+  report: Report | null;
+  warnings: string[];
+  deviceModel: Report["device_model"];
+  hideCompile?: boolean;
+}) {
   const llm = report?.llm;
+  const hasSerial = !!trace && trace.serial_log.length > 0;
   return (
     <div className="space-y-5 pt-4">
-      <Fold title={`Serial output${trace ? ` (${trace.serial_log.length})` : ""}`} defaultOpen contentClassName="pl-5">
-        <div className="scroll max-h-[260px] overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] leading-5">
-          {!trace || trace.serial_log.length === 0 ? (
-            <span className="text-muted">No output</span>
-          ) : (
-            trace.serial_log.slice(0, 400).map((l, i) => (
+      {hasSerial && (
+        <Fold title={`Serial output (${trace.serial_log.length})`} defaultOpen contentClassName="pl-5">
+          <div className="scroll max-h-[260px] overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] leading-5">
+            {trace.serial_log.slice(0, 400).map((l, i) => (
               <div key={i} className="flex gap-3 whitespace-pre">
                 <span className="shrink-0 text-muted">{(l.t_ms / 1000).toFixed(3)}</span>
                 <span>{l.text}</span>
               </div>
-            ))
-          )}
-        </div>
-      </Fold>
-      {report?.compile_log && (
+            ))}
+          </div>
+        </Fold>
+      )}
+      {!hideCompile && report?.compile_log && (
         <Fold title="Compiler output" contentClassName="pl-5">
           <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] text-muted">{report.compile_log}</pre>
         </Fold>

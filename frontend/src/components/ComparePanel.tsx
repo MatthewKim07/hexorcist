@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CircleCheck } from "lucide-react";
 import { api, Bug, Report, Review, ReviewConcern, ReviewState } from "../api";
 import { keyFact } from "../format";
-import { Icon } from "./Common";
+import { iconProps } from "../icons";
 
 const EMPTY: ReviewState = { review: null, pending: false, error: "" };
 
@@ -121,7 +122,7 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
           const first = row.left[0];
           return (
             <li key={row.key} className="border-b border-line">
-              <button aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : row.key)} className="hover-row grid w-full grid-cols-2 gap-8 py-3.5 text-left transition-colors">
+              <button type="button" aria-expanded={isOpen} aria-label={isOpen ? "Collapse comparison row" : "Expand comparison row"} onClick={() => setOpen(isOpen ? null : row.key)} className="hover-row grid w-full grid-cols-2 gap-8 py-3.5 text-left transition-colors">
                 <span className="min-w-0 text-muted">
                   {first ? first.title : <span className="text-muted">Nothing matched</span>}
                   {row.left.length > 1 && <span className="ml-2 text-muted">+{row.left.length - 1}</span>}
@@ -133,8 +134,8 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
                       <span className="mt-0.5 flex items-center gap-3">
                         <span className="num text-xs text-fail">{keyFact(row.bug.before?.evidence ?? row.bug.evidence)}</span>
                         {row.bug.verified && (
-                          <span className="flex items-center gap-1 text-pass">
-                            <Icon name="check" /> Fixed
+                          <span className="inline-flex items-center gap-1 text-pass">
+                            <CircleCheck {...iconProps} /> Fixed
                           </span>
                         )}
                       </span>
@@ -186,17 +187,20 @@ function Comparison({ review, bugs, report }: { review: Review; bugs: Bug[]; rep
   );
 }
 
-export function ComparePanel({ runId, bugs, report, finished }: { runId: string; bugs: Bug[]; report: Report | null; finished: boolean }) {
-  const { state, ask, asking, error } = useReview(runId, finished);
+export function ComparePanel({ runId, bugs, report, finished, available = true }: { runId: string; bugs: Bug[]; report: Report | null; finished: boolean; available?: boolean }) {
+  const { state, ask, asking, error } = useReview(runId, finished && available);
   const waiting = asking || state.pending;
 
   return (
     <div id="compare" className="pt-4">
-      {state.review ? (
+      {!available ? (
+        <p className="text-sm text-muted">A plain LLM review is only available after a Find bugs run finishes.</p>
+      ) : state.review ? (
         <Comparison review={state.review} bugs={bugs} report={report} />
       ) : (
         <div className="space-y-3">
-          <button type="button" className="inline-flex h-9 items-center rounded-md border border-line bg-white px-3 text-sm text-ink hover:bg-[#FAFAFA]" onClick={ask} disabled={waiting}>
+          <p className="text-sm text-muted">No comparison yet. Run a plain LLM review to see what reading the code alone would claim.</p>
+          <button type="button" className="inline-flex h-9 items-center rounded-md border border-line bg-white px-3 text-sm text-ink hover:bg-[#FAFAFA] disabled:opacity-50" onClick={ask} disabled={waiting}>
             {waiting ? "Asking the model" : "Run a plain LLM review"}
           </button>
           <p className="text-xs text-muted">One extra LLM call. No compiler, no emulator.</p>

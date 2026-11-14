@@ -12,6 +12,7 @@ import { ComparePanel } from "./ComparePanel";
 import { STATUS_META, Tone, TONE_TEXT } from "./Common";
 import { ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
+import { FirmwareCard } from "./FirmwareCard";
 import { Replay } from "./Replay";
 import { ReportTabs, ReportTabId } from "./ReportTabs";
 import { ReportVerdict } from "./ReportVerdict";
@@ -186,6 +187,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   const beforeMatrix = report?.matrix?.["0"];
   const afterMatrix = afterIteration !== null ? report?.matrix?.[String(afterIteration)] : undefined;
   const contained = !!report?.contained;
+  const isBuild = state.run!.mode === "build";
+  const firmware = (report?.firmware || state.firmware || state.run!.firmware || "").trim();
 
   const tabs: ReportTabId[] = [];
   if (hasBoard) {
@@ -194,10 +197,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   if (records.length && !contained) {
     tabs.push("containment");
   }
-  if (comparable) {
+  if (state.run!.mode === "break" && !contained && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status)) {
     tabs.push("compare");
   }
-  if (report && !contained) {
+  if (report && !contained && (trace || (report.compile_log && status !== "compile_failed") || warnings.length || report.device_model || (report.llm?.calls ?? 0) > 0)) {
     tabs.push("logs");
   }
   const activeTab = tab && tabs.includes(tab) ? tab : tabs[0] ?? null;
@@ -242,6 +245,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
       {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
 
+      {isBuild && firmware && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
+
       {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
 
       {hasBoard && (
@@ -284,8 +289,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
           )}
           {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
           {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
-          {activeTab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
-          {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
+          {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
+          {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}
         </ReportTabs>
       )}
     </div>
