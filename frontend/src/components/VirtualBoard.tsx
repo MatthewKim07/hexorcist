@@ -44,7 +44,7 @@ export function pinXY(pin: string): { x: number; y: number } {
   return n >= 8 ? { x: 368 + (13 - n) * 20, y: 148 } : { x: 496 + (7 - n) * 20, y: 148 };
 }
 
-interface Live {
+export interface BoardLive {
   pin: PinSpec;
   color: string;
   component: Component;
@@ -60,39 +60,29 @@ interface Live {
   pressed: boolean;
 }
 
-function niceRange(lo: number, hi: number): [number, number] {
-  if (!isFinite(lo) || !isFinite(hi)) {
-    return [0, 100];
-  }
-  const span = Math.max(hi - lo, 1);
-  const step = Math.pow(10, Math.floor(Math.log10(span)));
-  return [Math.floor(lo / step - 0.5) * step, Math.ceil(hi / step + 0.5) * step];
-}
-
-export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, className = "mx-auto block max-h-[420px] w-full" }: { pins: PinSpec[]; trace: Trace | null; t: number; scenario?: Scenario; tag?: string; full?: boolean; className?: string }) {
-  const tracks = useMemo(() => {
+/** Live pin values at time t, shared by the SVG board and the mobile part list. */
+export function boardLive(pins: PinSpec[], trace: Trace | null, t: number, scenario?: Scenario): BoardLive[] {
+  const tracks = pins.map((pin) => {
     if (!trace) {
       return null;
     }
-    return pins.map((pin) => {
-      if (pin.type === "analog_input") {
-        const analog = new AnalogTrack(trace, pin.pin);
-        const scale = parseScale(pin.scale);
-        const lo = analog.empty ? 0 : toPhysical(Math.min(...analog.low), scale);
-        const hi = analog.empty ? 100 : toPhysical(Math.max(...analog.high), scale);
-        return { kind: "analog" as const, analog, scale, range: niceRange(Math.min(lo, hi), Math.max(lo, hi)) };
-      }
-      if (pin.type === "digital_input") {
-        const initial = scenario?.digital?.find((d) => d.pin === pin.pin)?.initial ?? (pin.active_low ? 1 : 0);
-        return { kind: "input" as const, input: new InputTrack(trace, pin.pin, initial) };
-      }
-      return { kind: "output" as const, output: new OutputTrack(trace, pin.pin) };
-    });
-  }, [trace, pins, scenario]);
+    if (pin.type === "analog_input") {
+      const analog = new AnalogTrack(trace, pin.pin);
+      const scale = parseScale(pin.scale);
+      const lo = analog.empty ? 0 : toPhysical(Math.min(...analog.low), scale);
+      const hi = analog.empty ? 100 : toPhysical(Math.max(...analog.high), scale);
+      return { kind: "analog" as const, analog, scale, range: niceRange(Math.min(lo, hi), Math.max(lo, hi)) };
+    }
+    if (pin.type === "digital_input") {
+      const initial = scenario?.digital?.find((d) => d.pin === pin.pin)?.initial ?? (pin.active_low ? 1 : 0);
+      return { kind: "input" as const, input: new InputTrack(trace, pin.pin, initial) };
+    }
+    return { kind: "output" as const, output: new OutputTrack(trace, pin.pin) };
+  });
 
-  const live: Live[] = pins.map((pin, i) => {
-    const base: Live = { pin, color: PIN_COLORS[i % PIN_COLORS.length], component: componentFor(pin), level: 0, brightness: 0, toggles: 0, angle: 0, value: 0, mv: 0, unit: "", range: [0, 100], floating: false, pressed: false };
-    const track = tracks?.[i];
+  return pins.map((pin, i) => {
+    const base: BoardLive = { pin, color: PIN_COLORS[i % PIN_COLORS.length], component: componentFor(pin), level: 0, brightness: 0, toggles: 0, angle: 0, value: 0, mv: 0, unit: "", range: [0, 100], floating: false, pressed: false };
+    const track = tracks[i];
     base.floating = !!scenario?.floating?.some((w) => w.pin === pin.pin && t >= w.from_ms && t < w.to_ms);
     if (!track) {
       return base;
@@ -113,6 +103,57 @@ export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, clas
     }
     return base;
   });
+}
+
+/** Short state line for a part ("On, 23 toggles", "30.0 °C"). */
+export function partState(item: BoardLive): string {
+  if (item.pin.type === "analog_input") {
+    const reading = `${item.value.toFixed(item.unit === "mV" ? 0 : 1)} ${item.unit}`;
+    return item.floating ? `${reading}, floating` : reading;
+  }
+  if (item.component === "button" || item.component === "switch") {
+    return item.floating ? "Floating" : item.pressed ? "Pressed" : "Released";
+  }
+  const toggles = `${item.toggles} toggle${item.toggles === 1 ? "" : "s"}`;
+  if (item.component === "siren") {
+    return `${item.level === 1 ? "Sounding" : "Silent"}, ${toggles}`;
+  }
+  if (item.pin.type === "pwm_output" && item.brightness > 0) {
+    return `On at ${Math.round(item.brightness * 100)}%, ${toggles}`;
+  }
+  return `${item.level === 1 || item.brightness > 0 ? "On" : "Off"}, ${toggles}`;
+}
+
+function niceRange(lo: number, hi: number): [number, number] {
+  if (!isFinite(lo) || !isFinite(hi)) {
+    return [0, 100];
+  }
+  const span = Math.max(hi - lo, 1);
+  const step = Math.pow(10, Math.floor(Math.log10(span)));
+  return [Math.floor(lo / step - 0.5) * step, Math.ceil(hi / step + 0.5) * step];
+}
+
+export function VirtualBoard({
+  pins,
+  trace,
+  t,
+  scenario,
+  tag,
+  full = false,
+  captions = true,
+  className = "mx-auto block max-h-[420px] w-full",
+}: {
+  pins: PinSpec[];
+  trace: Trace | null;
+  t: number;
+  scenario?: Scenario;
+  tag?: string;
+  full?: boolean;
+  /** When false, SVG part captions are omitted (shown in an HTML list instead). */
+  captions?: boolean;
+  className?: string;
+}) {
+  const live = useMemo(() => boardLive(pins, trace, t, scenario), [pins, trace, t, scenario]);
 
   const layout = boardLayout(pins, full);
   const byPin = new Map(live.map((l) => [l.pin.pin, l]));
@@ -130,7 +171,6 @@ export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, clas
 
   return (
     <svg viewBox={`${viewLeft} 0 ${viewRight - viewLeft} ${viewH}`} className={className} role="img" aria-label={`Replay of the Arduino Uno. ${live.map((l) => describe(l)).join(". ")}`}>
-
       {[...top, ...bottom].map(({ item, x, y }) => {
         const p = pinXY(item.pin.pin);
         const isTop = y === TOP_Y;
@@ -143,12 +183,12 @@ export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, clas
 
       {top.map(({ item, x }) => (
         <g key={item.pin.pin} transform={`translate(${x}, 0)`}>
-          <Part item={item} />
+          <Part item={item} captions={captions} />
         </g>
       ))}
       {bottom.map(({ item, x }) => (
         <g key={item.pin.pin} transform={`translate(${x}, ${BOTTOM_Y})`}>
-          <Gauge item={item} />
+          <Gauge item={item} captions={captions} />
         </g>
       ))}
 
@@ -164,7 +204,7 @@ export function VirtualBoard({ pins, trace, t, scenario, tag, full = false, clas
   );
 }
 
-function describe(l: Live): string {
+function describe(l: BoardLive): string {
   if (l.pin.type === "analog_input") {
     return `${l.pin.pin} ${l.pin.role} ${l.value.toFixed(1)} ${l.unit}`;
   }
@@ -174,7 +214,7 @@ function describe(l: Live): string {
   return `${l.pin.pin} ${l.pin.role} ${l.level ? "on" : "off"}`;
 }
 
-function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On: boolean }) {
+function Board({ live, lineNow, d13On }: { live: BoardLive[]; lineNow: boolean; d13On: boolean }) {
   const used = new Map(live.map((l) => [l.pin.pin, l]));
   const digital = Array.from({ length: 14 }, (_, n) => `D${n}`);
   const analog = Array.from({ length: 6 }, (_, n) => `A${n}`);
@@ -236,7 +276,7 @@ function Board({ live, lineNow, d13On }: { live: Live[]; lineNow: boolean; d13On
   );
 }
 
-function Caption({ item, state, y = 8 }: { item: Live; state?: string; y?: number }) {
+function Caption({ item, state, y = 8 }: { item: BoardLive; state?: string; y?: number }) {
   return (
     <>
       <text textAnchor="middle" y={y} fontSize="11" fontFamily="Geist Sans" fontWeight="500" fill="#C9D1CC">
@@ -256,13 +296,12 @@ function shorten(role: string): string {
   return clean.length > 20 ? `${clean.slice(0, 19)}…` : clean;
 }
 
-function Part({ item }: { item: Live }) {
-  const toggles = `${item.toggles} toggle${item.toggles === 1 ? "" : "s"}`;
+function Part({ item, captions }: { item: BoardLive; captions: boolean }) {
+  const state = partState(item);
   if (item.component === "button" || item.component === "switch") {
-    const label = item.floating ? "Floating" : item.pressed ? "Pressed" : "Released";
     return (
       <g>
-        <Caption item={item} state={label} y={12} />
+        {captions && <Caption item={item} state={state} y={12} />}
         <rect x="-26" y="68" width="52" height="30" rx="4" fill="#1A221F" stroke="#34403B" />
         <rect x="-16" y={item.pressed ? 62 : 52} width="32" height={item.pressed ? 12 : 22} rx="4" fill={item.floating ? "#F0766B" : item.pressed ? "#E8C15A" : "#56625C"} stroke="#0C1110" />
         <line x1="0" y1="98" x2="0" y2="112" stroke={item.color} strokeWidth="2.2" />
@@ -273,7 +312,7 @@ function Part({ item }: { item: Live }) {
     const on = item.level === 1;
     return (
       <g>
-        <Caption item={item} state={`${on ? "On" : "Off"}, ${toggles}`} y={10} />
+        {captions && <Caption item={item} state={state} y={10} />}
         <circle cy="66" r="34" fill="#1A221F" stroke={on ? "#E8C15A" : "#34403B"} strokeWidth="2" />
         <g transform={`translate(0, 66) rotate(${item.angle})`}>
           {[0, 120, 240].map((a) => (
@@ -288,7 +327,7 @@ function Part({ item }: { item: Live }) {
     const on = item.level === 1;
     return (
       <g>
-        <Caption item={item} state={`${on ? "Sounding" : "Silent"}, ${toggles}`} y={10} />
+        {captions && <Caption item={item} state={state} y={10} />}
         <path d="M-22 56 h12 l20 -16 v52 l-20 -16 h-12 Z" fill={on ? "#E8C15A" : "#56625C"} stroke="#0C1110" transform="translate(-2, 0)" />
         {[0, 1, 2].map((i) => (
           <path key={i} d={`M ${15 + i * 8} ${50 - i * 4} q ${8 + i * 2} 16 0 ${32 + i * 8}`} fill="none" stroke="#E8C15A" strokeWidth="2" strokeLinecap="round" opacity={on ? 1 - i * 0.25 : 0.08} />
@@ -298,10 +337,9 @@ function Part({ item }: { item: Live }) {
     );
   }
   const on = item.brightness > 0;
-  const duty = item.pin.type === "pwm_output" && on ? ` at ${Math.round(item.brightness * 100)}%` : "";
   return (
     <g>
-      <Caption item={item} state={`${on ? "On" : "Off"}${duty}, ${toggles}`} y={10} />
+      {captions && <Caption item={item} state={state} y={10} />}
       <circle cy="62" r="30" fill="#E8C15A" opacity={item.brightness * 0.16} />
       <path d="M-14 78 v-20 a14 14 0 0 1 28 0 v20 Z" fill={on ? "#F1D58A" : "#3A4640"} stroke={on ? "#E8C15A" : "#56625C"} strokeWidth="1.5" />
       <rect x="-18" y="78" width="36" height="6" rx="1" fill={on ? "#E8C15A" : "#56625C"} />
@@ -310,7 +348,7 @@ function Part({ item }: { item: Live }) {
   );
 }
 
-function Gauge({ item }: { item: Live }) {
+function Gauge({ item, captions }: { item: BoardLive; captions: boolean }) {
   const [lo, hi] = item.range;
   const frac = Math.max(0, Math.min(1, (item.value - lo) / (hi - lo || 1)));
   const angle = -120 + frac * 240;
@@ -326,15 +364,22 @@ function Gauge({ item }: { item: Live }) {
         {frac > 0.002 && <path d={`M ${point(-120, R)} A ${R} ${R} 0 ${frac * 240 > 180 ? 1 : 0} 1 ${point(angle, R)}`} fill="none" stroke={item.floating ? "#F0766B" : "#E8C15A"} strokeWidth="6" strokeLinecap="round" />}
         <line x1="0" y1="0" x2="0" y2={-R + 10} stroke="#C9D1CC" strokeWidth="2.2" strokeLinecap="round" transform={`rotate(${angle})`} />
         <circle r="4" fill="#C9D1CC" />
-        <text x={-R - 6} y={R - 8} fontSize="10" textAnchor="end" fontFamily="Geist Mono" fill="#8A958F">{lo}</text>
-        <text x={R + 6} y={R - 8} fontSize="10" textAnchor="start" fontFamily="Geist Mono" fill="#8A958F">{hi}</text>
+        <text x={-R - 6} y={R - 8} fontSize="10" textAnchor="end" fontFamily="Geist Mono" fill="#8A958F">
+          {lo}
+        </text>
+        <text x={R + 6} y={R - 8} fontSize="10" textAnchor="start" fontFamily="Geist Mono" fill="#8A958F">
+          {hi}
+        </text>
       </g>
       <text y="84" textAnchor="middle" fontSize="17" fontWeight="500" fontFamily="Geist Mono" fill="#C9D1CC">
         {item.value.toFixed(item.unit === "mV" ? 0 : 1)} {item.unit}
       </text>
-      <text y="99" textAnchor="middle" fontSize="11" fontFamily="Geist Sans" fontWeight="500" fill="#8A958F">
-        {item.pin.pin} {shorten(item.pin.role)}{item.floating ? ", floating" : `, ${Math.round(item.mv)} mV`}
-      </text>
+      {captions && (
+        <text y="99" textAnchor="middle" fontSize="11" fontFamily="Geist Sans" fontWeight="500" fill="#8A958F">
+          {item.pin.pin} {shorten(item.pin.role)}
+          {item.floating ? ", floating" : `, ${Math.round(item.mv)} mV`}
+        </text>
+      )}
     </g>
   );
 }

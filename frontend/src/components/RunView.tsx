@@ -1,93 +1,127 @@
 import { useEffect, useMemo, useState } from "react";
-import { Bug, PinSpec, Report } from "../api";
-import { duration, keyFact, rankBugs } from "../format";
+import { ArrowLeft, Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, Loader2, LucideIcon, ShieldCheck, Wand2, WifiOff } from "lucide-react";
+import { Bug as BugType, PinSpec } from "../api";
+import { displayTitle, keyFact, rankBugs, shortDuration } from "../format";
+import { iconCardProps, iconProps } from "../icons";
+import { runIcon } from "../presetIcons";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
 import { BugList } from "./BugList";
-import { Mode, useStripText } from "./Chassis";
 import { ComparePanel } from "./ComparePanel";
-import { Icon, STATUS_META, TONE_TEXT } from "./Common";
-import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
+import { STATUS_META, Tone, TONE_TEXT } from "./Common";
+import { ContainmentDetails } from "./ContainmentPanel";
 import { ChecksTab, LogsTab, ScenariosTab } from "./Details";
+import { FirmwareCard } from "./FirmwareCard";
 import { Replay } from "./Replay";
-import { Stepper } from "./Stepper";
-import { Fold, KeyRow, reducedMotion, Ticking } from "./ui";
-
-type TabId = "scenarios" | "checks" | "containment" | "compare" | "logs";
+import { ReportTabs, ReportTabId } from "./ReportTabs";
+import { ReportVerdict } from "./ReportVerdict";
+import { RunPipeline } from "./RunPipeline";
+import { Fold, reducedMotion } from "./ui";
+import { NotFound } from "./NotFound";
+import { RunPageSkeleton } from "./Skeletons";
 
 /** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
 const LEAD_MS = 300;
 
-function headline(report: Report | null, status: string, firstWarning: string): { title: string; sub: string } {
-  const s = report?.score;
-  const n = s?.bugs_found ?? 0;
-  const v = s?.bugs_verified ?? 0;
-  const bugs = `${n} bug${n === 1 ? "" : "s"} found`;
-  const fixed = v === n ? (n === 1 ? "fixed and verified" : n === 2 ? "both fixed and verified" : "all fixed and verified") : `${v} fixed and verified`;
+function headerStatus(status: string): { label: string; tone: Tone; Icon: LucideIcon; spin?: boolean } {
   switch (status) {
+    case "running":
+      return { label: "Running", tone: "neutral", Icon: Loader2, spin: true };
     case "fixed":
-      return { title: `${bugs}, ${fixed}`, sub: "" };
+      return { label: "Fixed", tone: "pass", Icon: CircleCheck };
     case "clean":
-      return { title: "No bugs found", sub: `${s?.assertions} checks passed in ${s?.scenarios} scenarios` };
-    case "partial":
-      return { title: `${bugs}, ${v} fixed and verified`, sub: "The best patch still fails a check, so it is not claimed as a fix" };
-    case "unfixed":
-      return { title: `${bugs}, no working fix`, sub: "" };
-    case "inconclusive":
-      return { title: "Inconclusive", sub: firstWarning || "Not everything could be checked" };
-    case "compile_failed":
-      return { title: "Does not compile", sub: "" };
+      return { label: "Clean", tone: "pass", Icon: CircleCheck };
     case "contained":
-      return { title: "Contained", sub: `${s?.checks_passed} of ${s?.checks_total} checks passed` };
-    case "containment_failed":
-      return { title: "Not contained", sub: "A containment check failed" };
-    case "blocked":
-      return { title: "Blocked by the input guard", sub: "No LLM call was made" };
-    case "interrupted":
-      return { title: "Interrupted", sub: "The backend restarted during the run" };
-    case "error":
-      return { title: "The run failed", sub: report?.error ?? "" };
+      return { label: "Contained", tone: "pass", Icon: ShieldCheck };
+    case "inconclusive":
+      return { label: "Inconclusive", tone: "neutral", Icon: CircleHelp };
     default:
-      return { title: "", sub: "" };
+      return { label: STATUS_META[status]?.label ?? "Failed", tone: STATUS_META[status]?.tone ?? "fail", Icon: CircleX };
   }
 }
 
-function Skeleton() {
+function useElapsed(createdAt: number | undefined, finishedAt: number | null | undefined, running: boolean): string {
+  const [now, setNow] = useState(() => Date.now() / 1000);
+  useEffect(() => {
+    if (!running) {
+      return;
+    }
+    const id = setInterval(() => setNow(Date.now() / 1000), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+  if (createdAt === undefined) {
+    return "—";
+  }
+  return shortDuration(createdAt, finishedAt ?? (running ? now : createdAt)) || "0s";
+}
+
+function isSecurityDemo(title: string, status: string): boolean {
+  return status === "contained" || status === "containment_failed" || /contain/i.test(title);
+}
+
+function RunHeader({ title, mode, status, createdAt, finishedAt, sandboxCount, connectionLost }: { title: string; mode: string; status: string; createdAt: number; finishedAt: number | null; sandboxCount: number; connectionLost: boolean }) {
+  const running = status === "running";
+  const elapsed = useElapsed(createdAt, finishedAt, running);
+  const Device = runIcon(title, mode);
+  const st = headerStatus(status);
+  const security = isSecurityDemo(title, status);
+  const ModeIcon = security ? ShieldCheck : mode === "build" ? Wand2 : Bug;
+  const modeLabel = security ? "Security demo" : mode === "build" ? "Write firmware" : "Find bugs";
+  const color = status === "running" ? "text-running" : TONE_TEXT[st.tone];
+
   return (
-    <div aria-busy="true" className="space-y-6">
-      <div className="h-4 w-40 rounded bg-raised" />
-      <div className="h-[34px] w-80 rounded bg-raised" />
+    <div className="border border-line bg-white p-5" style={{ borderRadius: 8 }}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-[#FAFAFA] text-ink">
+            <Device {...iconCardProps} />
+          </span>
+          <h1 className="truncate text-lg font-semibold tracking-tight text-ink">{displayTitle(title)}</h1>
+        </div>
+        <span className={`inline-flex shrink-0 items-center gap-2 text-sm ${color}`}>
+          <st.Icon {...iconProps} className={st.spin ? "animate-spin" : ""} />
+          {st.label}
+        </span>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <Clock {...iconProps} />
+          {elapsed}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <ModeIcon {...iconProps} />
+          {modeLabel}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Box {...iconProps} />
+          {sandboxCount} sandbox{sandboxCount === 1 ? "" : "es"}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <WifiOff {...iconProps} />
+          no network
+        </span>
+        {connectionLost && running && <span className="text-running">Reconnecting</span>}
+      </div>
     </div>
   );
 }
 
-export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode | null) => void }) {
-  const state = useRun(runId);
+/** Finished-run report: verdict, replay, bugs, patch, detail tabs. */
+function FinishedReport({ runId, state, status }: { runId: string; state: ReturnType<typeof useRun>; status: string }) {
   const report = state.run?.report ?? null;
-  const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
   const pins: PinSpec[] = report?.spec?.pins ?? state.spec?.pins ?? state.run?.spec?.pins ?? [];
   const [chosenId, setScenarioId] = useState<string | null>(null);
   const [side, setSide] = useState<"before" | "after">("before");
-  const [tab, setTab] = useState<TabId | null>(null);
+  const [tab, setTab] = useState<ReportTabId | null>(null);
   const [openBug, setOpenBug] = useState<string | null>(null);
-
-  const runMode = state.run?.mode as Mode | undefined;
-  useEffect(() => {
-    onMode?.(runMode ?? null);
-  }, [runMode, onMode]);
-  const finishedIn = state.run?.finished_at ? duration(state.run.created_at, state.run.finished_at) : "";
-  useStripText(!state.run ? "Loading the run" : status === "running" ? (state.connectionLost ? "Reconnecting" : "Running") : finishedIn ? `Finished in ${finishedIn}` : "Finished");
 
   const scenarios = report?.scenarios?.length ? report.scenarios : state.scenarios;
   const emulated = useMemo(() => scenarios.filter((s) => !s.id.startsWith("containment-")), [scenarios]);
   const bugs = useMemo(() => rankBugs(report?.bugs?.length ? report.bugs : state.bugs), [report, state.bugs]);
   const afterIteration = report?.fix?.iteration ?? null;
   const iteration = side === "after" && afterIteration !== null ? afterIteration : 0;
-
-  // On a finished run the board opens on the worst bug, not on the first scenario, so wait for the report.
   const scenarioId = chosenId ?? (report ? (bugs[0]?.scenario_id ?? emulated[0]?.id ?? null) : null);
-
   const ready = !!scenarioId && !!state.results[iteration]?.[scenarioId];
   const { trace, error: traceError } = useTrace(runId, iteration, scenarioId, ready);
   const results = useMemo(() => report?.matrix?.[String(iteration)]?.[scenarioId ?? ""] ?? [], [report, iteration, scenarioId]);
@@ -132,40 +166,38 @@ export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode
     showReplay();
   };
 
-  if (!state.run) {
-    return <Skeleton />;
-  }
-
-  const running = status === "running";
-  const guard = state.guard ?? state.run.guard;
+  const guard = state.guard ?? state.run!.guard;
   const warnings = report?.warnings ?? state.warnings;
-  const { title, sub } = headline(report, status, warnings[0] ?? "");
-  const meta = STATUS_META[status] ?? { tone: "neutral" as const };
-  const hasBoard = !running && emulated.length > 0 && pins.length > 0;
-  const comparable = state.run.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
+  const hasBoard = status !== "compile_failed" && emulated.length > 0 && pins.length > 0;
+  const comparable = state.run!.mode === "break" && !!guard?.allowed && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status);
   const records = report?.containment?.records ?? state.records;
   const focus = bugs.find((b) => b.scenario_id === scenarioId) ?? null;
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const evidence = focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
-  const emulatedResults = state.results[iteration] ?? {};
+  const beforeResults = state.results[0] ?? {};
+  const afterResults = afterIteration !== null ? (state.results[afterIteration] ?? {}) : null;
+  const beforeMatrix = report?.matrix?.["0"];
+  const afterMatrix = afterIteration !== null ? report?.matrix?.[String(afterIteration)] : undefined;
+  const contained = !!report?.contained;
+  const isBuild = state.run!.mode === "build";
+  const firmware = (report?.firmware || state.firmware || state.run!.firmware || "").trim();
 
-  const tabs: { value: TabId; label: string }[] = [];
-  if (!running) {
-    if (hasBoard) {
-      tabs.push({ value: "scenarios", label: "Scenarios" }, { value: "checks", label: "Checks" });
-    }
-    if (records.length && !report?.contained) {
-      tabs.push({ value: "containment", label: "Containment" });
-    }
-    if (comparable) {
-      tabs.push({ value: "compare", label: "Compare with plain LLM" });
-    }
-    if (report && !report.contained) {
-      tabs.push({ value: "logs", label: "Logs" });
-    }
+  const tabs: ReportTabId[] = [];
+  if (hasBoard) {
+    tabs.push("scenarios", "checks");
   }
+  if (records.length && !contained) {
+    tabs.push("containment");
+  }
+  if (state.run!.mode === "break" && !contained && ["fixed", "partial", "unfixed", "clean", "inconclusive"].includes(status)) {
+    tabs.push("compare");
+  }
+  if (report && !contained && (trace || (report.compile_log && status !== "compile_failed") || warnings.length || report.device_model || (report.llm?.calls ?? 0) > 0)) {
+    tabs.push("logs");
+  }
+  const activeTab = tab && tabs.includes(tab) ? tab : tabs[0] ?? null;
 
-  const onFocus = (bug: Bug) => {
+  const onFocus = (bug: BugType) => {
     setScenarioId(bug.scenario_id);
     showReplay();
   };
@@ -182,36 +214,7 @@ export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode
 
   return (
     <div className="space-y-8">
-      <header>
-        <p className="label flex flex-wrap items-baseline justify-between gap-x-6">
-          <span>
-            {state.run.title}
-            {report && state.run.mode === "build" && <span>, built from a description</span>}
-          </span>
-          {state.run.finished_at && <span className="num">{duration(state.run.created_at, state.run.finished_at)}</span>}
-          {state.connectionLost && running && <span>Reconnecting</span>}
-        </p>
-        {running ? (
-          <div className="mt-6">
-            <Stepper state={state} total={emulated.length} />
-          </div>
-        ) : (
-          <>
-            <h1 className="headline mt-2 flex items-center gap-3">
-              {meta.tone !== "neutral" && <Icon name={meta.tone === "pass" ? "check" : "x"} className={`h-6 w-6 shrink-0 ${TONE_TEXT[meta.tone]}`} />}
-              {title}
-            </h1>
-            {sub && <Ticking className="mt-2 block text-base text-muted" text={sub} />}
-          </>
-        )}
-      </header>
-
-      {report?.contained && (
-        <>
-          <ContainedRow report={report} />
-          <ContainmentDetails records={records} report={report} guard={guard} inline />
-        </>
-      )}
+      <ReportVerdict report={report} status={status} firstWarning={warnings[0] ?? ""} createdAt={state.run!.created_at} finishedAt={state.run!.finished_at} />
 
       {status === "blocked" && guard && !guard.allowed && (
         <section aria-label="Guard reasons">
@@ -232,7 +235,11 @@ export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode
         </section>
       )}
 
-      {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-raised p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
+      {status === "compile_failed" && report?.compile_log && <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-4 font-mono text-xs text-muted">{report.compile_log}</pre>}
+
+      {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
+
+      {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
 
       {hasBoard && (
         <Replay
@@ -255,21 +262,81 @@ export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode
         />
       )}
 
-      {!running && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
+      {!contained && bugs.length > 0 && <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} />}
 
       {tabs.length > 0 && (
-        <section>
-          <KeyRow label="Details" closable keys={tabs} value={tab} onChange={setTab}>
-            <div className="mt-5">
-          {tab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
-          {tab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
-          {tab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
-          {tab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}
-          {tab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} />}
-            </div>
-          </KeyRow>
-        </section>
+        <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
+          {activeTab === "scenarios" && (
+            <ScenariosTab
+              scenarios={emulated}
+              beforeResults={beforeResults}
+              afterResults={afterResults}
+              beforeMatrix={beforeMatrix}
+              afterMatrix={afterMatrix}
+              assertions={assertions}
+              pins={pins}
+              selected={scenarioId}
+              onSelect={replayTo}
+            />
+          )}
+          {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
+          {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
+          {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
+          {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}
+        </ReportTabs>
       )}
+    </div>
+  );
+}
+
+export function RunView({ runId }: { runId: string }) {
+  const state = useRun(runId);
+  const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
+  const running = status === "running";
+  const sandboxCount = (state.run?.report?.containment?.records ?? state.records).length;
+
+  if (state.notFound) {
+    return <NotFound message="That run was not found." />;
+  }
+
+  if (state.loadError && !state.run) {
+    return (
+      <p className="pt-8 text-sm text-fail">
+        Could not load this run.{" "}
+        <a href="#/" className="text-ink underline-offset-2 hover:underline">
+          Back home
+        </a>
+        .
+      </p>
+    );
+  }
+
+  if (!state.run) {
+    return <RunPageSkeleton />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <a href="#/runs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink">
+        <ArrowLeft {...iconProps} />
+        Runs
+      </a>
+
+      <RunHeader
+        title={state.run.title}
+        mode={state.run.mode}
+        status={status}
+        createdAt={state.run.created_at}
+        finishedAt={state.run.finished_at}
+        sandboxCount={sandboxCount}
+        connectionLost={state.connectionLost}
+      />
+
+      {running && <RunPipeline state={state} finished={false} />}
+
+      {!running && <FinishedReport runId={runId} state={state} status={status} />}
+
+      {!running && <RunPipeline state={state} finished />}
     </div>
   );
 }

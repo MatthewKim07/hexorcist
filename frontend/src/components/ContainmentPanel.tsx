@@ -1,55 +1,10 @@
-import { useState } from "react";
+import { CircleCheck, CircleX } from "lucide-react";
 import { ContainmentRecord, Guard, Report } from "../api";
-import { Collapsible, Fold, Lamp } from "./ui";
+import { iconProps } from "../icons";
+import { Fold } from "./ui";
 
 function mb(bytes?: number): string {
   return bytes ? `${Math.round(bytes / 1048576)} MiB` : "?";
-}
-
-/** The six containment checks as a row of lamps on the page's one screen. A lamp opens the measured detail behind it. */
-export function ContainedRow({ report }: { report: Report }) {
-  const [open, setOpen] = useState<string | null>(null);
-  const c = report.contained;
-  if (!c) {
-    return null;
-  }
-  const ok = (label: string) => c.checks.find((x) => x.label === label)?.ok ?? false;
-  const total = report.containment.total;
-  const items = [
-    { label: "Guard flagged it", ok: ok("Input guard flagged the upload"), detail: `${c.guard.reasons.length} red flags, risk score ${c.guard.score.toFixed(1)}. Blocked before any model saw it.` },
-    { label: "LLM never saw it", ok: ok("LLM never contacted"), detail: "0 LLM calls. The prompt injection reached no model." },
-    { label: "No network", ok: ok("Network disabled"), detail: `Connect ${c.probe.network}, DNS ${c.probe.dns}. NetworkMode none on all ${total} containers.` },
-    { label: "No secrets", ok: ok("No control-plane secrets in any output") && ok("No secrets in the sandbox environment"), detail: `${report.containment.secrets_found} found. The API key and passcode were searched for in all ${total} outputs.` },
-    { label: "Timeout kill", ok: ok("Runaway firmware killed by wall clock"), detail: c.runaway.ran ? `SIGKILL at ${c.runaway.duration_s} s, limit ${c.runaway.timeout_s} s.` : "Not run." },
-    { label: "Containers removed", ok: ok("Every container removed"), detail: `${report.containment.removed} of ${total} removed. A fresh container per task, none left behind.` },
-  ];
-  const shown = items.find((i) => i.label === open);
-  return (
-    <section aria-label="What was contained" className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-      <ul className="grid grid-cols-3 gap-y-2 px-2 py-5 sm:grid-cols-6">
-        {items.map((i) => (
-          <li key={i.label}>
-            <button
-              aria-pressed={open === i.label}
-              aria-label={`${i.label}: ${i.ok ? "held" : "failed"}`}
-              onClick={() => setOpen(open === i.label ? null : i.label)}
-              className={`key flex w-full flex-col items-center gap-3 rounded-md px-2 py-3 text-center text-xs !font-normal transition-colors hover:text-screen-ink ${open === i.label ? "bg-screen-raised text-screen-ink" : "text-screen-muted"}`}
-            >
-              <Lamp tone={i.ok ? "pass" : "fail"} />
-              {i.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-      <Collapsible.Root open={!!shown}>
-        <Collapsible.Content className="fold">
-          <p aria-live="polite" className="border-t border-screen-line px-5 py-3.5 text-sm text-screen-ink">
-            {shown?.detail}
-          </p>
-        </Collapsible.Content>
-      </Collapsible.Root>
-    </section>
-  );
 }
 
 function Row({ label, value, ok = true }: { label: string; value: string; ok?: boolean }) {
@@ -76,32 +31,58 @@ export function ContainmentDetails({ records, report, guard, inline = false }: {
   const reasons = guard && !guard.allowed ? guard.reasons : [];
 
   return (
-    <div className={inline ? "space-y-8" : "space-y-8 py-6"}>
-      <div className="space-y-1">
-        {inline && <h2 className="label">Sandbox limits</h2>}
-        <dl className="grid gap-x-12 md:grid-cols-2">
-          <div>
-            <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
-            <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
-            <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
-            <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
-            <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
-          </div>
-          <div>
-            <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
-            <Row label="User" value={String(limits.user ?? "?")} />
-            <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
-            <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
-            {killed.map((r) => (
-              <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
-            ))}
-          </div>
-        </dl>
-      </div>
+    <div className={inline ? "space-y-6" : "space-y-8 pt-4"}>
+      {inline && contained && (
+        <div className="space-y-4">
+          <ul className="space-y-2">
+            {contained.checks.map((c) => {
+              const detail =
+                c.label === "Input guard flagged the upload"
+                  ? `${contained.guard.reasons.length} attack pattern${contained.guard.reasons.length === 1 ? "" : "s"} flagged`
+                  : c.detail;
+              return (
+                <li key={c.label} className="flex items-start gap-2 text-sm text-ink">
+                  {c.ok ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className="mt-0.5 shrink-0 text-fail" />}
+                  <span>
+                    <span className="font-medium">{c.label}</span>
+                    {detail && <span className="mt-0.5 block text-xs text-muted">{detail}</span>}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-sm text-muted">
+            What the attacker got: <span className="text-ink">nothing</span>
+          </p>
+        </div>
+      )}
 
-      {contained && (
+      {!inline && (
+        <div className="space-y-1">
+          <dl className="grid gap-x-12 md:grid-cols-2">
+            <div>
+              <Row label="Network" value={allNone ? "none" : "NOT none"} ok={allNone} />
+              <Row label="Secrets found" value={String(secrets)} ok={secrets === 0} />
+              <Row label="Root filesystem" value={limits.read_only_rootfs ? "read-only" : "writable"} ok={!!limits.read_only_rootfs} />
+              <Row label="Capabilities" value={limits.cap_drop?.includes("ALL") ? "all dropped" : "kept"} ok={!!limits.cap_drop?.includes("ALL")} />
+              <Row label="Host mounts" value={String(mounts)} ok={mounts === 0} />
+            </div>
+            <div>
+              <Row label="Containers removed" value={`${removed} / ${records.length}`} ok={removed === records.length} />
+              <Row label="User" value={String(limits.user ?? "?")} />
+              <Row label="Memory / CPU / PIDs" value={`${mb(limits.memory_bytes)} / ${(limits.nano_cpus ?? 0) / 1e9} / ${limits.pids_limit ?? "?"}`} />
+              <Row label="No new privileges" value={limits.no_new_privileges ? "yes" : "no"} ok={!!limits.no_new_privileges} />
+              {killed.map((r) => (
+                <Row key={r.container_id} label="Killed at timeout" value={`${r.timeout_s} s`} />
+              ))}
+            </div>
+          </dl>
+        </div>
+      )}
+
+      {!inline && contained && (
         <div className="space-y-3">
-          {inline ? <h2 className="label">What the attacker got</h2> : <h3 className="text-sm font-medium">What the attacker got</h3>}
+          <h3 className="text-sm font-medium">What the attacker got</h3>
           <p>{contained.what_the_attacker_got.note}</p>
           <dl className="grid grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-xs">
             <dt className="num text-muted">/etc/passwd</dt>

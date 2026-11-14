@@ -234,6 +234,11 @@ async function getJson<T>(path: string): Promise<T> {
   return res.json();
 }
 
+/** True when the server rejected the request for a missing or wrong demo passcode. */
+export function isPasscodeError(e: unknown): boolean {
+  return e instanceof Error && /passcode/i.test(e.message);
+}
+
 async function postJson<T>(path: string, body?: Record<string, unknown>): Promise<T> {
   const res = await fetch(path, {
     method: "POST",

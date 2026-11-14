@@ -2,7 +2,6 @@ import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } 
 import * as RCheckbox from "@radix-ui/react-checkbox";
 import * as RCollapsible from "@radix-ui/react-collapsible";
 import * as RSelect from "@radix-ui/react-select";
-import * as RTabs from "@radix-ui/react-tabs";
 import * as RToggle from "@radix-ui/react-toggle-group";
 import * as RTooltip from "@radix-ui/react-tooltip";
 import { Icon } from "./Common";
@@ -46,13 +45,13 @@ function useIndicator(selector: string, deps: unknown[]) {
 
 export interface Option<T extends string> {
   value: T;
-  label: string;
+  label: ReactNode;
 }
 
 export function Select<T extends string>({ value, onChange, options, label, mono = false, className = "" }: { value: T; onChange: (v: T) => void; options: Option<T>[]; label: string; mono?: boolean; className?: string }) {
   return (
     <RSelect.Root value={value} onValueChange={(v) => onChange(v as T)}>
-      <RSelect.Trigger aria-label={label} className={`key field flex h-9 min-w-0 items-center justify-between gap-2 !py-0 !font-normal data-[state=open]:border-ink/40 ${mono ? "font-mono" : ""} ${className}`}>
+      <RSelect.Trigger aria-label={label} className={`key flex h-9 min-w-0 items-center justify-between gap-2 rounded-md border border-line bg-white px-3 !py-0 text-sm !font-normal text-ink ${mono ? "font-mono" : ""} ${className}`}>
         <span className="min-w-0 truncate text-left">
           <RSelect.Value />
         </span>
@@ -61,14 +60,14 @@ export function Select<T extends string>({ value, onChange, options, label, mono
         </RSelect.Icon>
       </RSelect.Trigger>
       <RSelect.Portal>
-        <RSelect.Content position="popper" sideOffset={6} className="pop z-50 max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-line bg-raised p-1 text-sm text-ink">
+        <RSelect.Content position="popper" sideOffset={6} className="pop z-50 max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-line bg-white p-1 text-sm text-ink">
           <RSelect.Viewport className="scroll">
             {options.map((o) => (
               <RSelect.Item key={o.value} value={o.value} className={`relative flex cursor-default select-none items-center rounded py-1.5 pl-7 pr-3 outline-none data-[highlighted]:bg-bg ${mono ? "font-mono" : ""}`}>
                 <RSelect.ItemIndicator className="absolute left-2 text-ink">
                   <Icon name="check" className="h-3 w-3" />
                 </RSelect.ItemIndicator>
-                <RSelect.ItemText>{o.label}</RSelect.ItemText>
+                <RSelect.ItemText>{typeof o.label === "string" ? o.label : String(o.value)}</RSelect.ItemText>
               </RSelect.Item>
             ))}
           </RSelect.Viewport>
@@ -83,8 +82,8 @@ export function Select<T extends string>({ value, onChange, options, label, mono
 export function Checkbox({ checked, onChange, children, className = "", hint }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; className?: string; hint?: string }) {
   // A tooltip trigger takes over data-state, so the checked look keys off aria-checked.
   const box = (
-    <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-[#9aa098] bg-raised aria-checked:border-ink aria-checked:bg-ink">
-      <RCheckbox.Indicator className="text-bg">
+    <RCheckbox.Root checked={checked} onCheckedChange={(v) => onChange(v === true)} className="key h-4 w-4 shrink-0 rounded-[4px] border border-line bg-white aria-checked:border-ink aria-checked:bg-ink">
+      <RCheckbox.Indicator className="text-white">
         <Icon name="check" className="h-3 w-3" />
       </RCheckbox.Indicator>
     </RCheckbox.Root>
@@ -104,14 +103,14 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   const { box, pos } = useIndicator('[aria-checked="true"]', [value]);
   return (
     <RToggle.Root type="single" value={value} onValueChange={(v) => v && onChange(v as T)} aria-label={label} asChild>
-      <div ref={box} className="relative flex rounded-md border border-line bg-raised p-0.5">
+      <div ref={box} className="relative flex rounded-md border border-line bg-white p-0.5">
         <span
           aria-hidden="true"
-          className={`absolute bottom-0.5 left-0 top-0.5 rounded bg-ink ${pos.animate ? "indicator" : ""}`}
+          className={`absolute bottom-0.5 left-0 top-0.5 rounded-[5px] bg-ink ${pos.animate ? "indicator" : ""}`}
           style={{ transform: `translateX(${pos.x}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }}
         />
         {options.map((o) => (
-          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded px-5 py-1.5 !font-normal text-muted aria-checked:text-bg">
+          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 inline-flex items-center gap-1.5 rounded-[5px] px-4 py-1.5 !font-normal text-muted aria-checked:text-white">
             {o.label}
           </RToggle.Item>
         ))}
@@ -120,78 +119,35 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
   );
 }
 
-/* -------------------------------------------------------------------- Tabs */
-
-export interface PanelKey<T extends string> {
-  value: T;
-  label: string;
-  /** A step lamp: lit once the step is done. Left out for keys that are not steps. */
-  lamp?: boolean;
-}
-
-/** The row of keys under the screen. Each opens its panel below; with `closable`, pressing the open key closes it. */
-export function KeyRow<T extends string>({ keys, value, onChange, onPress, label, closable = false, end, children }: { keys: PanelKey<T>[]; value: T | null; onChange: (v: T | null) => void; onPress?: (v: T, wasOpen: boolean) => void; label: string; closable?: boolean; end?: ReactNode; children?: ReactNode }) {
-  const wasActive = useRef(false);
-  return (
-    <RTabs.Root value={value ?? ""} onValueChange={(v) => onChange(v as T)} activationMode="manual">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
-        <RTabs.List aria-label={label} className="flex flex-wrap gap-2">
-          {keys.map((k) => (
-            <RTabs.Trigger
-              key={k.value}
-              value={k.value}
-              onPointerDownCapture={() => {
-                wasActive.current = value === k.value;
-              }}
-              onKeyDownCapture={() => {
-                wasActive.current = value === k.value;
-              }}
-              onClick={() => {
-                if (closable && wasActive.current) {
-                  onChange(null);
-                }
-                onPress?.(k.value, wasActive.current);
-                wasActive.current = false;
-              }}
-              className="panel-key"
-            >
-              {k.lamp !== undefined && <span aria-hidden="true" className={`step-lamp ${k.lamp ? "is-lit" : ""}`} />}
-              {k.label}
-              {k.lamp !== undefined && <span className="sr-only">{k.lamp ? ", done" : ", not done"}</span>}
-            </RTabs.Trigger>
-          ))}
-        </RTabs.List>
-        {end && <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2">{end}</div>}
-      </div>
-      {value && (
-        <RTabs.Content value={value} className="outline-none" tabIndex={-1}>
-          {children}
-        </RTabs.Content>
-      )}
-    </RTabs.Root>
-  );
-}
-
 /* ----------------------------------------------------------------- Tooltip */
 
 export function TipProvider({ children }: { children: ReactNode }) {
   return (
-    <RTooltip.Provider delayDuration={400} skipDelayDuration={300}>
+    <RTooltip.Provider delayDuration={150} skipDelayDuration={300}>
       {children}
     </RTooltip.Provider>
   );
 }
 
-export function Tip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" }) {
+/** Dark accessible tooltip. Prefer this for new UI; Tip is the same. */
+export function Tooltip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" | "left" | "right" }) {
   return (
-    <RTooltip.Root>
+    <RTooltip.Root delayDuration={150}>
       <RTooltip.Trigger asChild>{children}</RTooltip.Trigger>
       <RTooltip.Portal>
-        <RTooltip.Content side={side} sideOffset={6} collisionPadding={12} className="pop z-50 max-w-[280px] rounded-md bg-ink px-2.5 py-1.5 text-xs text-bg">
+        <RTooltip.Content side={side} sideOffset={6} collisionPadding={12} className="pop z-50 max-w-[280px] rounded-md bg-ink px-2.5 py-1.5 text-[12px] leading-snug text-white">
           {content}
         </RTooltip.Content>
       </RTooltip.Portal>
     </RTooltip.Root>
+  );
+}
+
+export function Tip({ content, children, side = "top" }: { content: ReactNode; children: ReactNode; side?: "top" | "bottom" }) {
+  return (
+    <Tooltip content={content} side={side}>
+      {children}
+    </Tooltip>
   );
 }
 
@@ -213,14 +169,6 @@ export function Fold({ title, children, defaultOpen = false, className = "", con
 }
 
 export const Collapsible = RCollapsible;
-
-/* -------------------------------------------------------------------- Lamp */
-
-/** An indicator lamp: lit green when the check held, red when it did not. */
-export function Lamp({ tone, breathing = false }: { tone: "pass" | "fail" | "trace" | "off"; breathing?: boolean }) {
-  const colour = { pass: "bg-pass-lit shadow-[0_0_0_4px_rgba(92,201,138,0.14)]", fail: "bg-fail-lit shadow-[0_0_0_4px_rgba(240,118,107,0.16)]", trace: "bg-trace shadow-[0_0_0_4px_rgba(232,193,90,0.14)]", off: "bg-screen-line" }[tone];
-  return <span aria-hidden="true" className={`block h-2.5 w-2.5 rounded-full ${colour} ${breathing ? "breathe" : ""}`} />;
-}
 
 /* ----------------------------------------------------------------- Counter */
 

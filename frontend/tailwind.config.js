@@ -4,18 +4,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        // The bench the instrument sits on, a shade under the faceplate
-        bench: "#D8DBD5",
-        // Faceplate
-        bg: "#E3E5E0",
-        raised: "#EEF0EC",
-        line: "#C4C8C1",
-        ink: "#202427",
-        muted: "#5A615D",
-        pass: "#1E6B43",
-        fail: "#B0382F",
+        bg: "var(--bg)",
+        raised: "var(--raised)",
+        line: "var(--line)",
+        ink: "var(--ink)",
+        muted: "var(--muted)",
+        pass: "var(--pass)",
+        fail: "var(--fail)",
+        running: "var(--running)",
+        queued: "var(--queued)",
+        brand: "var(--brand)",
         probe: "#1C6884",
-        // The one lit screen
+        // Lit board (unchanged for existing pages)
         screen: {
           DEFAULT: "#121816",
           raised: "#1A221F",
@@ -23,9 +23,12 @@ export default {
           ink: "#C9D1CC",
           muted: "#8A958F",
         },
-        trace: "#E8C15A",
+        trace: "var(--brand)",
         "pass-lit": "#5CC98A",
         "fail-lit": "#F0766B",
+      },
+      borderRadius: {
+        card: "var(--radius)",
       },
       fontFamily: {
         sans: ['"Geist Sans"', "system-ui", "sans-serif"],

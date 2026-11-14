@@ -38,18 +38,30 @@
 @tailwind utilities;
 
 :root {
+  --bg: #ffffff;
+  --raised: #fafafa;
+  --ink: #171717;
+  --muted: #666666;
+  --line: #eaeaea;
+  --pass: #1e6b43;
+  --fail: #b0382f;
+  --running: #c47d1a;
+  --queued: #a1a1a1;
+  --brand: #e8c15a;
+  --radius: 8px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 html {
   color-scheme: light;
+  background: #ffffff;
 }
 
-body {
-  background: #e3e5e0;
-  color: #202427;
+body,
+#root {
+  background: #ffffff;
+  color: var(--ink);
   font-family: "Geist Sans", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -57,11 +69,15 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
 /* One focus ring for every control on the page. */
 :focus-visible {
-  outline: 2px solid #1c6884;
+  outline: 2px solid #171717;
   outline-offset: 2px;
-  border-radius: 4px;
 }
 .screen :focus-visible {
   outline-color: #7cc4dc;
@@ -104,8 +120,7 @@ body {
     transition: border-color 150ms ease;
   }
   .field:focus-visible {
-    @apply border-ink/40;
-    outline-offset: 0;
+    border-color: #171717;
   }
   /* Keys: they press. */
   .key {
@@ -128,44 +143,60 @@ body {
     @apply text-muted underline decoration-line underline-offset-4;
     transition: color 150ms ease, text-decoration-color 150ms ease;
   }
-  /* Panel keys under the screen: raised caps that go dark while their panel is open. */
-  .panel-key {
-    @apply key rounded-md border border-line bg-raised px-3.5 py-2 !font-normal text-ink;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 1px rgba(18, 24, 22, 0.08);
-  }
-  .panel-key[data-state="active"] {
-    @apply border-ink bg-ink text-bg;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
-  }
-  .step-lamp {
-    @apply block h-1.5 w-1.5 rounded-full;
-    background: #b3b8b0;
-    transition: background-color 200ms ease, box-shadow 200ms ease;
-  }
-  .step-lamp.is-lit {
-    background: #e8c15a;
-    box-shadow: 0 0 0 3px rgba(232, 193, 90, 0.22);
-  }
+}
+
+.preset-card {
+  border-radius: var(--radius);
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.form-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 0.5rem 0.75rem;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.form-input::placeholder {
+  color: var(--muted);
+}
+
+.form-input:focus-visible {
+  border-color: #171717;
+  outline: 2px solid #171717;
+  outline-offset: 2px;
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .preset-card:hover {
+    border-color: #d4d4d4;
+  }
   .btn-primary:hover:not(:disabled) {
     background: #33383c;
   }
-  .btn-outline:hover:not(:disabled),
-  .panel-key:hover:not([data-state="active"]) {
+  .btn-outline:hover:not(:disabled) {
     border-color: #a9aea6;
   }
   .btn-ghost:hover:not(:disabled),
   .hover-ink:hover {
-    color: #202427;
+    color: #171717;
   }
   .hover-row:hover {
-    background: rgba(238, 240, 236, 0.7);
+    background: #fafafa;
   }
   .link:hover {
-    color: #202427;
-    text-decoration-color: #5a615d;
+    color: #171717;
+    text-decoration-color: #666666;
   }
 }
 
@@ -261,42 +292,11 @@ body {
 }
 
 
-/* Sheets and the history drawer slide in from the edge they live on. */
-.drawer[data-state="open"] {
-  animation: drawer-in 280ms var(--ease-drawer);
-}
-.drawer[data-state="closed"] {
-  animation: drawer-out 200ms var(--ease-out) forwards;
-}
-@keyframes drawer-in {
-  from {
-    transform: translateX(100%);
-  }
-}
-@keyframes drawer-out {
-  to {
-    transform: translateX(100%);
-  }
-}
 .scrim[data-state="open"] {
   animation: fade-in 200ms ease;
 }
 .scrim[data-state="closed"] {
   animation: fade-out 160ms ease forwards;
-}
-
-/* A lamp that is working breathes. */
-@keyframes breathe {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-.breathe {
-  animation: breathe 1.6s ease-in-out infinite;
 }
 
 @keyframes spin-slow {
@@ -322,7 +322,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breathe,
   .spin {
     animation: none;
   }
@@ -330,13 +329,6 @@ body {
   .chev,
   .slide-thumb {
     transition: none;
-  }
-  .drawer[data-state="open"],
-  .drawer[data-state="closed"] {
-    animation-name: fade-in;
-  }
-  .drawer[data-state="closed"] {
-    animation-name: fade-out;
   }
   .key:active:not(:disabled) {
     transform: none;
@@ -364,16 +356,14 @@ body {
 }
 
 /* Landing scroll story: one quiet pane at a time, board does the talking. */
-main:has(.story) {
-  container-type: size;
+.story {
   scroll-snap-type: y proximity;
 }
 .story-pane {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  height: 100cqh;
-  min-height: 100cqh;
+  min-height: calc(100dvh - 8rem);
   scroll-snap-align: start;
   padding: 1.5rem 0 2rem;
 }
@@ -401,7 +391,7 @@ main:has(.story) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  main:has(.story) {
+  .story {
     scroll-snap-type: none;
   }
   .story-pane > * {

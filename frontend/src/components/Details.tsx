@@ -1,34 +1,149 @@
-import { AssertionDef, AssertionResult, Report, Scenario, Trace } from "../api";
+import { useState } from "react";
+import { ChevronDown, CircleCheck, CircleX, Minus } from "lucide-react";
+import { AssertionDef, AssertionResult, PinSpec, Report, Scenario, Trace } from "../api";
+import { chipLabel } from "../checks";
+import { iconProps } from "../icons";
 import { RunState } from "../useRun";
-import { Icon } from "./Common";
 import { Fold, Tip } from "./ui";
 
-/** Scenarios, failing ones first. A click puts the scenario on the board. */
-export function ScenariosTab({ scenarios, results, selected, onSelect }: { scenarios: Scenario[]; results: RunState["results"][number]; selected: string | null; onSelect: (id: string) => void }) {
-  const rank = (s: Scenario) => (results[s.id] && !results[s.id].passed ? 0 : 1);
-  const sorted = [...scenarios].sort((a, b) => rank(a) - rank(b));
-  const failing = scenarios.filter((s) => rank(s) === 0).length;
+type ScenarioResult = RunState["results"][number][string] | undefined;
+
+function scenarioFailed(r: ScenarioResult): boolean {
+  return !!r && !r.passed;
+}
+
+function failTip(results: AssertionResult[] | undefined, assertions: AssertionDef[], pins: PinSpec[]): string {
+  const fails = (results ?? []).filter((x) => x.status === "fail");
+  if (!fails.length) {
+    return "Passed";
+  }
+  return fails
+    .map((f) => {
+      const a = assertions.find((x) => x.id === f.assertion_id);
+      return a ? `Failed: ${chipLabel(a, pins)}` : `Failed: ${f.type}`;
+    })
+    .join(" · ");
+}
+
+function SideIcon({ results, assertions, pins }: { results: AssertionResult[] | undefined; assertions: AssertionDef[]; pins: PinSpec[] }) {
+  if (!results) {
+    return <Minus {...iconProps} className="text-muted" />;
+  }
+  const fail = results.some((r) => r.status === "fail");
+  const tip = failTip(results, assertions, pins);
   return (
-    <div className="py-6">
-      <p className="label mb-3">
-        {scenarios.length} scenarios{failing ? `, ${failing} failing` : ", all passing"}
+    <Tip content={tip}>
+      <span tabIndex={0} className="inline-flex" aria-label={tip}>
+        {fail ? <CircleX {...iconProps} className="text-fail" /> : <CircleCheck {...iconProps} className="text-pass" />}
+      </span>
+    </Tip>
+  );
+}
+
+/** Scenarios with Before/After icon columns; failing-before first; both-passed collapsed. */
+export function ScenariosTab({
+  scenarios,
+  beforeResults,
+  afterResults,
+  beforeMatrix,
+  afterMatrix,
+  assertions,
+  pins,
+  selected,
+  onSelect,
+}: {
+  scenarios: Scenario[];
+  beforeResults: RunState["results"][number];
+  afterResults: RunState["results"][number] | null;
+  beforeMatrix: Report["matrix"][string] | undefined;
+  afterMatrix: Report["matrix"][string] | undefined;
+  assertions: AssertionDef[];
+  pins: PinSpec[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [showPassed, setShowPassed] = useState(false);
+  const hasAfter = !!afterMatrix || !!afterResults;
+
+  const rank = (s: Scenario) => {
+    const before = beforeResults[s.id];
+    if (scenarioFailed(before)) {
+      return 0;
+    }
+    return 1;
+  };
+  const sorted = [...scenarios].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const failedBefore = sorted.filter((s) => rank(s) === 0);
+  const passedBoth = sorted.filter((s) => {
+    if (rank(s) === 0) {
+      return false;
+    }
+    if (!hasAfter) {
+      return !!beforeResults[s.id]?.passed;
+    }
+    const after = afterResults?.[s.id];
+    return !!beforeResults[s.id]?.passed && !!after?.passed;
+  });
+  const other = sorted.filter((s) => !failedBefore.includes(s) && !passedBoth.includes(s));
+  const primary = [...failedBefore, ...other];
+
+  const row = (s: Scenario) => (
+    <tr
+      key={s.id}
+      className={`cursor-pointer border-b border-line transition-colors last:border-b-0 hover:bg-[#FAFAFA] ${selected === s.id ? "bg-[#FAFAFA]" : ""}`}
+      onClick={() => onSelect(s.id)}
+    >
+      <td className="py-2.5 pr-4 align-middle">
+        <Tip content={s.hypothesis}>
+          <span tabIndex={0} className={selected === s.id ? "font-medium text-ink" : "text-ink"}>
+            {s.name}
+          </span>
+        </Tip>
+      </td>
+      <td className="py-2.5 text-center align-middle">
+        <SideIcon results={beforeMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+      </td>
+      {hasAfter && (
+        <td className="py-2.5 text-center align-middle">
+          <SideIcon results={afterMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+        </td>
+      )}
+    </tr>
+  );
+
+  return (
+    <div className="pt-4">
+      <p className="mb-3 text-xs text-muted">
+        {scenarios.length} scenarios{failedBefore.length ? `, ${failedBefore.length} failed before` : ", all passing"}
       </p>
-      <ul className="grid gap-x-12 md:grid-cols-2">
-        {sorted.map((s) => {
-          const r = results[s.id];
-          return (
-            <li key={s.id} className="border-b border-line">
-              <Tip content={s.hypothesis}>
-                <button onClick={() => onSelect(s.id)} aria-current={selected === s.id || undefined} className={`hover-ink flex w-full items-center gap-3 py-2.5 text-left transition-colors ${selected === s.id ? "font-medium text-ink" : "text-muted"}`}>
-                  <span className="w-4 shrink-0">{!r ? <span className="breathe block h-1.5 w-1.5 rounded-full bg-muted" /> : r.passed ? <Icon name="check" className="text-pass" /> : <Icon name="x" className="text-fail" />}</span>
-                  <span className="min-w-0 flex-1">{s.name}</span>
-                  {r && !r.passed && <span className="num text-xs text-fail">{r.failed.length ? `${r.failed.length} failed` : r.exit_reason}</span>}
-                </button>
-              </Tip>
-            </li>
-          );
-        })}
-      </ul>
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-line text-xs text-muted">
+            <th className="pb-2 pr-4 font-normal">Name</th>
+            <th className="w-14 pb-2 text-center font-normal">Before</th>
+            {hasAfter && <th className="w-14 pb-2 text-center font-normal">After</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {primary.map(row)}
+          {passedBoth.length > 0 && (
+            <>
+              <tr className="border-b border-line">
+                <td colSpan={hasAfter ? 3 : 2} className="py-0">
+                  <button type="button" className="flex w-full items-center gap-2 py-2.5 text-left text-sm text-muted hover:text-ink" aria-expanded={showPassed} onClick={() => setShowPassed((v) => !v)}>
+                    <CircleCheck {...iconProps} className="text-pass" />
+                    <span className="flex-1">
+                      {passedBoth.length} passed before and after
+                    </span>
+                    <ChevronDown {...iconProps} className={`transition-transform ${showPassed ? "rotate-180" : ""}`} />
+                  </button>
+                </td>
+              </tr>
+              {showPassed && passedBoth.map(row)}
+            </>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -38,52 +153,73 @@ export function ChecksTab({ results, assertions, scenarioName, side }: { results
   const names = new Map(assertions.map((a) => [a.id, a.description]));
   const failed = results.filter((r) => r.status === "fail").length;
   return (
-    <div className="py-6">
-      <p className="label mb-3">
+    <div className="pt-4">
+      <p className="mb-3 text-xs text-muted">
         {scenarioName}, {side}: {results.length - failed} of {results.length} passed
       </p>
-      {results.length === 0 && <p className="text-muted">No results for this scenario yet.</p>}
-      <ul>
-        {results.map((r) => (
-          <li key={r.assertion_id} className="flex gap-3 border-b border-line py-3">
-            <span className="mt-1 w-4 shrink-0">
-              {r.status === "pass" && <Icon name="check" className="text-pass" />}
-              {r.status === "fail" && <Icon name="x" className="text-fail" />}
-              {r.status === "not_exercised" && <Icon name="dash" className="text-muted" />}
-            </span>
-            <span className="min-w-0">
-              <span className="block">{names.get(r.assertion_id) ?? r.type}</span>
-              <span className="block text-xs text-muted">{r.evidence}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {results.length === 0 && <p className="text-sm text-muted">No results for this scenario yet.</p>}
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-line text-xs text-muted">
+            <th className="w-8 pb-2 font-normal" />
+            <th className="pb-2 pr-4 font-normal">Check</th>
+            <th className="hidden pb-2 font-normal sm:table-cell">Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((r) => (
+            <tr key={r.assertion_id} className="border-b border-line last:border-b-0">
+              <td className="py-2.5 align-middle">
+                {r.status === "pass" && <CircleCheck {...iconProps} className="text-pass" />}
+                {r.status === "fail" && <CircleX {...iconProps} className="text-fail" />}
+                {r.status === "not_exercised" && <Minus {...iconProps} className="text-muted" />}
+              </td>
+              <td className="py-2.5 pr-4 align-middle text-ink">
+                {names.get(r.assertion_id) ?? r.type}
+                <span className="mt-0.5 block text-xs text-muted sm:hidden">{r.evidence}</span>
+              </td>
+              <td className="hidden py-2.5 align-middle font-mono text-xs text-muted sm:table-cell">{r.evidence}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/** Serial output, compiler output, warnings and run details. Nothing here is needed to read the verdict. */
-export function LogsTab({ trace, report, warnings, deviceModel }: { trace: Trace | null; report: Report | null; warnings: string[]; deviceModel: Report["device_model"] }) {
+/** Serial output, compiler output, warnings and run details. */
+export function LogsTab({
+  trace,
+  report,
+  warnings,
+  deviceModel,
+  hideCompile = false,
+}: {
+  trace: Trace | null;
+  report: Report | null;
+  warnings: string[];
+  deviceModel: Report["device_model"];
+  hideCompile?: boolean;
+}) {
   const llm = report?.llm;
+  const hasSerial = !!trace && trace.serial_log.length > 0;
   return (
-    <div className="space-y-5 py-6">
-      <Fold title={`Serial output${trace ? ` (${trace.serial_log.length})` : ""}`} defaultOpen contentClassName="pl-5">
-        <div className="scroll max-h-[260px] overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs leading-5">
-          {!trace || trace.serial_log.length === 0 ? (
-            <span className="text-muted">No output</span>
-          ) : (
-            trace.serial_log.slice(0, 400).map((l, i) => (
+    <div className="space-y-5 pt-4">
+      {hasSerial && (
+        <Fold title={`Serial output (${trace.serial_log.length})`} defaultOpen contentClassName="pl-5">
+          <div className="scroll max-h-[260px] overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] leading-5">
+            {trace.serial_log.slice(0, 400).map((l, i) => (
               <div key={i} className="flex gap-3 whitespace-pre">
                 <span className="shrink-0 text-muted">{(l.t_ms / 1000).toFixed(3)}</span>
                 <span>{l.text}</span>
               </div>
-            ))
-          )}
-        </div>
-      </Fold>
-      {report?.compile_log && (
+            ))}
+          </div>
+        </Fold>
+      )}
+      {!hideCompile && report?.compile_log && (
         <Fold title="Compiler output" contentClassName="pl-5">
-          <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-raised p-3 font-mono text-xs text-muted">{report.compile_log}</pre>
+          <pre className="scroll max-h-64 overflow-auto rounded-md border border-line bg-[#FAFAFA] p-3 font-mono text-[13px] text-muted">{report.compile_log}</pre>
         </Fold>
       )}
       {warnings.length > 0 && (
@@ -108,7 +244,7 @@ export function LogsTab({ trace, report, warnings, deviceModel }: { trace: Trace
         </Fold>
       )}
       {llm && llm.calls > 0 && (
-        <p className="num pt-2 text-muted">
+        <p className="num pt-2 text-xs text-muted">
           {llm.model}: {llm.calls} calls, {llm.repairs} repairs, {llm.prompt_tokens + llm.completion_tokens} tokens
         </p>
       )}

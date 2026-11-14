@@ -115,10 +115,129 @@ export function keyNumber(evidence: string | undefined | null): string {
   return m ? m[1] : clip(fact.replace(/^[AD]\d+ /, ""), 32);
 }
 
+/**
+ * Short evidence for a bug chip, using the rule's quantity in a few words
+ * ("23 switches / 5 s", "fan on after 1 s"). Derived from the assertion type.
+ */
+export function chipEvidence(type: string, evidence: string | undefined | null, subject = ""): string {
+  if (!evidence) {
+    return "";
+  }
+  const name = (subject.trim() || "output").toLowerCase();
+  switch (type) {
+    case "max_toggles": {
+      const win = /^(\w+) toggled (\d+) times? in a (\d+) ms window/.exec(evidence);
+      if (win) {
+        const n = Number(win[2]);
+        return `${n} switch${n === 1 ? "" : "es"} / ${seconds(Number(win[3]))}`;
+      }
+      const whole = /^(\w+) toggled (\d+) time\(s\) in ([\d.]+) ?s/.exec(evidence);
+      if (whole) {
+        const n = Number(whole[2]);
+        return `${n} switch${n === 1 ? "" : "es"} / ${seconds(parseFloat(whole[3]) * 1000)}`;
+      }
+      break;
+    }
+    case "safe_state_on_fault": {
+      const reached = /(\w+) reached safe state (HIGH|LOW) within (\d+) ms/.exec(evidence);
+      if (reached) {
+        return `${name} ${reached[2] === "HIGH" ? "on" : "off"} after ${seconds(Number(reached[3]))}`;
+      }
+      const notSafe = /(\w+) was not in safe state (HIGH|LOW) for (\d+) ms/.exec(evidence);
+      if (notSafe) {
+        return `${name} ${notSafe[2] === "HIGH" ? "on" : "off"} after ${seconds(Number(notSafe[3]))}`;
+      }
+      break;
+    }
+    case "responsive": {
+      const silent = /went silent for (\d+) ms/.exec(evidence) || /^Longest silent gap was (\d+) ms/.exec(evidence);
+      if (silent) {
+        return `silent ${seconds(Number(silent[1]))}`;
+      }
+      break;
+    }
+    case "timed_pulse": {
+      const pulses = /^(\w+) ran (\d+) pulse\(s\), lasting \d+ to (\d+) ms/.exec(evidence);
+      if (pulses) {
+        return `${pulses[2]} pulse${pulses[2] === "1" ? "" : "s"} / ${seconds(Number(pulses[3]))}`;
+      }
+      const missed = /^(\w+) missed (\d+) of (\d+) trigger/.exec(evidence);
+      if (missed) {
+        return `missed ${missed[2]} of ${missed[3]}`;
+      }
+      break;
+    }
+    case "toggle_per_press": {
+      const bad = /^(\d+) of (\d+) press\(es\) did not toggle/.exec(evidence);
+      if (bad) {
+        return `${bad[1]} of ${bad[2]} presses`;
+      }
+      const ok = /^All (\d+) press\(es\) toggled/.exec(evidence);
+      if (ok) {
+        return `all ${ok[1]} presses`;
+      }
+      break;
+    }
+    case "output_follows": {
+      const wrong = /^(\w+) was in the wrong state for (\d+) ms/.exec(evidence);
+      if (wrong) {
+        return `wrong ${seconds(Number(wrong[2]))}`;
+      }
+      break;
+    }
+    case "serial_value_matches": {
+      const off = /: off by ([\d.]+ ?\S+)/.exec(evidence);
+      if (off) {
+        return `off by ${off[1]}`;
+      }
+      const within = /^(\d+) printed values within/.exec(evidence);
+      if (within) {
+        return `${within[1]} values ok`;
+      }
+      break;
+    }
+    case "serial_period": {
+      const silent = /went silent for (\d+) ms/.exec(evidence) || /^Longest silent gap was (\d+) ms/.exec(evidence);
+      if (silent) {
+        return `gap ${seconds(Number(silent[1]))}`;
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  return clip(keyNumber(evidence) || firstClause(evidence), 28);
+}
+
 export function duration(from: number, to: number | null): string {
   if (to === null) {
     return "";
   }
   const s = Math.round(to - from);
   return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
+}
+
+/** Display a run title with the first letter capitalized. */
+export function displayTitle(title: string | null | undefined): string {
+  const t = (title ?? "").trim() || "Untitled";
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+/** Compact run duration for tables: "33s", "1m 23s", "1h 16m". */
+export function shortDuration(from: number, to: number | null): string {
+  if (to === null) {
+    return "";
+  }
+  const s = Math.max(0, Math.round(to - from));
+  if (s < 60) {
+    return `${s}s`;
+  }
+  const m = Math.floor(s / 60);
+  if (m < 60) {
+    const rem = s % 60;
+    return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
+  }
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return remM === 0 ? `${h}h` : `${h}h ${remM}m`;
 }

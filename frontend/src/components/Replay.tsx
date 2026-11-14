@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Bug, ChevronDown, CircleCheck } from "lucide-react";
 import { PinSpec, Scenario, Trace, Violation } from "../api";
+import { iconProps } from "../icons";
 import { fmtTime } from "../trace";
 import { BoardStage, StageChip } from "./BoardStage";
 import { Icon } from "./Common";
@@ -92,23 +94,47 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
   return (
     <section id="replay" className="scroll-mt-20">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <Select label="Scenario" className="w-auto max-w-[min(360px,100%)]" value={scenarioId ?? ""} onChange={onScenario} options={scenarios.map((s) => ({ value: s.id, label: s.name }))} />
+        <Select
+          label="Scenario"
+          className="w-auto max-w-[min(360px,100%)] !border-line !bg-white"
+          value={scenarioId ?? ""}
+          onChange={onScenario}
+          options={scenarios.map((s) => ({ value: s.id, label: s.name }))}
+        />
         {hasAfter && (
           <Segmented
             label="Firmware version"
             value={side}
             onChange={switchSide}
             options={[
-              { value: "before", label: "Before" },
-              { value: "after", label: "After" },
+              {
+                value: "before",
+                label: (
+                  <>
+                    <Bug {...iconProps} />
+                    Before
+                  </>
+                ),
+              },
+              {
+                value: "after",
+                label: (
+                  <>
+                    <CircleCheck {...iconProps} />
+                    After
+                  </>
+                ),
+              },
             ]}
           />
         )}
       </div>
 
-      <div className="screen rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
-        <div className="relative px-3 pt-3">
-          {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} className="mx-auto max-w-[960px]" /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} />}
+      <div className="screen overflow-hidden rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="relative w-full pt-1 sm:px-3 sm:pt-3">
+          <div className="w-full sm:mx-auto sm:max-w-[960px]">
+            {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} className="block w-full" />}
+          </div>
           {!trace && <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>}
         </div>
 
@@ -153,8 +179,8 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
         </div>
 
         <Collapsible.Root open={chart} onOpenChange={setChart} className="border-t border-screen-line">
-          <Collapsible.Trigger className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-screen-muted transition-colors hover:text-screen-ink data-[state=open]:text-screen-ink">
-            <Icon name="chevron" className="chev h-3 w-3" /> Signal trace
+          <Collapsible.Trigger className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-screen-muted transition-colors hover:text-screen-ink data-[state=open]:text-screen-ink" aria-label={chart ? "Collapse signal trace" : "Expand signal trace"}>
+            <ChevronDown {...iconProps} className={`transition-transform ${chart ? "rotate-180" : ""}`} aria-hidden="true" /> Signal trace
           </Collapsible.Trigger>
           <Collapsible.Content className="fold">
             {trace && (

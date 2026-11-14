@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="178 125 394 500">
+  <defs>
+    <clipPath id="hx"><path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z"/></clipPath>
+    <clipPath id="hl"><ellipse cx="375" cy="179.32" rx="150" ry="45"/></clipPath>
+  </defs>
+  <path d="M375 179.32L562.5 288.41V506.59L375 615.68L187.5 506.59V288.41Z" fill="none" stroke="currentColor" stroke-width="60" clip-path="url(#hx)"/>
+  <ellipse cx="375" cy="179.32" rx="150" ry="45" fill="none" stroke="#E8C15A" stroke-width="60" clip-path="url(#hl)"/>
+</svg>

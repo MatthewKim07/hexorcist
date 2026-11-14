@@ -1,126 +1,149 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { Activity, Loader2, LucideIcon, Play, ShieldCheck, Siren, Thermometer, ToggleLeft } from "lucide-react";
 import { api, Health, Preset, RunSummary } from "../api";
-import { useStripText } from "./Chassis";
-import { HeroScope } from "./HeroScope";
-import { reducedMotion } from "./ui";
+import { iconCardProps, iconProps } from "../icons";
+import { usePasscodeGate } from "./Chassis";
+import { RunsTable } from "./RunsTable";
+import { Tooltip } from "./ui";
 
 /** A run of an example, with the checks the example ships, so the run measures exactly what its chips say. */
 export function startPreset(p: Preset, compare = false) {
   return api.start({ mode: "break", title: p.title, firmware: p.firmware, pins: p.pins, behaviour: p.behaviour, compare, ...(p.checks ? { checks: p.checks } : {}) });
 }
 
-/** Reveal a pane once it is mostly on screen. One motion per section; none under reduced motion. */
-function useReveal<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-  const [on, setOn] = useState(() => reducedMotion());
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || reducedMotion()) {
-      setOn(true);
-      return;
-    }
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setOn(true), { threshold: 0.35 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return { ref, on };
+/** Short card copy for each preset. Tags stay short and mono. Blurb is the icon tooltip. */
+const CARD: Record<string, { blurb: string; tag: string; Icon: LucideIcon }> = {
+  thermostat: { blurb: "Fan chatters near the threshold", tag: "hysteresis", Icon: Thermometer },
+  button: { blurb: "One press toggles the LED many times", tag: "debounce", Icon: ToggleLeft },
+  logger: { blurb: "Printed temperature is scaled wrong", tag: "units", Icon: Activity },
+  alarm: { blurb: "Short presses never reach the siren", tag: "blocking delay", Icon: Siren },
+  containment: { blurb: "Uploads hostile code. Nothing should escape.", tag: "security demo", Icon: ShieldCheck },
+};
+
+function DeviceIcon({ id, blurb }: { id: string; blurb: string }) {
+  const Icon = CARD[id]?.Icon ?? Activity;
+  return (
+    <Tooltip content={blurb}>
+      <span
+        tabIndex={0}
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-[#FAFAFA] text-ink"
+        aria-label={blurb}
+      >
+        <Icon {...iconCardProps} />
+      </span>
+    </Tooltip>
+  );
 }
 
-function Pane({ children, className = "", id }: { children: React.ReactNode; className?: string; id?: string }) {
-  const { ref, on } = useReveal<HTMLElement>();
+function RunButton({ title, busy, disabled, onClick }: { title: string; busy: boolean; disabled: boolean; onClick: () => void }) {
+  const label = busy ? `Starting ${title}` : `Run ${title}`;
   return (
-    <section ref={ref} id={id} data-in={on || undefined} className={`story-pane ${className}`}>
-      {children}
-    </section>
+    <Tooltip content={busy ? "Starting…" : `Run ${title}`}>
+      <button
+        type="button"
+        aria-label={label}
+        className="key inline-flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-white text-ink disabled:opacity-50"
+        style={{ borderRadius: 8 }}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        {busy ? <Loader2 {...iconProps} className="animate-spin" /> : <Play {...iconProps} />}
+      </button>
+    </Tooltip>
   );
 }
 
 export function Landing({ health, onStarted }: { health: Health | null; onStarted: (id: string) => void }) {
-  const scroller = useRef<HTMLDivElement>(null);
-  const [thermostat, setThermostat] = useState<Preset | null>(null);
-  const [finished, setFinished] = useState<RunSummary | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [recent, setRecent] = useState<RunSummary[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  useStripText(busy ? "Starting" : "");
+  const withPasscode = usePasscodeGate();
 
   useEffect(() => {
     api
       .presets()
-      .then((list) => setThermostat(list.find((p) => p.id === "thermostat") ?? null))
+      .then(setPresets)
       .catch((e) => setError(e.message));
     api
       .runs()
-      .then((runs) => {
-        const done = runs.filter((r) => r.mode === "break" && r.status === "fixed");
-        setFinished(done.find((r) => /thermostat/i.test(r.title)) ?? done[0] ?? null);
-      })
-      .catch(() => undefined);
+      .then(setRecent)
+      .catch(() => setRecent([]));
   }, []);
 
-  const run = async () => {
-    if (!thermostat) {
-      return;
-    }
-    setBusy(true);
+  const run = async (p: Preset) => {
+    setBusyId(p.id);
     setError("");
     try {
-      onStarted((await startPreset(thermostat)).run_id);
+      onStarted((await withPasscode(() => startPreset(p))).run_id);
     } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
+      const msg = (e as Error).message;
+      if (msg !== "Passcode cancelled") {
+        setError(msg);
+      }
+      setBusyId(null);
     }
   };
 
-  const toExample = () => {
-    document.getElementById("example")?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" });
-  };
+  const canRun = health === null || health.llm_configured;
+  const bugs = presets.filter((p) => p.id !== "containment");
+  const containment = presets.find((p) => p.id === "containment");
+  const recentRows = recent?.slice(0, 5) ?? [];
 
   return (
-    <div ref={scroller} className="story -mx-5 -mb-8 -mt-3 sm:-mx-8">
-      <Pane className="relative items-center justify-center text-center">
-        <h1 className="text-[clamp(2.75rem,8vw,5.5rem)] font-semibold leading-none tracking-[-0.04em] text-ink">Hexorcist</h1>
-        <p className="mt-5 max-w-[22ch] text-base text-muted sm:text-lg">Casts the bugs out of your firmware.</p>
-        <button type="button" onClick={toExample} className="key absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 !font-normal text-muted" aria-label="See an example">
-          <span className="story-hint h-7 w-px bg-line" />
-          <span className="text-xs">See an example</span>
-        </button>
-      </Pane>
+    <div>
+      <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-ink">Break your firmware.</h1>
+      <p className="mt-3 text-sm text-muted">Hexorcist attacks your Arduino sketch on an emulated chip, then proves the fix.</p>
 
-      <Pane id="example" className="justify-center gap-5 px-4 sm:px-6">
-        <p className="text-center text-sm text-muted">A fan that would not stay on.</p>
-        <HeroScope quiet />
-      </Pane>
+      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {bugs.map((p) => {
+          const card = CARD[p.id] ?? { blurb: p.summary, tag: p.id, Icon: Activity };
+          const busy = busyId === p.id;
+          const disabled = !!busyId || !canRun;
+          return (
+            <article key={p.id} className="preset-card flex h-full flex-col border border-line bg-white p-5 transition-[border-color] duration-150">
+              <DeviceIcon id={p.id} blurb={card.blurb} />
+              <h2 className="mt-3 text-sm font-medium text-ink">{p.title}</h2>
+              <div className="mt-auto flex items-center justify-between gap-3 pt-4">
+                <span className="font-mono text-xs text-muted">{card.tag}</span>
+                <RunButton title={p.title} busy={busy} disabled={disabled} onClick={() => run(p)} />
+              </div>
+            </article>
+          );
+        })}
+      </div>
 
-      <Pane className="items-stretch justify-center gap-6 px-4 pb-10 sm:px-6">
-        <p className="text-center text-sm text-muted">Your turn.</p>
-        <div className="mx-auto grid w-full max-w-3xl gap-3 sm:grid-cols-3">
-          <button
-            type="button"
-            disabled={busy || !thermostat || (health !== null && !health.llm_configured)}
-            onClick={run}
-            className="key flex min-h-[120px] flex-col items-start justify-between rounded-xl bg-ink p-5 text-left text-bg disabled:opacity-50"
-          >
-            <span className="text-xs text-bg/55">Example</span>
-            <span className="text-lg font-semibold tracking-tight">{busy ? "Starting…" : "Try the fan"}</span>
-          </button>
-          <a href="#/break" className="key flex min-h-[120px] flex-col items-start justify-between rounded-xl border border-line bg-raised p-5 text-left text-ink">
-            <span className="text-xs text-muted">Blank</span>
-            <span className="text-lg font-semibold tracking-tight">Your sketch</span>
-          </a>
-          {finished ? (
-            <a href={`#/runs/${finished.id}`} className="key flex min-h-[120px] flex-col items-start justify-between rounded-xl border border-line bg-raised p-5 text-left text-ink">
-              <span className="text-xs text-muted">Done</span>
-              <span className="text-lg font-semibold tracking-tight">A finished run</span>
-            </a>
-          ) : (
-            <span className="flex min-h-[120px] flex-col items-start justify-between rounded-xl border border-dashed border-line p-5 text-left text-muted">
-              <span className="text-xs">Done</span>
-              <span className="text-lg font-semibold tracking-tight text-muted/70">No runs yet</span>
-            </span>
-          )}
+      {containment && (
+        <div className="mt-8">
+          <p className="mb-3 text-xs text-muted">Security</p>
+          <article className="preset-card flex items-center gap-3 border border-line bg-white p-5 transition-[border-color] duration-150">
+            <DeviceIcon id="containment" blurb={CARD.containment.blurb} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-sm font-medium text-ink">{containment.title}</h2>
+                  <span className="font-mono text-xs text-muted">{CARD.containment.tag}</span>
+                </div>
+                <RunButton title={containment.title} busy={busyId === containment.id} disabled={!!busyId} onClick={() => run(containment)} />
+              </div>
+            </div>
+          </article>
         </div>
-        {error && <p className="text-center text-sm text-fail">{error}</p>}
-      </Pane>
+      )}
+
+      {error && <p className="mt-4 text-sm text-fail">{error}</p>}
+
+      {recentRows.length > 0 && (
+        <section className="mt-12">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-ink">Recent runs</h2>
+            <a href="#/runs" className="text-sm text-muted transition-colors hover:text-ink">
+              View all →
+            </a>
+          </div>
+          <RunsTable runs={recentRows} />
+        </section>
+      )}
     </div>
   );
 }
