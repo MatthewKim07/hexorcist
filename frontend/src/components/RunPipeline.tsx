@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, Circle, CircleCheck, CircleX, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Circle, CircleCheck, CircleX, Loader2, Terminal } from "lucide-react";
 import { shortDuration } from "../format";
 import { iconProps } from "../icons";
 import { RunState, STEP_LABELS, STEP_ORDER, StepName, StepState } from "../useRun";
@@ -76,10 +76,7 @@ function stepDuration(step: StepState | undefined, nowSec: number): string {
   return shortDuration(step.startedAt, end);
 }
 
-/** Vercel build-log style vertical step list for a live or finished run. */
-export function RunPipeline({ state, finished }: { state: RunState; finished: boolean }) {
-  const mode = state.run?.mode ?? "break";
-  const names = stepList(mode, state.steps, finished);
+function StepRows({ state, names, finished }: { state: RunState; names: StepName[]; finished: boolean }) {
   const runningName = names.find((n) => state.steps[n]?.status === "running") ?? null;
   const [open, setOpen] = useState<StepName | null>(null);
   const [now, setNow] = useState(() => Date.now() / 1000);
@@ -102,12 +99,8 @@ export function RunPipeline({ state, finished }: { state: RunState; finished: bo
     return () => clearInterval(id);
   }, [finished]);
 
-  if (!names.length) {
-    return null;
-  }
-
   return (
-    <ol className="divide-y divide-line border border-line" style={{ borderRadius: 8 }}>
+    <ol className="divide-y divide-line">
       {names.map((name) => {
         const step = state.steps[name];
         const status = statusOf(step);
@@ -137,5 +130,55 @@ export function RunPipeline({ state, finished }: { state: RunState; finished: bo
         );
       })}
     </ol>
+  );
+}
+
+/** Vercel build-log style step list. Finished runs collapse to one "Build log" row. */
+export function RunPipeline({ state, finished }: { state: RunState; finished: boolean }) {
+  const mode = state.run?.mode ?? "break";
+  const names = stepList(mode, state.steps, finished);
+  const [logOpen, setLogOpen] = useState(false);
+
+  if (!names.length) {
+    return null;
+  }
+
+  const totalDur =
+    state.run?.finished_at && state.run.created_at
+      ? shortDuration(state.run.created_at, state.run.finished_at)
+      : (() => {
+          const starts = names.map((n) => state.steps[n]?.startedAt).filter((t): t is number => t != null);
+          const ends = names.map((n) => state.steps[n]?.endedAt).filter((t): t is number => t != null);
+          if (!starts.length || !ends.length) {
+            return "";
+          }
+          return shortDuration(Math.min(...starts), Math.max(...ends));
+        })();
+
+  if (finished) {
+    return (
+      <div className="border border-line" style={{ borderRadius: 8 }}>
+        <button type="button" className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink" onClick={() => setLogOpen((v) => !v)} aria-expanded={logOpen}>
+          <Terminal {...iconProps} className="shrink-0 text-muted" />
+          <span className="font-medium">Build log</span>
+          <span className="num min-w-0 flex-1 truncate text-xs text-muted">
+            {names.length} step{names.length === 1 ? "" : "s"}
+            {totalDur ? ` · ${totalDur}` : ""}
+          </span>
+          <ChevronDown {...iconProps} className={`shrink-0 text-muted transition-transform ${logOpen ? "rotate-180" : ""}`} />
+        </button>
+        {logOpen && (
+          <div className="border-t border-line">
+            <StepRows state={state} names={names} finished />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-line" style={{ borderRadius: 8 }}>
+      <StepRows state={state} names={names} finished={false} />
+    </div>
   );
 }

@@ -385,9 +385,11 @@ export function RunView({ runId }: { runId: string }) {
         connectionLost={state.connectionLost}
       />
 
-      <RunPipeline state={state} finished={!running} />
+      {running && <RunPipeline state={state} finished={false} />}
 
       {!running && <FinishedReport runId={runId} state={state} status={status} />}
+
+      {!running && <RunPipeline state={state} finished />}
     </div>
   );
 }
