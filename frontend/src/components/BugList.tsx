@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { ArrowRight, Check, ChevronDown, CircleCheck, CircleX, Copy, FileDiff, Ruler } from "lucide-react";
 import { AssertionDef, Bug, PinSpec, Report } from "../api";
-import { chipLabel } from "../checks";
-import { keyNumber } from "../format";
+import { anchorOf, chipLabel, shortRole } from "../checks";
+import { chipEvidence } from "../format";
 import { iconProps } from "../icons";
 import { DiffView } from "./Common";
 import { Collapsible, Tooltip } from "./ui";
@@ -23,7 +23,7 @@ interface Props {
 function evidenceChip(label: string, text: string, tone: "fail" | "pass") {
   return (
     <span className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs ${tone === "fail" ? "border-fail/30 bg-fail/10 text-fail" : "border-pass/30 bg-pass/10 text-pass"}`}>
-      {label} {text}
+      {label}: {text}
     </span>
   );
 }
@@ -59,8 +59,10 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
       {bugs.map((bug) => {
         const rule = assertions.find((a) => a.id === bug.assertion_id);
         const isOpen = open === bug.id;
-        const beforeN = keyNumber(bug.before?.evidence ?? bug.evidence);
-        const afterN = bug.after?.status === "pass" ? keyNumber(bug.after.evidence) : "";
+        const outPin = rule?.output_pin || (rule && anchorOf(rule) !== "usb" ? anchorOf(rule) : "");
+        const subject = outPin ? shortRole(pins.find((p) => p.pin === outPin), outPin) : "";
+        const beforeN = chipEvidence(bug.assertion_type, bug.before?.evidence ?? bug.evidence, subject);
+        const afterN = bug.after?.status === "pass" ? chipEvidence(bug.assertion_type, bug.after.evidence, subject) : "";
         const fixed = bug.verified;
         return (
           <Collapsible.Root
