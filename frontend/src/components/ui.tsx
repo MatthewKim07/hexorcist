@@ -46,7 +46,7 @@ function useIndicator(selector: string, deps: unknown[]) {
 
 export interface Option<T extends string> {
   value: T;
-  label: string;
+  label: ReactNode;
 }
 
 export function Select<T extends string>({ value, onChange, options, label, mono = false, className = "" }: { value: T; onChange: (v: T) => void; options: Option<T>[]; label: string; mono?: boolean; className?: string }) {
@@ -68,7 +68,7 @@ export function Select<T extends string>({ value, onChange, options, label, mono
                 <RSelect.ItemIndicator className="absolute left-2 text-ink">
                   <Icon name="check" className="h-3 w-3" />
                 </RSelect.ItemIndicator>
-                <RSelect.ItemText>{o.label}</RSelect.ItemText>
+                <RSelect.ItemText>{typeof o.label === "string" ? o.label : String(o.value)}</RSelect.ItemText>
               </RSelect.Item>
             ))}
           </RSelect.Viewport>
@@ -111,7 +111,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           style={{ transform: `translateX(${pos.x}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }}
         />
         {options.map((o) => (
-          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded-[5px] px-5 py-1.5 !font-normal text-muted aria-checked:text-white">
+          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 inline-flex items-center gap-1.5 rounded-[5px] px-4 py-1.5 !font-normal text-muted aria-checked:text-white">
             {o.label}
           </RToggle.Item>
         ))}

@@ -1,6 +1,8 @@
+import { Plus } from "lucide-react";
 import { PinSpec, PinType } from "../api";
+import { iconProps } from "../icons";
 import { Icon } from "./Common";
-import { Checkbox, Select } from "./ui";
+import { Checkbox, Select, Tooltip } from "./ui";
 
 const PINS = [...Array.from({ length: 14 }, (_, i) => `D${i}`), ...Array.from({ length: 6 }, (_, i) => `A${i}`)];
 const TYPES: { value: PinType; label: string }[] = [
@@ -39,13 +41,16 @@ export function PinTable({ pins, onChange }: { pins: PinSpec[]; onChange: (pins:
           ) : (
             <span className="hidden sm:block" />
           )}
-          <button type="button" aria-label={`Remove ${p.pin}`} className="key h-6 w-6 rounded text-muted hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
-            <Icon name="x" className="h-3 w-3" />
-          </button>
+          <Tooltip content={`Remove ${p.pin}`}>
+            <button type="button" aria-label={`Remove ${p.pin}`} className="key h-6 w-6 rounded text-muted hover:text-fail" onClick={() => onChange(pins.filter((_, j) => j !== i))}>
+              <Icon name="x" className="h-3 w-3" />
+            </button>
+          </Tooltip>
         </div>
       ))}
-      <button type="button" className="btn-ghost !px-0 mt-1 text-sm" onClick={() => onChange([...pins, { pin: free, role: "", type: "digital_output", scale: "", active_low: false }])}>
-        + Add pin
+      <button type="button" className="btn-ghost !px-0 mt-1 inline-flex items-center gap-1.5 text-sm" onClick={() => onChange([...pins, { pin: free, role: "", type: "digital_output", scale: "", active_low: false }])}>
+        <Plus {...iconProps} />
+        Add pin
       </button>
     </div>
   );

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Bug, Info, Play, Sparkles, Upload, Wand2 } from "lucide-react";
 import { api, Health, PinSpec, Preset } from "../api";
+import { iconProps } from "../icons";
 import { usePasscodeGate } from "./Chassis";
 import { PinTable } from "./PinTable";
-import { Checkbox, Segmented } from "./ui";
+import { Checkbox, Segmented, Tooltip } from "./ui";
 
 type Mode = "break" | "build";
 
@@ -11,6 +13,25 @@ const BUILD_EXAMPLES = [
   { label: "Door chime", text: "A door chime: push button on D2 to ground, buzzer on D8. Each press sounds the buzzer for exactly 1 second, and a heartbeat line prints every second." },
   { label: "Light logger", text: "A light logger: photoresistor on A0, 1 mV per mV. Print the reading every 500 ms, and turn the LED on D13 on when it stays below 1000 mV." },
 ];
+
+function LabelHint({ htmlFor, children, hint }: { htmlFor?: string; children: string; hint: string }) {
+  return (
+    <span className="mb-1.5 inline-flex items-center gap-1.5">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="form-label">
+          {children}
+        </label>
+      ) : (
+        <span className="form-label">{children}</span>
+      )}
+      <Tooltip content={hint}>
+        <button type="button" aria-label={hint} className="inline-flex text-muted outline-none hover:text-ink focus-visible:ring-2 focus-visible:ring-ink/20">
+          <Info {...iconProps} />
+        </button>
+      </Tooltip>
+    </span>
+  );
+}
 
 export function NewRun({ health, onStarted, initialMode = "break" }: { health: Health | null; onStarted: (id: string) => void; initialMode?: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -91,8 +112,9 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
 
   return (
     <div className="mx-auto w-full max-w-[720px]">
-      <a href="#/" className="text-sm text-muted transition-colors hover:text-ink">
-        ← Back
+      <a href="#/" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink">
+        <ArrowLeft {...iconProps} />
+        Back
       </a>
       <h1 className="mt-6 text-[32px] font-semibold leading-tight tracking-[-0.03em] text-ink">New run</h1>
 
@@ -102,13 +124,35 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
           value={mode}
           onChange={setMode}
           options={[
-            { value: "break", label: "Find bugs" },
-            { value: "build", label: "Write firmware" },
+            {
+              value: "break",
+              label: (
+                <>
+                  <Bug {...iconProps} />
+                  Find bugs
+                </>
+              ),
+            },
+            {
+              value: "build",
+              label: (
+                <>
+                  <Wand2 {...iconProps} />
+                  Write firmware
+                </>
+              ),
+            },
           ]}
         />
         {mode === "break" && (
-          <button type="button" className="text-sm text-muted transition-colors hover:text-ink" onClick={fillExample} disabled={!presets.some((p) => p.id === "thermostat")}>
-            Fill with an example
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink disabled:opacity-50"
+            onClick={fillExample}
+            disabled={!presets.some((p) => p.id === "thermostat")}
+          >
+            <Sparkles {...iconProps} />
+            Example
           </button>
         )}
       </div>
@@ -118,29 +162,32 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
           <>
             <div>
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                <label htmlFor="sketch" className="form-label">
+                <LabelHint htmlFor="sketch" hint="Arduino Uno sketch. Compiles and runs only in the sandbox.">
                   Sketch
-                </label>
-                <button type="button" className="key border border-line bg-white px-2.5 py-1 text-xs !font-normal text-ink" style={{ borderRadius: 6 }} onClick={() => fileRef.current?.click()}>
-                  Upload .ino
+                </LabelHint>
+                <button
+                  type="button"
+                  className="key inline-flex items-center gap-1.5 border border-line bg-white px-2.5 py-1 text-xs !font-normal text-ink"
+                  style={{ borderRadius: 6 }}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload {...iconProps} />
+                  .ino
                 </button>
                 <input ref={fileRef} type="file" accept=".ino,.cpp,.c,.h,text/plain" className="hidden" onChange={(e) => onUpload(e.target.files?.[0] ?? null)} />
               </div>
-              <p className="mb-2 text-sm text-muted">Arduino Uno sketch. Compiles and runs only in the sandbox.</p>
               <textarea id="sketch" rows={16} className="form-input scroll font-mono text-[13px] leading-relaxed" value={firmware} onChange={(e) => setFirmware(e.target.value)} placeholder={"void setup()\n{\n  pinMode(9, OUTPUT);\n}\n\nvoid loop()\n{\n}"} spellCheck={false} />
             </div>
 
             <div>
-              <div className="form-label mb-1.5">Pins</div>
-              <p className="mb-2 text-sm text-muted">What is wired to the board: inputs the tests drive, outputs the checks watch.</p>
+              <LabelHint hint="What is wired to the board: inputs the tests drive, outputs the checks watch.">Pins</LabelHint>
               <PinTable pins={pins} onChange={setPins} />
             </div>
 
             <div>
-              <label htmlFor="behaviour" className="form-label mb-1.5 block">
+              <LabelHint htmlFor="behaviour" hint="What it must do, with numbers.">
                 Behaviour
-              </label>
-              <p className="mb-2 text-sm text-muted">What it must do, with numbers.</p>
+              </LabelHint>
               <textarea id="behaviour" rows={5} className="form-input scroll leading-relaxed" value={behaviour} onChange={(e) => setBehaviour(e.target.value)} placeholder="Fan on at 30 °C, off at 27 °C…" />
             </div>
 
@@ -150,10 +197,9 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
           </>
         ) : (
           <div>
-            <label htmlFor="description" className="form-label mb-1.5 block">
+            <LabelHint htmlFor="description" hint="Sensors, outputs, pins, behaviour. It writes the firmware, then attacks it.">
               Device
-            </label>
-            <p className="mb-2 text-sm text-muted">Sensors, outputs, pins, behaviour. It writes the firmware, then attacks it.</p>
+            </LabelHint>
             <textarea id="description" rows={8} className="form-input scroll leading-relaxed" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A greenhouse fan: LM35 on A0…" />
             <div className="mt-3 flex flex-wrap gap-2">
               {BUILD_EXAMPLES.map((e) => (
@@ -170,7 +216,8 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
         {error && <p className="mb-3 text-sm text-fail">{error}</p>}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
           {why && <p className="text-[13px] text-muted">{why}</p>}
-          <button type="button" className="btn-primary w-full sm:w-auto" disabled={!ready || busy || !llm} onClick={start}>
+          <button type="button" className="btn-primary inline-flex w-full items-center justify-center gap-1.5 sm:w-auto" disabled={!ready || busy || !llm} onClick={start}>
+            <Play {...iconProps} />
             {busy ? "Starting…" : "Start run"}
           </button>
         </div>
