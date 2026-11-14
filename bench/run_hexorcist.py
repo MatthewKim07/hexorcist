@@ -17,6 +17,7 @@ sys.path[:0] = [str(_ROOT)]
 load_dotenv(_ROOT / ".env", override=False)
 
 from bench.case_io import RESULTS_DIR, list_case_ids, load_case, write_json
+from bench.llm_budget import estimate_cost
 
 
 def wait_done(client: httpx.Client, run_id: str, timeout_s: float = 900) -> dict:
@@ -109,6 +110,13 @@ def main() -> None:
                 )
             fix = report.get("fix") or {}
             llm = report.get("llm") or {}
+            # Prefer report.llm; fall back to top-level run fields if the API shape differs.
+            model = llm.get("model") or run.get("model") or ""
+            prompt_tokens = int(llm.get("prompt_tokens") or run.get("prompt_tokens") or 0)
+            completion_tokens = int(llm.get("completion_tokens") or run.get("completion_tokens") or 0)
+            cost = llm.get("cost_usd")
+            if cost is None and (prompt_tokens or completion_tokens):
+                cost = round(estimate_cost(model, prompt_tokens, completion_tokens), 8)
             rows.append(
                 {
                     "case_id": cid,
@@ -117,14 +125,17 @@ def main() -> None:
                     "bugs": bugs,
                     "patched_sketch": fix.get("patched_firmware") or "",
                     "wall_s": round(time.monotonic() - t0, 2),
-                    "llm_calls": llm.get("calls"),
-                    "prompt_tokens": llm.get("prompt_tokens"),
-                    "completion_tokens": llm.get("completion_tokens"),
-                    "cost_usd": None,  # filled by scorer projection / llm report elsewhere
-                    "model": llm.get("model"),
+                    "llm_calls": llm.get("calls") or run.get("llm_calls"),
+                    "prompt_tokens": prompt_tokens or None,
+                    "completion_tokens": completion_tokens or None,
+                    "cost_usd": cost,
+                    "model": model or None,
                 }
             )
-            print(f"{cid}: status={run.get('status')} bugs={len(bugs)} time={rows[-1]['wall_s']}s")
+            print(
+                f"{cid}: status={run.get('status')} bugs={len(bugs)} "
+                f"time={rows[-1]['wall_s']}s cost={cost}"
+            )
 
     out = {
         "run_id": run_id,
