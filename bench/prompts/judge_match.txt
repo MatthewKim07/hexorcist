@@ -1,14 +1,40 @@
 You grade whether a system-reported bug list covers ground-truth bugs for one firmware case.
 
-Temperature is 0. Be strict: a reported bug matches a truth bug only if it names the same wrong behaviour or the same root cause (not a vague "might be wrong" that could fit anything).
+Temperature is 0.
+
+A reported bug DETECTS a true bug if either:
+1) it names the same root cause, OR
+2) it describes the observable behaviour that the true bug's exposing check tests
+   (same pin/output/serial symptom — e.g. "D13 does not follow the button" detects a
+   wrong-pin bug whose exposing check is output_follows on D13).
+
+Do NOT require the report to use the same category label or to name the root cause
+when the symptom match is clear.
+
+Duplicates: several reports may describe the same true bug. Match each true bug to
+the best single report (lowest reported_index among valid matches). List every other
+report that is the same bug under duplicate_of_truth (they are NOT false alarms).
+
+False alarms: reports that match no true bug after duplicates are assigned.
+
+If truth_bugs is empty (correct case): every report is a false alarm, but merge
+reports that share the same root cause / same claimed violation into one cluster.
+Return unique_false_alarm_indices = one representative index per cluster.
 
 Return JSON only:
 {
   "matches": [
-    {"truth_id": "b1", "reported_index": 0, "matched": true, "reason": "one short sentence"}
+    {"truth_id": "b1", "reported_index": 0, "matched": true, "reason": "short reason"}
+  ],
+  "duplicate_of_truth": [
+    {"truth_id": "b1", "reported_index": 2}
   ],
   "unmatched_reported": [1],
+  "unique_false_alarm_indices": [1],
   "notes": "optional"
 }
 
-Include every truth_id exactly once in matches. reported_index is 0-based into the reported list, or -1 if unmatched.
+Include every truth_id exactly once in matches (matched true or false; reported_index
+-1 if unmatched). unique_false_alarm_indices must list the FA representatives after
+dedupe (for buggy cases: same as unmatched_reported after removing duplicates;
+for correct cases: one index per distinct claimed root cause).

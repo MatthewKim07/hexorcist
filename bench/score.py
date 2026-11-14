@@ -13,6 +13,10 @@ from typing import Any
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(_ROOT), str(_ROOT / "backend")]
 
+from dotenv import load_dotenv
+
+load_dotenv(_ROOT / ".env", override=False)
+
 from bench.case_io import JUDGEMENTS_DIR, RESULTS_DIR, Case, load_case, load_cases, write_json
 from bench.evaluate_gt import build_spec, default_runner, load_assertions, load_scenarios, run_firmware
 from bench.llm_budget import (
@@ -38,6 +42,97 @@ def _judge_endpoint():
     return ep
 
 
+def _plain_check_behaviour(assertion: dict[str, Any]) -> str:
+    """One plain-English line for what an exposing check observes."""
+    t = assertion.get("type") or ""
+    pin = assertion.get("pin") or assertion.get("output_pin") or ""
+    desc = (assertion.get("description") or "").strip()
+    if t == "output_follows":
+        hw = assertion.get("high_when") or {}
+        lw = assertion.get("low_when") or {}
+        within = assertion.get("within_ms")
+        parts = [f"{pin} must follow its stimulus"]
+        if hw:
+            parts.append(f"HIGH when {hw.get('pin')} {hw.get('op')} {hw.get('value')}")
+        if lw:
+            parts.append(f"LOW when {lw.get('pin')} {lw.get('op')} {lw.get('value')}")
+        if within is not None:
+            parts.append(f"within {within} ms")
+        return "; ".join(parts) + (f" ({desc})" if desc else "")
+    if t == "max_toggles":
+        return (
+            f"{pin} must not toggle more than {assertion.get('max_toggles')} times "
+            f"in any {assertion.get('window_ms')} ms window"
+            + (f" ({desc})" if desc else "")
+        )
+    if t == "safe_state_on_fault":
+        safe = assertion.get("safe_value", assertion.get("expected"))
+        fault = assertion.get("fault_when") or "fault condition"
+        return (
+            f"{pin or 'output'} must stay {safe} during sensor fault ({fault})"
+            + (f" ({desc})" if desc else "")
+        )
+    if t == "serial_period":
+        return (
+            f"serial lines matching {assertion.get('pattern')!r} every "
+            f"{assertion.get('period_ms')} ms"
+            + (f" ({desc})" if desc else "")
+        )
+    if t == "serial_value_matches":
+        return (
+            f"serial values for {assertion.get('pattern')!r} match the stimulus "
+            f"(tolerance {assertion.get('tolerance')})"
+            + (f" ({desc})" if desc else "")
+        )
+    if t == "timed_pulse":
+        return (
+            f"{pin} pulse length around {assertion.get('pulse_ms')} ms "
+            f"(tolerance {assertion.get('tolerance_ms')} ms)"
+            + (f" ({desc})" if desc else "")
+        )
+    if t == "toggle_per_press":
+        return f"{pin} toggles exactly once per settled press on {assertion.get('button_pin')}" + (
+            f" ({desc})" if desc else ""
+        )
+    if t == "responsive":
+        return f"{pin} responds to stimulus within {assertion.get('within_ms')} ms" + (
+            f" ({desc})" if desc else ""
+        )
+    if t == "no_crash":
+        return "firmware must not crash"
+    return desc or f"{t} on {pin}".strip()
+
+
+def truth_bugs_for_judge(case: Case) -> list[dict[str, Any]]:
+    """Truth bugs plus plain-language exposing-check behaviour for the judge."""
+    by_id = {a.get("id"): a for a in (case.checks.get("assertions") or []) if isinstance(a, dict)}
+    out = []
+    for bug in case.truth:
+        exposing = []
+        for cid in bug.get("check_ids") or []:
+            a = by_id.get(cid)
+            if a:
+                exposing.append(
+                    {
+                        "check_id": cid,
+                        "type": a.get("type"),
+                        "behaviour": _plain_check_behaviour(a),
+                    }
+                )
+            else:
+                exposing.append({"check_id": cid, "behaviour": f"unknown check {cid}"})
+        out.append(
+            {
+                "id": bug.get("id"),
+                "category": bug.get("category"),
+                "description": bug.get("description"),
+                "check_ids": bug.get("check_ids") or [],
+                "exposing_checks": exposing,
+            }
+        )
+    return out
+
+
 def match_bugs_with_judge(
     case: Case,
     reported: list[dict[str, Any]],
@@ -47,28 +142,20 @@ def match_bugs_with_judge(
 ) -> dict[str, Any]:
     truth = case.truth
     if not truth and not reported:
-        return {"matched_truth_ids": [], "false_alarms": [], "judgement": None}
-    if not truth:
-        return {
-            "matched_truth_ids": [],
-            "false_alarms": list(range(len(reported))),
-            "judgement": {"notes": "correct case; all reports are false alarms", "matches": []},
-        }
+        return {"matched_truth_ids": [], "false_alarms": [], "false_alarm_count": 0, "judgement": None}
 
     system = (PROMPTS / "judge_match.txt").read_text()
-    user = json.dumps(
-        {
-            "case_id": case.id,
-            "spec": case.spec.strip(),
-            "truth_bugs": truth,
-            "reported_bugs": reported,
-        },
-        indent=2,
-    )
+    user_payload = {
+        "case_id": case.id,
+        "spec": case.spec.strip(),
+        "truth_bugs": truth_bugs_for_judge(case),
+        "reported_bugs": reported,
+    }
+    user = json.dumps(user_payload, indent=2)
     raw = judge.chat(
         [{"role": "system", "content": system}, {"role": "user", "content": user}],
         step=f"judge:{system_name}:{case.id}",
-        max_tokens=300,
+        max_tokens=500,
         temperature=0.0,
         json_mode=True,
     )
@@ -87,6 +174,8 @@ def match_bugs_with_judge(
             "system": system_name,
             "reported": reported,
             "truth": truth,
+            "truth_for_judge": user_payload["truth_bugs"],
+            "judge_input": user_payload,
             "raw": text,
             "judgement": judgement,
             "usage": {k: raw[k] for k in ("model", "prompt_tokens", "completion_tokens", "cost_usd", "cached")},
@@ -94,19 +183,45 @@ def match_bugs_with_judge(
     )
 
     matched: list[str] = []
-    used_reported: set[int] = set()
+    credited: set[int] = set()  # reports that detect a truth bug (primary or duplicate)
     for m in judgement.get("matches") or []:
         if m.get("matched") and m.get("truth_id"):
-            matched.append(m["truth_id"])
+            matched.append(str(m["truth_id"]))
             idx = m.get("reported_index", -1)
             if isinstance(idx, int) and idx >= 0:
-                used_reported.add(idx)
-    false_alarms = [i for i in range(len(reported)) if i not in used_reported]
-    # Also honor unmatched_reported if present
-    for i in judgement.get("unmatched_reported") or []:
-        if isinstance(i, int) and i not in false_alarms:
-            false_alarms.append(i)
-    return {"matched_truth_ids": matched, "false_alarms": sorted(set(false_alarms)), "judgement": judgement}
+                credited.add(idx)
+    for d in judgement.get("duplicate_of_truth") or []:
+        idx = d.get("reported_index", -1)
+        if isinstance(idx, int) and idx >= 0:
+            credited.add(idx)
+
+    # Prefer judge's unique_false_alarm_indices (deduped); else unmatched after removing credited.
+    uniq = judgement.get("unique_false_alarm_indices")
+    if isinstance(uniq, list) and all(isinstance(i, int) for i in uniq):
+        false_alarms = sorted(set(uniq))
+    else:
+        unmatched = judgement.get("unmatched_reported")
+        if isinstance(unmatched, list) and unmatched and all(isinstance(i, int) for i in unmatched):
+            false_alarms = sorted({i for i in unmatched if i not in credited})
+        else:
+            false_alarms = sorted(i for i in range(len(reported)) if i not in credited)
+
+    if case.is_correct:
+        # All reports are FAs; count unique root-cause clusters only.
+        if isinstance(uniq, list) and uniq:
+            fa_count = len(set(uniq))
+        else:
+            fa_count = len(false_alarms) if false_alarms else len(reported)
+        false_alarms = list(range(len(reported))) if not false_alarms and reported else false_alarms
+    else:
+        fa_count = len(false_alarms)
+
+    return {
+        "matched_truth_ids": matched,
+        "false_alarms": false_alarms,
+        "false_alarm_count": fa_count,
+        "judgement": judgement,
+    }
 
 
 def verify_patch(case: Case, patched: str | None, runner) -> dict[str, Any]:
@@ -150,21 +265,30 @@ def score_system(
                 )
 
         if judge is None:
-            match = {"matched_truth_ids": [], "false_alarms": list(range(len(norm))), "judgement": None}
+            match = {
+                "matched_truth_ids": [],
+                "false_alarms": list(range(len(norm))),
+                "false_alarm_count": len(norm),
+                "judgement": None,
+            }
         else:
             match = match_bugs_with_judge(case, norm, judge, run_id, system_name)
 
         truth_ids = [b["id"] for b in case.truth]
         detected = set(match["matched_truth_ids"])
         detection = {tid: tid in detected for tid in truth_ids}
-        false_alarms = match["false_alarms"]
-        if case.is_correct:
-            false_alarm_count = len(norm)
-        else:
-            false_alarm_count = len(false_alarms)
+        false_alarm_count = int(match.get("false_alarm_count", len(match.get("false_alarms") or [])))
 
         patch = cr.get("patched_sketch") or cr.get("patched_firmware")
         verify = verify_patch(case, patch, runner)
+
+        cost = cr.get("cost_usd")
+        if cost is None:
+            pt = cr.get("prompt_tokens") or 0
+            ct = cr.get("completion_tokens") or 0
+            model = cr.get("model") or ""
+            if pt or ct:
+                cost = round(estimate_cost(model, int(pt), int(ct)), 8)
 
         row = {
             "case_id": case.id,
@@ -181,7 +305,8 @@ def score_system(
             "llm_calls": cr.get("llm_calls"),
             "prompt_tokens": cr.get("prompt_tokens"),
             "completion_tokens": cr.get("completion_tokens"),
-            "cost_usd": cr.get("cost_usd"),
+            "cost_usd": cost,
+            "model": cr.get("model"),
         }
         rows.append(row)
         for cat in case.categories:
@@ -232,9 +357,13 @@ def markdown_summary(payload: dict[str, Any]) -> str:
         lines.append("| Case | Cats | Det | FA | Compile | Fixed | Time s | Cost |")
         lines.append("| --- | --- | ---: | ---: | --- | --- | ---: | ---: |")
         for r in block["rows"]:
+            cost = r.get("cost_usd")
+            cost_s = "-" if cost is None else cost
+            wall = r.get("wall_s")
+            wall_s = "-" if wall is None else wall
             lines.append(
                 f"| {r['case_id']} | {','.join(r['categories'])} | {r['detected']}/{r['truth_bugs']} | "
-                f"{r['false_alarms']} | {r['compiles']} | {r['fixed']} | {r.get('wall_s') or '-'} | {r.get('cost_usd') or '-'} |"
+                f"{r['false_alarms']} | {r['compiles']} | {r['fixed']} | {wall_s} | {cost_s} |"
             )
         lines.append("")
     if payload.get("budget"):
