@@ -1,0 +1,50 @@
+{
+  "case_id": "bench_led_miswire",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect LED Pin Assignment",
+      "description": "The LED is assigned to pin D12 in the sketch, but according to the pin map, it should be on pin D13.",
+      "category": "wrong_pin"
+    },
+    {
+      "id": "b2",
+      "title": "Timing Issue with LED State Change",
+      "description": "The LED state change does not guarantee reaching the commanded state within 100 ms due to the lack of a delay after setting the LED state.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"one short sentence\"}\n  ],\n  \"unmatched_reported\": [1],\n  \"notes\": \"The second reported bug does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "one short sentence"
+      }
+    ],
+    "unmatched_reported": [
+      1
+    ],
+    "notes": "The second reported bug does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 496,
+    "completion_tokens": 64,
+    "cost_usd": 0.0001128,
+    "cached": false
+  }
+}

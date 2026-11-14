@@ -1,0 +1,234 @@
+{
+  "run_id": "dry_v2_20261114T230218Z",
+  "created_at": "2026-11-14T23:11:06.427790+00:00",
+  "systems": [
+    {
+      "system": "baseline",
+      "cases": 3,
+      "detection_recall": 0.6666666666666666,
+      "bugs_detected": 2,
+      "bugs_truth": 3,
+      "false_alarms": 4,
+      "compile_rate": 1.0,
+      "fix_rate": 0.3333333333333333,
+      "per_category": {
+        "correct": {
+          "cases": 1,
+          "truth_bugs": 0,
+          "false_alarms": 2,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "missing_failsafe": {
+          "cases": 1,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "missing_hysteresis": {
+          "cases": 1,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "wrong_pin": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        }
+      },
+      "rows": [
+        {
+          "case_id": "bench_led_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.97,
+          "llm_calls": 1,
+          "prompt_tokens": 914,
+          "completion_tokens": 667,
+          "cost_usd": 0.0005373
+        },
+        {
+          "case_id": "greenhouse_dual",
+          "categories": [
+            "missing_hysteresis",
+            "missing_failsafe"
+          ],
+          "truth_bugs": 2,
+          "detected": 1,
+          "detection": {
+            "b1": false,
+            "b2": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 15.04,
+          "llm_calls": 1,
+          "prompt_tokens": 983,
+          "completion_tokens": 888,
+          "cost_usd": 0.00068025
+        },
+        {
+          "case_id": "loft_fan_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 14.75,
+          "llm_calls": 1,
+          "prompt_tokens": 1073,
+          "completion_tokens": 870,
+          "cost_usd": 0.00068295
+        }
+      ]
+    },
+    {
+      "system": "hexorcist",
+      "cases": 3,
+      "detection_recall": 0.6666666666666666,
+      "bugs_detected": 2,
+      "bugs_truth": 3,
+      "false_alarms": 5,
+      "compile_rate": 1.0,
+      "fix_rate": 0.6666666666666666,
+      "per_category": {
+        "correct": {
+          "cases": 1,
+          "truth_bugs": 0,
+          "false_alarms": 2,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "missing_failsafe": {
+          "cases": 1,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "missing_hysteresis": {
+          "cases": 1,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "wrong_pin": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 1,
+          "compiles": 1
+        }
+      },
+      "rows": [
+        {
+          "case_id": "bench_led_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 3,
+          "false_alarms": 3,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 99.76,
+          "llm_calls": 7,
+          "prompt_tokens": 25101,
+          "completion_tokens": 3820,
+          "cost_usd": null
+        },
+        {
+          "case_id": "greenhouse_dual",
+          "categories": [
+            "missing_hysteresis",
+            "missing_failsafe"
+          ],
+          "truth_bugs": 2,
+          "detected": 2,
+          "detection": {
+            "b1": true,
+            "b2": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_chatter"
+          ],
+          "wall_s": 161.71,
+          "llm_calls": 6,
+          "prompt_tokens": 14096,
+          "completion_tokens": 3775,
+          "cost_usd": null
+        },
+        {
+          "case_id": "loft_fan_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 181.17,
+          "llm_calls": 6,
+          "prompt_tokens": 17306,
+          "completion_tokens": 3769,
+          "cost_usd": null
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.000634,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "calls": 4
+  }
+}

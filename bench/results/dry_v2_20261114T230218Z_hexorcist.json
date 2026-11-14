@@ -1,0 +1,112 @@
+{
+  "run_id": "dry_v2_20261114T230218Z_hexorcist",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "bench_led_miswire",
+      "run_id": "6a2ed1273098",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Button Press Toggle Failure",
+          "description": "The firmware does not handle rapid button presses correctly, leading to missed toggles. Measured evidence shows that 15 of 15 presses did not toggle D13 exactly once, with counts per press being [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].",
+          "assertion_type": "toggle_per_press",
+          "verified": false,
+          "evidence": "15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].",
+          "root_cause": "The firmware does not handle rapid button presses correctly, leading to missed toggles. Measured evidence shows that 15 of 15 presses did not toggle D13 exactly once, with counts per press being [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]."
+        },
+        {
+          "id": "bug-a2",
+          "title": "LED State Not Following Button Press",
+          "description": "The LED state does not follow the button press as required, remaining LOW for extended periods. Measured evidence indicates D13 was not HIGH for 48 ms while required, first at 901.5 ms, across multiple intervals. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "root_cause": "The LED state does not follow the button press as required, remaining LOW for extended periods. Measured evidence indicates D13 was not HIGH for 48 ms while required, first at 901.5 ms, across multiple intervals."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Blinking Failure on D4 Press",
+          "description": "The firmware fails to blink the LED within the required time frame when D4 is pressed. Measured evidence shows D13 missed 15 of 15 triggers, with the first violation occurring at 801.5 ms, indicating it did not start within 100 ms of the trigger. D13 missed 15 of 15 trigger(s): D13 did not start within 100 ms of the trigger at 802 ms.",
+          "assertion_type": "timed_pulse",
+          "verified": false,
+          "evidence": "D13 missed 15 of 15 trigger(s): D13 did not start within 100 ms of the trigger at 802 ms.",
+          "root_cause": "The firmware fails to blink the LED within the required time frame when D4 is pressed. Measured evidence shows D13 missed 15 of 15 triggers, with the first violation occurring at 801.5 ms, indicating it did not start within 100 ms of the trigger."
+        }
+      ],
+      "patched_sketch": "// Electronics-bench user LED mirror.\n// Momentary probe button on D2 (pull-up), user LED on D13.\n// Mode switch on D4 (pull-up) selects steady vs blink-while-held.\n\nconst int BTN_PIN = 2;\nconst int LED_PIN = 13; // Corrected LED pin to match specification\nconst int MODE_PIN = 4;\nconst unsigned long BLINK_MS = 120;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long DEBOUNCE_MS = 50; // Added debounce time\n\nbool lit = false;\nunsigned long lastBlink = 0;\nunsigned long lastStatus = 0;\nunsigned long pressMs = 0;\nunsigned long lastPressTime = 0; // Added to track last stable press time\nbool lastButtonState = HIGH; // Track the last stable state of the button\n\nvoid setLed(bool on)\n{\n    lit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"bench led=\");\n    Serial.print(lit ? 1 : 0);\n    Serial.print(\" held_ms=\");\n    Serial.println(pressMs);\n}\n\nvoid setup()\n{\n    pinMode(BTN_PIN, INPUT_PULLUP);\n    pinMode(MODE_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    setLed(false);\n    Serial.begin(9600);\n    lastBlink = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool pressed = (digitalRead(BTN_PIN) == LOW);\n    bool blinkMode = (digitalRead(MODE_PIN) == LOW);\n\n    if (!pressed)\n    {\n        pressMs = 0;\n        setLed(false);\n        lastButtonState = HIGH; // Update last button state\n    }\n    else if (pressed && lastButtonState == HIGH && (now - lastPressTime >= DEBOUNCE_MS)) // Check for stable press\n    {\n        lastPressTime = now; // Update last stable press time\n        pressMs = now; // Update press time\n        setLed(true); // Turn on LED\n        lastButtonState = LOW; // Update last button state\n    }\n    else if (pressed && blinkMode && lastButtonState == LOW)\n    {\n        if (pressMs == 0)\n        {\n            pressMs = now;\n            lastBlink = now;\n            setLed(true);\n        }\n        if (now - lastBlink >= BLINK_MS)\n        {\n            lastBlink = now;\n            setLed(!lit);\n        }\n    }\n    else if (!pressed && lastButtonState == LOW)\n    {\n        lastButtonState = HIGH; // Update last button state\n        setLed(false); // Turn off LED when released\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 99.76,
+      "llm_calls": 7,
+      "prompt_tokens": 25101,
+      "completion_tokens": 3820,
+      "cost_usd": null,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "greenhouse_dual",
+      "run_id": "561addbbc5be",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Fan State Toggle Excessive",
+          "description": "The fan toggled 46 times in a 5000 ms window due to sensor noise at the threshold, indicating a lack of hysteresis in the control logic. This is evidenced by the measurement stating 'D9 toggled 46 times in a 5000 ms window starting at 1.30 s'. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": false,
+          "evidence": "D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "root_cause": "The fan toggled 46 times in a 5000 ms window due to sensor noise at the threshold, indicating a lack of hysteresis in the control logic. This is evidenced by the measurement stating 'D9 toggled 46 times in a 5000 ms window starting at 1.30 s'."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Fan Not Forced ON During Fault",
+          "description": "The fan did not enter the safe state when the temperature reading was below 5.0 \u00b0C, remaining OFF for 5400 ms during a sensor disconnection. This is shown by the measurement 'D9 not HIGH for 5400 ms during fault'. During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "assertion_type": "safe_state_on_fault",
+          "verified": true,
+          "evidence": "During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "root_cause": "The fan did not enter the safe state when the temperature reading was below 5.0 \u00b0C, remaining OFF for 5400 ms during a sensor disconnection. This is shown by the measurement 'D9 not HIGH for 5400 ms during fault'."
+        }
+      ],
+      "patched_sketch": "// Greenhouse ridge-vent controller.\n// Soil-air LM35 on A2, exhaust fan relay on D9, UART status.\n\nconst int SENSOR_PIN = A2;\nconst int FAN_PIN = 9;\nconst float OPEN_C = 28.0f;\nconst float CLOSE_C = 24.0f; // Added close threshold for hysteresis\nconst float MIN_SAFE_C = 5.0f; // Minimum safe temperature\nconst float MAX_SAFE_C = 100.0f; // Maximum safe temperature\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long FAN_ON_TIME_MS = 600; // Time to hold fan ON state during fault\n\nbool fanOn = false;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nunsigned long sampleCount = 0;\nfloat tempC = 0.0f;\nfloat tempMin = 999.0f;\nfloat tempMax = -999.0f;\nunsigned long fanOnStartTime = 0; // Track when the fan was turned ON for fault conditions\n\nfloat readTempC()\n{\n    int raw = analogRead(SENSOR_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid trackTemp(float c)\n{\n    if (c < tempMin)\n    {\n        tempMin = c;\n    }\n    if (c > tempMax)\n    {\n        tempMax = c;\n    }\n}\n\nvoid setFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"gh: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        sampleCount++;\n        trackTemp(tempC);\n\n        // Check for safe state conditions\n        if (tempC < MIN_SAFE_C || tempC > MAX_SAFE_C)\n        {\n            setFan(true);\n            fanOnStartTime = now; // Record the time when fan is turned ON\n        }\n        else if (tempC >= OPEN_C)\n        {\n            if (!fanOn) // Only change state if fan is currently OFF\n            {\n                setFan(true);\n            }\n        }\n        else if (tempC <= CLOSE_C)\n        {\n            if (fanOn) // Only change state if fan is currently ON\n            {\n                setFan(false);\n            }\n        }\n\n        // If the fan is ON due to fault condition, check if we need to keep it ON\n        if (fanOn && (tempC < MIN_SAFE_C || tempC > MAX_SAFE_C))\n        {\n            if (now - fanOnStartTime >= FAN_ON_TIME_MS)\n            {\n                setFan(false); // Turn OFF if the fault condition is resolved\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 161.71,
+      "llm_calls": 6,
+      "prompt_tokens": 14096,
+      "completion_tokens": 3775,
+      "cost_usd": null,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "loft_fan_ok",
+      "run_id": "7ba4603a22de",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a3",
+          "title": "Fan State Change Limit Exceeded",
+          "description": "The fan toggled 7 times in a 5000 ms window due to button bounce and rapid presses on D4, violating the requirement of no more than 2 state changes. This is evidenced by the measured data showing 7 toggles starting at 1.00 s. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": false,
+          "evidence": "D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "root_cause": "The fan toggled 7 times in a 5000 ms window due to button bounce and rapid presses on D4, violating the requirement of no more than 2 state changes. This is evidenced by the measured data showing 7 toggles starting at 1.00 s."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Fan Change Timing Violation",
+          "description": "The fan did not start within 500 ms of the temperature crossing the threshold of 36.0 \u00b0C, missing 24 triggers due to rapid oscillation and noise. This is evidenced by the measured data indicating missed triggers at 570 ms and other timestamps. D5 missed 24 of 24 trigger(s): D5 did not start within 500 ms of the trigger at 570 ms.",
+          "assertion_type": "timed_pulse",
+          "verified": false,
+          "evidence": "D5 missed 24 of 24 trigger(s): D5 did not start within 500 ms of the trigger at 570 ms.",
+          "root_cause": "The fan did not start within 500 ms of the temperature crossing the threshold of 36.0 \u00b0C, missing 24 triggers due to rapid oscillation and noise. This is evidenced by the measured data indicating missed triggers at 570 ms and other timestamps."
+        }
+      ],
+      "patched_sketch": "// Loft cooling fan with hysteresis and a boost button.\n// TMP-style linear probe on A3 (10 mV/\u00b0C), fan on D5, boost on D4.\n\nconst int TEMP_PIN = A3;\nconst int FAN_PIN = 5;\nconst int BOOST_PIN = 4;\n\nconst float ON_C = 36.0f;\nconst float OFF_C = 32.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long LOG_MS = 1000;\nconst int HOLD = 4;\nconst unsigned long DEBOUNCE_MS = 50; // debounce time for button\nconst unsigned long SUSTAIN_MS = 500; // time to sustain state for fan changes\n\nbool fanOn = false;\nint onHold = 0;\nint offHold = 0;\nunsigned long lastSample = 0;\nunsigned long lastLog = 0;\nfloat tempC = 0.0f;\nunsigned long lastBoostChange = 0; // time of last boost button change\nbool boostActive = false;\nunsigned long boostStartTime = 0; // time when boost was activated\n\nfloat sampleTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid driveFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid logLine()\n{\n    Serial.print(\"loft: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(BOOST_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        tempC = sampleTempC();\n\n        if (digitalRead(BOOST_PIN) == LOW)\n        {\n            if (!boostActive || (now - lastBoostChange >= DEBOUNCE_MS))\n            {\n                lastBoostChange = now;\n                boostActive = true;\n                boostStartTime = now; // record the time boost was activated\n                onHold = 0;\n                offHold = 0;\n                driveFan(true);\n            }\n        }\n        else\n        {\n            boostActive = false; // reset boost state when button is released\n            if (tempC >= ON_C)\n            {\n                onHold++;\n                offHold = 0; // reset offHold\n            }\n            else\n            {\n                onHold = 0; // reset onHold\n                if (tempC <= OFF_C)\n                {\n                    offHold++;\n                }\n                else\n                {\n                    offHold = 0; // reset offHold\n                }\n            }\n\n            if (onHold >= HOLD && (now - boostStartTime >= SUSTAIN_MS))\n            {\n                driveFan(true);\n            }\n            else if (offHold >= HOLD && (now - boostStartTime >= SUSTAIN_MS))\n            {\n                driveFan(false);\n            }\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        logLine();\n    }\n}\n",
+      "wall_s": 181.17,
+      "llm_calls": 6,
+      "prompt_tokens": 17306,
+      "completion_tokens": 3769,
+      "cost_usd": null,
+      "model": "gpt-4o-mini"
+    }
+  ]
+}

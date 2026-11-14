@@ -1,0 +1,64 @@
+{
+  "case_id": "greenhouse_dual",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing temperature range checks",
+      "description": "The sketch does not handle cases where the temperature is below 5.0 \u00b0C or above 100.0 \u00b0C, which should force the fan ON within 600 ms.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "Fan state change frequency not enforced",
+      "description": "The sketch does not limit the fan state changes to a maximum of 2 times in any 5000 ms window, which could lead to rapid toggling of the fan state.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b2\", \"reported_index\": 0, \"matched\": true, \"reason\": \"matches the same root cause of failing to turn the fan ON when the probe is floating\"},\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": false, \"reason\": \"describes a different issue related to fan state changes\"}\n  ],\n  \"unmatched_reported\": [1],\n  \"notes\": \"Only the floating probe issue was correctly identified in the reported bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b2",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "matches the same root cause of failing to turn the fan ON when the probe is floating"
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": false,
+        "reason": "describes a different issue related to fan state changes"
+      }
+    ],
+    "unmatched_reported": [
+      1
+    ],
+    "notes": "Only the floating probe issue was correctly identified in the reported bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 650,
+    "completion_tokens": 116,
+    "cost_usd": 0.0001671,
+    "cached": false
+  }
+}

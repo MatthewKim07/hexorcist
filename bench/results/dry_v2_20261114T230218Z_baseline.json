@@ -1,0 +1,92 @@
+{
+  "run_id": "dry_v2_20261114T230218Z_baseline",
+  "system": "baseline",
+  "model": "gpt-4o-mini",
+  "endpoint": "llm",
+  "stopped": null,
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.001901,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "calls": 3
+  },
+  "cases": [
+    {
+      "case_id": "bench_led_miswire",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect LED Pin Assignment",
+          "category": "wrong_pin",
+          "description": "The LED is assigned to pin D12 in the sketch, but according to the pin map, it should be on pin D13."
+        },
+        {
+          "id": "b2",
+          "title": "Timing Issue with LED State Change",
+          "category": "blocking_delay",
+          "description": "The LED state change does not guarantee reaching the commanded state within 100 ms due to the lack of a delay after setting the LED state."
+        }
+      ],
+      "patched_sketch": "// Electronics-bench user LED mirror.\n// Momentary probe button on D2 (pull-up), user LED on D13.\n// Mode switch on D4 (pull-up) selects steady vs blink-while-held.\n\nconst int BTN_PIN = 2;\nconst int LED_PIN = 13; // Corrected to D13\nconst int MODE_PIN = 4;\nconst unsigned long BLINK_MS = 120;\nconst unsigned long STATUS_MS = 1000;\n\nbool lit = false;\nunsigned long lastBlink = 0;\nunsigned long lastStatus = 0;\nunsigned long pressMs = 0;\n\nvoid setLed(bool on)\n{\n    lit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n    delay(1); // Added delay to ensure LED state change is registered within 100 ms\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"bench led=\");\n    Serial.print(lit ? 1 : 0);\n    Serial.print(\" held_ms=\");\n    Serial.println(pressMs);\n}\n\nvoid setup()\n{\n    pinMode(BTN_PIN, INPUT_PULLUP);\n    pinMode(MODE_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    setLed(false);\n    Serial.begin(9600);\n    lastBlink = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool pressed = (digitalRead(BTN_PIN) == LOW);\n    bool blinkMode = (digitalRead(MODE_PIN) == LOW);\n\n    if (!pressed)\n    {\n        pressMs = 0;\n        setLed(false);\n    }\n    else if (!blinkMode)\n    {\n        pressMs = now;\n        setLed(true);\n    }\n    else\n    {\n        if (pressMs == 0)\n        {\n            pressMs = now;\n            lastBlink = now;\n            setLed(true);\n        }\n        if (now - lastBlink >= BLINK_MS)\n        {\n            lastBlink = now;\n            setLed(!lit);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}",
+      "wall_s": 10.97,
+      "llm_calls": 1,
+      "prompt_tokens": 914,
+      "completion_tokens": 667,
+      "cost_usd": 0.0005373,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "greenhouse_dual",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing temperature range checks",
+          "category": "missing_failsafe",
+          "description": "The sketch does not handle cases where the temperature is below 5.0 \u00b0C or above 100.0 \u00b0C, which should force the fan ON within 600 ms."
+        },
+        {
+          "id": "b2",
+          "title": "Fan state change frequency not enforced",
+          "category": "other",
+          "description": "The sketch does not limit the fan state changes to a maximum of 2 times in any 5000 ms window, which could lead to rapid toggling of the fan state."
+        }
+      ],
+      "patched_sketch": "// Greenhouse ridge-vent controller.\n// Soil-air LM35 on A2, exhaust fan relay on D9, UART status.\n\nconst int SENSOR_PIN = A2;\nconst int FAN_PIN = 9;\nconst float OPEN_C = 28.0f;\nconst float CLOSE_C = 24.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long FAN_STATE_CHANGE_WINDOW_MS = 5000;\n\nbool fanOn = false;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nunsigned long lastFanChange = 0;\nunsigned long sampleCount = 0;\nfloat tempC = 0.0f;\nfloat tempMin = 999.0f;\nfloat tempMax = -999.0f;\n\nfloat readTempC()\n{\n    int raw = analogRead(SENSOR_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid trackTemp(float c)\n{\n    if (c < tempMin)\n    {\n        tempMin = c;\n    }\n    if (c > tempMax)\n    {\n        tempMax = c;\n    }\n}\n\nvoid setFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"gh: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        sampleCount++;\n        trackTemp(tempC);\n\n        if (tempC < 5.0f || tempC > 100.0f)\n        {\n            if (!fanOn)\n            {\n                setFan(true);\n                lastFanChange = now;\n            }\n        }\n        else if (tempC >= OPEN_C)\n        {\n            if (!fanOn && (now - lastFanChange >= FAN_STATE_CHANGE_WINDOW_MS / 2))\n            {\n                setFan(true);\n                lastFanChange = now;\n            }\n        }\n        else if (tempC <= CLOSE_C)\n        {\n            if (fanOn && (now - lastFanChange >= FAN_STATE_CHANGE_WINDOW_MS / 2))\n            {\n                setFan(false);\n                lastFanChange = now;\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}",
+      "wall_s": 15.04,
+      "llm_calls": 1,
+      "prompt_tokens": 983,
+      "completion_tokens": 888,
+      "cost_usd": 0.00068025,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "loft_fan_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect fan state change frequency",
+          "category": "timed_pulse_length",
+          "description": "The fan state can change more than twice in a 5000 ms window because the onHold and offHold counters are reset every sample, allowing rapid toggling."
+        },
+        {
+          "id": "b2",
+          "title": "Missing hysteresis implementation",
+          "category": "missing_hysteresis",
+          "description": "The fan state changes immediately upon crossing the thresholds without considering the required hysteresis, which can lead to rapid toggling."
+        }
+      ],
+      "patched_sketch": "// Loft cooling fan with hysteresis and a boost button.\n// TMP-style linear probe on A3 (10 mV/\u00b0C), fan on D5, boost on D4.\n\nconst int TEMP_PIN = A3;\nconst int FAN_PIN = 5;\nconst int BOOST_PIN = 4;\n\nconst float ON_C = 36.0f;\nconst float OFF_C = 32.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long LOG_MS = 1000;\nconst unsigned long FAN_CHANGE_WINDOW_MS = 5000;\nconst int HOLD = 4;\n\nbool fanOn = false;\nint onHold = 0;\nint offHold = 0;\nunsigned long lastSample = 0;\nunsigned long lastLog = 0;\nunsigned long lastFanChange = 0;\nfloat tempC = 0.0f;\n\nfloat sampleTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid driveFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n    lastFanChange = millis();\n}\n\nvoid logLine()\n{\n    Serial.print(\"loft: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(BOOST_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        tempC = sampleTempC();\n\n        if (digitalRead(BOOST_PIN) == LOW)\n        {\n            onHold = 0;\n            offHold = 0;\n            driveFan(true);\n        }\n        else\n        {\n            if (tempC >= ON_C)\n            {\n                onHold++;\n            }\n            else\n            {\n                onHold = 0;\n            }\n            if (tempC <= OFF_C)\n            {\n                offHold++;\n            }\n            else\n            {\n                offHold = 0;\n            }\n\n            if (onHold >= HOLD && fanOn == false && (now - lastFanChange) >= FAN_CHANGE_WINDOW_MS)\n            {\n                driveFan(true);\n            }\n            else if (offHold >= HOLD && fanOn == true && (now - lastFanChange) >= FAN_CHANGE_WINDOW_MS)\n            {\n                driveFan(false);\n            }\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        logLine();\n    }\n}",
+      "wall_s": 14.75,
+      "llm_calls": 1,
+      "prompt_tokens": 1073,
+      "completion_tokens": 870,
+      "cost_usd": 0.00068295,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    }
+  ]
+}

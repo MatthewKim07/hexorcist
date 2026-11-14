@@ -13,11 +13,13 @@ Presets used for product tuning (`thermostat`, `button`, `logger`, `alarm`, `con
 ## Dataset versions
 
 - **v1** (archived under `bench/archive/v1/`): discarded. Sketches were too short (median ~8 non-blank lines vs a 30–150 target), some comments revealed bugs, and several `spec.md` files omitted requirements that `checks.json` tested. Only a **3-case dry run** was ever executed against v1; there was no full run.
-- **v2** (current `bench/cases/`): hand-written realistic sketches, specs that cover every check, linted for bug-hinting language. See freeze section below after validation.
+- **v2** (current `bench/cases/`): hand-written realistic sketches, specs that cover every check, linted for bug-hinting language.
+  - **Frozen** at SHA-256 `6512d059501717c0e271c7058d0053fff2ef08ee13db31ed953d0b3e3325ac97` (hash over sorted `bench/cases/**` file paths + contents; 40 cases, 241 files).
+  - Dry run `dry_v2_20261114T230218Z` (OpenAI `gpt-4o-mini` judge): `bench_led_miswire`, `greenhouse_dual`, `loft_fan_ok`. No full run yet.
 
 ## Freeze rule
 
-**`bench/cases/` is frozen after the v2 freeze commit.** Do not add, edit, or delete cases to improve scores. Do not tune Hexorcist prompts, judges, or agent loops against these cases. If a case is wrong, document it and ship a later versioned dataset — never silently reshape the frozen set during a leaderboard run.
+**`bench/cases/` is frozen.** Do not add, edit, or delete cases to improve scores. Do not tune Hexorcist prompts, judges, or agent loops against these cases. If a case is wrong, document it and ship a later versioned dataset — never silently reshape the frozen set during a leaderboard run.
 
 ## Layout
 

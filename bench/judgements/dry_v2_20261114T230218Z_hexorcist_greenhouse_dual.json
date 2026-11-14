@@ -1,0 +1,62 @@
+{
+  "case_id": "greenhouse_dual",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Fan State Toggle Excessive",
+      "description": "The fan toggled 46 times in a 5000 ms window due to sensor noise at the threshold, indicating a lack of hysteresis in the control logic. This is evidenced by the measurement stating 'D9 toggled 46 times in a 5000 ms window starting at 1.30 s'. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Fan Not Forced ON During Fault",
+      "description": "The fan did not enter the safe state when the temperature reading was below 5.0 \u00b0C, remaining OFF for 5400 ms during a sensor disconnection. This is shown by the measurement 'D9 not HIGH for 5400 ms during fault'. During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+      "category": "safe_state_on_fault"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes excessive toggling due to lack of hysteresis\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 1, \"matched\": true, \"reason\": \"describes fan not being forced ON during fault\"}\n  ],\n  \"unmatched_reported\": [],\n  \"notes\": \"All reported bugs matched the truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes excessive toggling due to lack of hysteresis"
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "describes fan not being forced ON during fault"
+      }
+    ],
+    "unmatched_reported": [],
+    "notes": "All reported bugs matched the truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 761,
+    "completion_tokens": 102,
+    "cost_usd": 0.00017535,
+    "cached": false
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "case_id": "bench_led_miswire",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Button Press Toggle Failure",
+      "description": "The firmware does not handle rapid button presses correctly, leading to missed toggles. Measured evidence shows that 15 of 15 presses did not toggle D13 exactly once, with counts per press being [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].",
+      "category": "toggle_per_press"
+    },
+    {
+      "id": "bug-a2",
+      "title": "LED State Not Following Button Press",
+      "description": "The LED state does not follow the button press as required, remaining LOW for extended periods. Measured evidence indicates D13 was not HIGH for 48 ms while required, first at 901.5 ms, across multiple intervals. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Blinking Failure on D4 Press",
+      "description": "The firmware fails to blink the LED within the required time frame when D4 is pressed. Measured evidence shows D13 missed 15 of 15 triggers, with the first violation occurring at 801.5 ms, indicating it did not start within 100 ms of the trigger. D13 missed 15 of 15 trigger(s): D13 did not start within 100 ms of the trigger at 802 ms.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"No reported bug matches the wrong pin behavior.\"}\n  ],\n  \"unmatched_reported\": [0, 1, 2],\n  \"notes\": \"All reported bugs relate to button press handling and LED state but do not address the issue of driving the wrong pin (D12 instead of D13).\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "No reported bug matches the wrong pin behavior."
+      }
+    ],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs relate to button press handling and LED state but do not address the issue of driving the wrong pin (D12 instead of D13)."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 811,
+    "completion_tokens": 96,
+    "cost_usd": 0.00017925,
+    "cached": false
+  }
+}
