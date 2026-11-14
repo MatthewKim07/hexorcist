@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api, Health, PinSpec, Preset } from "../api";
-import { useStripText } from "./Chassis";
+import { usePasscodeGate } from "./Chassis";
 import { PinTable } from "./PinTable";
 import { Checkbox, Segmented } from "./ui";
 
@@ -23,6 +23,7 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const withPasscode = usePasscodeGate();
 
   useEffect(() => {
     api.presets().then(setPresets).catch(() => undefined);
@@ -37,8 +38,6 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
   const buildReady = !!description.trim();
   const ready = mode === "break" ? breakReady : buildReady;
   const why = busy || ready || !llm ? (!llm && !busy ? "No model configured" : "") : mode === "break" ? (!firmware.trim() ? "Paste a sketch" : pins.length === 0 ? "Add at least one pin" : !behaviour.trim() ? "Say what it must do" : "") : !description.trim() ? "Describe a device" : "";
-  // Only busy/ready status goes to the strip — never the disabled reason (that sits next to the button).
-  useStripText(busy ? "Starting" : ready ? "Ready" : "");
 
   const fillExample = () => {
     const t = presets.find((p) => p.id === "thermostat");
@@ -63,24 +62,29 @@ export function NewRun({ health, onStarted, initialMode = "break" }: { health: H
     setBusy(true);
     setError("");
     try {
-      if (mode === "build") {
-        onStarted((await api.start({ mode: "build", title: description.slice(0, 60), description, pins: [] })).run_id);
-        return;
-      }
-      const thermo = presets.find((p) => p.id === "thermostat");
-      const same = thermo && firmware === thermo.firmware && behaviour === thermo.behaviour;
-      const { run_id } = await api.start({
-        mode: "break",
-        title: same ? thermo!.title : "",
-        firmware,
-        pins,
-        behaviour,
-        compare,
-        ...(same && thermo?.checks ? { checks: thermo.checks } : {}),
+      await withPasscode(async () => {
+        if (mode === "build") {
+          onStarted((await api.start({ mode: "build", title: description.slice(0, 60), description, pins: [] })).run_id);
+          return;
+        }
+        const thermo = presets.find((p) => p.id === "thermostat");
+        const same = thermo && firmware === thermo.firmware && behaviour === thermo.behaviour;
+        const { run_id } = await api.start({
+          mode: "break",
+          title: same ? thermo!.title : "",
+          firmware,
+          pins,
+          behaviour,
+          compare,
+          ...(same && thermo?.checks ? { checks: thermo.checks } : {}),
+        });
+        onStarted(run_id);
       });
-      onStarted(run_id);
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg !== "Passcode cancelled") {
+        setError(msg);
+      }
       setBusy(false);
     }
   };

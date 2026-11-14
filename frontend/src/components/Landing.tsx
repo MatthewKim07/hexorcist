@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { api, Health, Preset } from "../api";
-import { useStripText } from "./Chassis";
+import { api, Health, Preset, RunSummary } from "../api";
+import { usePasscodeGate } from "./Chassis";
+import { RunsTable } from "./RunsTable";
 
 /** A run of an example, with the checks the example ships, so the run measures exactly what its chips say. */
 export function startPreset(p: Preset, compare = false) {
@@ -18,24 +19,32 @@ const CARD: Record<string, { blurb: string; tag: string }> = {
 
 export function Landing({ health, onStarted }: { health: Health | null; onStarted: (id: string) => void }) {
   const [presets, setPresets] = useState<Preset[]>([]);
+  const [recent, setRecent] = useState<RunSummary[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
-  useStripText(busyId ? "Starting" : "");
+  const withPasscode = usePasscodeGate();
 
   useEffect(() => {
     api
       .presets()
       .then(setPresets)
       .catch((e) => setError(e.message));
+    api
+      .runs()
+      .then(setRecent)
+      .catch(() => setRecent([]));
   }, []);
 
   const run = async (p: Preset) => {
     setBusyId(p.id);
     setError("");
     try {
-      onStarted((await startPreset(p)).run_id);
+      onStarted((await withPasscode(() => startPreset(p))).run_id);
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg !== "Passcode cancelled") {
+        setError(msg);
+      }
       setBusyId(null);
     }
   };
@@ -43,6 +52,7 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
   const canRun = health === null || health.llm_configured;
   const bugs = presets.filter((p) => p.id !== "containment");
   const containment = presets.find((p) => p.id === "containment");
+  const recentRows = recent?.slice(0, 5) ?? [];
 
   return (
     <div>
@@ -100,6 +110,18 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
           Use your own sketch →
         </a>
       </p>
+
+      {recentRows.length > 0 && (
+        <section className="mt-12">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-ink">Recent runs</h2>
+            <a href="#/runs" className="text-sm text-muted transition-colors hover:text-ink">
+              View all →
+            </a>
+          </div>
+          <RunsTable runs={recentRows} />
+        </section>
+      )}
     </div>
   );
 }

@@ -122,7 +122,7 @@ body {
     transition: border-color 150ms ease;
   }
   .field:focus-visible {
-    @apply border-ink/40;
+    border-color: color-mix(in srgb, var(--ink) 40%, transparent);
     outline-offset: 0;
   }
   /* Keys: they press. */

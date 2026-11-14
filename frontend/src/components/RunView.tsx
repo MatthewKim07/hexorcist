@@ -5,7 +5,6 @@ import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
 import { BugList } from "./BugList";
-import { useStripText } from "./Chassis";
 import { ComparePanel } from "./ComparePanel";
 import { Icon, STATUS_META, TONE_TEXT } from "./Common";
 import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
@@ -71,9 +70,6 @@ export function RunView({ runId }: { runId: string }) {
   const [side, setSide] = useState<"before" | "after">("before");
   const [tab, setTab] = useState<TabId | null>(null);
   const [openBug, setOpenBug] = useState<string | null>(null);
-
-  const finishedIn = state.run?.finished_at ? duration(state.run.created_at, state.run.finished_at) : "";
-  useStripText(!state.run ? "Loading the run" : status === "running" ? (state.connectionLost ? "Reconnecting" : "Running") : finishedIn ? `Finished in ${finishedIn}` : "Finished");
 
   const scenarios = report?.scenarios?.length ? report.scenarios : state.scenarios;
   const emulated = useMemo(() => scenarios.filter((s) => !s.id.startsWith("containment-")), [scenarios]);

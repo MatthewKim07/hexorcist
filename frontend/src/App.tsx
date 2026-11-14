@@ -3,6 +3,7 @@ import { api, Health } from "./api";
 import { Chassis } from "./components/Chassis";
 import { Landing } from "./components/Landing";
 import { NewRun } from "./components/NewRun";
+import { RunsPage } from "./components/RunsPage";
 import { RunView } from "./components/RunView";
 import { TipProvider } from "./components/ui";
 
@@ -38,14 +39,8 @@ export default function App() {
   }, [hash]);
 
   const runMatch = /^#\/runs\/([a-z0-9]+)/.exec(hash);
-  const route = runMatch ? "run" : hash.startsWith("#/runs") ? "runs" : hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build") ? "new" : "landing";
+  const route = runMatch ? "run" : hash === "#/runs" || hash.startsWith("#/runs?") ? "runs" : hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build") ? "new" : "landing";
   const newMode = /[?&]mode=build\b/.test(hash) || hash.startsWith("#/build") ? "build" : "break";
-  const [historyOpen, setHistoryOpen] = useState(route === "runs");
-  useEffect(() => {
-    if (route === "runs") {
-      setHistoryOpen(true);
-    }
-  }, [route]);
 
   const started = (id: string) => {
     location.hash = `#/runs/${id}`;
@@ -53,18 +48,9 @@ export default function App() {
 
   return (
     <TipProvider>
-      <Chassis
-        health={health}
-        healthError={healthError}
-        historyOpen={historyOpen}
-        onHistory={(open) => {
-          setHistoryOpen(open);
-          if (!open && route === "runs") {
-            location.hash = "#/";
-          }
-        }}
-      >
-        {(route === "landing" || route === "runs") && <Landing health={health} onStarted={started} />}
+      <Chassis health={health} healthError={healthError}>
+        {route === "landing" && <Landing health={health} onStarted={started} />}
+        {route === "runs" && <RunsPage />}
         {route === "new" && <NewRun key={newMode} health={health} onStarted={started} initialMode={newMode} />}
         {route === "run" && runMatch && <RunView key={runMatch[1]} runId={runMatch[1]} />}
       </Chassis>
