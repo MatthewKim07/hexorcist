@@ -1,8 +1,8 @@
-import { forwardRef, KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { forwardRef, KeyboardEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import * as RPopover from "@radix-ui/react-popover";
 import { Check, PinSpec, Scenario, Trace } from "../api";
 import { anchorOf, chipLabel, shortRole } from "../checks";
-import { boardLayout, HEADER_PINS, MCU_XY, pinXY, USB_XY, VirtualBoard } from "./VirtualBoard";
+import { boardLayout, boardLive, HEADER_PINS, MCU_XY, partState, pinXY, USB_XY, VirtualBoard } from "./VirtualBoard";
 
 export type ChipTone = "pass" | "fail" | "off" | "idle";
 
@@ -49,11 +49,11 @@ export const RuleChip = forwardRef<HTMLButtonElement, ChipProps>(function RuleCh
   const label = chipLabel(chip.check, pins);
   const body = (
     <>
-      <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${lamp} ${chip.flash ? "chip-flash" : ""}`} />
-      <span className="truncate">{label}</span>
+      <span aria-hidden="true" className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${lamp} ${chip.flash ? "chip-flash" : ""}`} />
+      <span className="min-w-0 text-left leading-snug">{label}</span>
     </>
   );
-  const look = `chip inline-flex max-w-[240px] items-center gap-2 rounded-full border px-2.5 py-1 text-xs ${active ? "border-trace text-screen-ink" : "border-screen-line text-screen-ink"} bg-screen-raised`;
+  const look = `chip inline-flex max-w-full items-start gap-2 rounded-full border px-2.5 py-1 text-xs ${active ? "border-trace text-screen-ink" : "border-screen-line text-screen-ink"} bg-screen-raised`;
   if (as === "span") {
     return <span className={look}>{body}</span>;
   }
@@ -94,20 +94,22 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
     return () => ro.disconnect();
   }, []);
 
-  const overlays = chips.length > 0 || !!pinPopover;
-  const layout = boardLayout(pins, overlays);
-  const { view } = layout;
   const used = new Map(pins.map((p) => [p.pin, p]));
-
+  const probe = boardLayout(pins, chips.length > 0 || !!pinPopover);
   const groups = new Map<string, StageChip[]>();
   for (const chip of chips) {
     const at = anchorOf(chip.check);
-    const key = at === "usb" || !layout.slots.some((s) => s.pin === at) ? "usb" : at;
+    const key = at === "usb" || !probe.slots.some((s) => s.pin === at) ? "usb" : at;
     groups.set(key, [...(groups.get(key) ?? []), chip]);
   }
-  const topCount = layout.slots.filter((s) => s.top).length;
+  const topCount = probe.slots.filter((s) => s.top).length;
   const crowded = topCount > 3 || [...groups.values()].some((g) => g.length > MAX_STACK);
   const asList = list || narrow || crowded;
+  // Side overlays need the wide viewBox; the list mode crops to the board so it fills the panel.
+  const overlays = (!asList && chips.length > 0) || !!pinPopover;
+  const layout = boardLayout(pins, overlays);
+  const { view } = layout;
+  const live = useMemo(() => boardLive(pins, trace, t, scenario), [pins, trace, t, scenario]);
 
   const chipButton = (chip: StageChip) => {
     const id = `chip:${chip.key}`;
@@ -177,8 +179,8 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
 
   return (
     <div className={className}>
-      <div ref={box} className="relative" style={{ aspectRatio: `${view.w} / ${view.h}` }}>
-        <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} full={overlays} className="absolute inset-0 block h-full w-full" />
+      <div ref={box} className="relative w-full overflow-hidden" style={{ aspectRatio: `${view.w} / ${view.h}` }}>
+        <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} full={overlays} captions={!asList} className="absolute inset-0 block h-full w-full" />
 
         {sketch && !asList && (
           <button
@@ -214,8 +216,8 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
           ))}
       </div>
 
-      {asList && (pinPopover || chips.length > 0 || sketch) && (
-        <div className="space-y-4 px-4 pb-4 pt-2 text-sm text-screen-ink">
+      {asList && (pinPopover || chips.length > 0 || sketch || live.length > 0) && (
+        <div className="space-y-3 px-3 pb-3 pt-2 text-sm text-screen-ink sm:px-4">
           {sketch && (
             <button type="button" onClick={sketch.onOpen} className={`key flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-xs !font-normal ${sketch.empty ? "border-dashed border-trace text-trace" : "border-screen-line text-screen-ink hover:border-screen-muted"}`}>
               <span className="truncate font-mono">{sketch.label}</span>
@@ -241,15 +243,33 @@ export function BoardStage({ pins, trace, t, scenario, chips = [], chipPopover, 
               </div>
             </div>
           )}
-          {chips.length > 0 && (
-            <div className="space-y-2">
-              {[...groups.entries()].map(([key, group]) => (
-                <div key={key} className="flex flex-wrap items-center gap-1.5">
-                  <span className="w-24 shrink-0 text-xs text-screen-muted">{key === "usb" ? "Serial, timing" : `${key} ${shortRole(used.get(key))}`}</span>
-                  {group.map(chipButton)}
-                </div>
-              ))}
-            </div>
+          {live.length > 0 && (
+            <ul className="space-y-2.5" aria-label="Parts and checks">
+              {layout.slots.map((slot) => {
+                const item = live.find((l) => l.pin.pin === slot.pin);
+                if (!item) {
+                  return null;
+                }
+                const group = groups.get(slot.pin) ?? [];
+                return (
+                  <li key={slot.pin} className="space-y-1.5">
+                    <div className="flex min-w-0 items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-xs text-screen-ink">
+                        <span className="font-mono">{item.pin.pin}</span> {shortRole(item.pin)}
+                      </span>
+                      <span className="shrink-0 font-mono text-[11px] text-screen-muted">{partState(item)}</span>
+                    </div>
+                    {group.length > 0 && <div className="flex flex-wrap gap-1.5">{group.map(chipButton)}</div>}
+                  </li>
+                );
+              })}
+              {(groups.get("usb") ?? []).length > 0 && (
+                <li className="space-y-1.5">
+                  <p className="text-xs text-screen-muted">Serial, timing</p>
+                  <div className="flex flex-wrap gap-1.5">{(groups.get("usb") ?? []).map(chipButton)}</div>
+                </li>
+              )}
+            </ul>
           )}
         </div>
       )}
