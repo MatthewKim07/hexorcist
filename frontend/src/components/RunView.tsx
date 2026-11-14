@@ -176,7 +176,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   const focus = bugs.find((b) => b.scenario_id === scenarioId) ?? null;
   const scenario = scenarios.find((s) => s.id === scenarioId);
   const evidence = focus ? { before: keyFact(focus.before?.evidence ?? focus.evidence), after: focus.after?.status === "pass" ? keyFact(focus.after.evidence) : "" } : null;
-  const emulatedResults = state.results[iteration] ?? {};
+  const beforeResults = state.results[0] ?? {};
+  const afterResults = afterIteration !== null ? (state.results[afterIteration] ?? {}) : null;
+  const beforeMatrix = report?.matrix?.["0"];
+  const afterMatrix = afterIteration !== null ? report?.matrix?.[String(afterIteration)] : undefined;
   const contained = !!report?.contained;
 
   const tabs: ReportTabId[] = [];
@@ -261,7 +264,19 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
 
       {tabs.length > 0 && (
         <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
-          {activeTab === "scenarios" && <ScenariosTab scenarios={emulated} results={emulatedResults} selected={scenarioId} onSelect={replayTo} />}
+          {activeTab === "scenarios" && (
+            <ScenariosTab
+              scenarios={emulated}
+              beforeResults={beforeResults}
+              afterResults={afterResults}
+              beforeMatrix={beforeMatrix}
+              afterMatrix={afterMatrix}
+              assertions={assertions}
+              pins={pins}
+              selected={scenarioId}
+              onSelect={replayTo}
+            />
+          )}
           {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={side} />}
           {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
           {activeTab === "compare" && comparable && <ComparePanel runId={runId} bugs={bugs} report={report} finished />}

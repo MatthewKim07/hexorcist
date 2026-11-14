@@ -1,4 +1,5 @@
-import { Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, FlaskConical, LucideIcon, ShieldCheck } from "lucide-react";
+import { ReactNode } from "react";
+import { Box, Bug, CircleCheck, CircleHelp, CircleX, Clock, FileDiff, FlaskConical, LucideIcon, ShieldCheck } from "lucide-react";
 import { Report } from "../api";
 import { shortDuration } from "../format";
 import { iconProps } from "../icons";
@@ -58,7 +59,7 @@ export function verdictText(report: Report | null, status: string, firstWarning:
   }
 }
 
-function Stat({ Icon, value, label }: { Icon: LucideIcon; value: string | number; label: string }) {
+function Stat({ Icon, value, label }: { Icon: LucideIcon; value: ReactNode; label: string }) {
   return (
     <div className="border border-line bg-white p-4" style={{ borderRadius: 8 }}>
       <div className="mb-2 text-muted">
@@ -68,6 +69,14 @@ function Stat({ Icon, value, label }: { Icon: LucideIcon; value: string | number
       <div className="mt-1 text-xs text-muted">{label}</div>
     </div>
   );
+}
+
+function failingScenarioCount(matrix: Report["matrix"] | undefined, iteration: string): number {
+  const row = matrix?.[iteration];
+  if (!row) {
+    return 0;
+  }
+  return Object.values(row).filter((rs) => rs.some((r) => r.status === "fail")).length;
 }
 
 /** Verdict heading + four stat tiles under the header card. */
@@ -91,19 +100,39 @@ export function ReportVerdict({
   const contained = !!report?.contained;
   const dur = shortDuration(createdAt, finishedAt) || "—";
 
-  const tiles = contained
+  const tiles: { Icon: LucideIcon; value: ReactNode; label: string }[] = contained
     ? [
         { Icon: CircleCheck, value: `${score?.checks_passed ?? 0}/${score?.checks_total ?? 0}`, label: "checks passed" },
         { Icon: ShieldCheck, value: report?.containment?.secrets_found ?? 0, label: "secrets found" },
         { Icon: Box, value: `${report?.containment?.removed ?? 0}/${report?.containment?.total ?? 0}`, label: "containers removed" },
         { Icon: Clock, value: dur, label: "duration" },
       ]
-    : [
-        { Icon: Bug, value: score?.bugs_found ?? 0, label: "bugs found" },
-        { Icon: FlaskConical, value: score?.scenarios ?? 0, label: "scenarios run" },
-        { Icon: Box, value: report?.containment?.total ?? 0, label: "sandboxes" },
-        { Icon: Clock, value: dur, label: "duration" },
-      ];
+    : (() => {
+        const found = score?.bugs_found ?? 0;
+        const verified = score?.bugs_verified ?? 0;
+        const beforeFail = failingScenarioCount(report?.matrix, "0");
+        const afterIter = report?.fix?.iteration;
+        const afterFail = afterIter !== undefined && afterIter !== null ? failingScenarioCount(report?.matrix, String(afterIter)) : beforeFail;
+        const out: { Icon: LucideIcon; value: ReactNode; label: string }[] = [{ Icon: Bug, value: found, label: "Bugs found" }];
+        if (found > 0 || verified > 0) {
+          out.push({ Icon: CircleCheck, value: `${verified}/${found || verified}`, label: "Fixed" });
+        }
+        if (report?.matrix) {
+          out.push({
+            Icon: FlaskConical,
+            value: (
+              <>
+                {beforeFail} <span className="text-muted">→</span> {afterFail}
+              </>
+            ),
+            label: "Failing scenarios",
+          });
+        }
+        if (report?.fix?.diff) {
+          out.push({ Icon: FileDiff, value: `+${report.fix.diff.added} −${report.fix.diff.removed}`, label: "Patch" });
+        }
+        return out;
+      })();
 
   return (
     <section aria-label="Verdict">
@@ -112,11 +141,13 @@ export function ReportVerdict({
         <span className="text-ink">{title}</span>
       </h2>
       {detail && <p className={`mt-2 text-sm ${meta.tone === "fail" ? "text-fail" : "text-muted"}`}>{detail}</p>}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tiles.map((t) => (
-          <Stat key={t.label} Icon={t.Icon} value={t.value} label={t.label} />
-        ))}
-      </div>
+      {tiles.length > 0 && (
+        <div className={`mt-6 grid gap-3 ${tiles.length >= 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 sm:grid-cols-4"}`}>
+          {tiles.map((t) => (
+            <Stat key={t.label} Icon={t.Icon} value={t.value} label={t.label} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

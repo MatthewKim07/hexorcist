@@ -1,52 +1,147 @@
-import { CircleCheck, CircleX, Minus } from "lucide-react";
-import { AssertionDef, AssertionResult, Report, Scenario, Trace } from "../api";
+import { useState } from "react";
+import { ChevronDown, CircleCheck, CircleX, Minus } from "lucide-react";
+import { AssertionDef, AssertionResult, PinSpec, Report, Scenario, Trace } from "../api";
+import { chipLabel } from "../checks";
 import { iconProps } from "../icons";
 import { RunState } from "../useRun";
 import { Fold, Tip } from "./ui";
 
-/** Scenarios, failing ones first. A click puts the scenario on the board. */
-export function ScenariosTab({ scenarios, results, selected, onSelect }: { scenarios: Scenario[]; results: RunState["results"][number]; selected: string | null; onSelect: (id: string) => void }) {
-  const rank = (s: Scenario) => (results[s.id] && !results[s.id].passed ? 0 : 1);
-  const sorted = [...scenarios].sort((a, b) => rank(a) - rank(b));
-  const failing = scenarios.filter((s) => rank(s) === 0).length;
+type ScenarioResult = RunState["results"][number][string] | undefined;
+
+function scenarioFailed(r: ScenarioResult): boolean {
+  return !!r && !r.passed;
+}
+
+function failTip(results: AssertionResult[] | undefined, assertions: AssertionDef[], pins: PinSpec[]): string {
+  const fails = (results ?? []).filter((x) => x.status === "fail");
+  if (!fails.length) {
+    return "Passed";
+  }
+  return fails
+    .map((f) => {
+      const a = assertions.find((x) => x.id === f.assertion_id);
+      return a ? `Failed: ${chipLabel(a, pins)}` : `Failed: ${f.type}`;
+    })
+    .join(" · ");
+}
+
+function SideIcon({ results, assertions, pins }: { results: AssertionResult[] | undefined; assertions: AssertionDef[]; pins: PinSpec[] }) {
+  if (!results) {
+    return <Minus {...iconProps} className="text-muted" />;
+  }
+  const fail = results.some((r) => r.status === "fail");
+  const tip = failTip(results, assertions, pins);
+  return (
+    <Tip content={tip}>
+      <span tabIndex={0} className="inline-flex" aria-label={tip}>
+        {fail ? <CircleX {...iconProps} className="text-fail" /> : <CircleCheck {...iconProps} className="text-pass" />}
+      </span>
+    </Tip>
+  );
+}
+
+/** Scenarios with Before/After icon columns; failing-before first; both-passed collapsed. */
+export function ScenariosTab({
+  scenarios,
+  beforeResults,
+  afterResults,
+  beforeMatrix,
+  afterMatrix,
+  assertions,
+  pins,
+  selected,
+  onSelect,
+}: {
+  scenarios: Scenario[];
+  beforeResults: RunState["results"][number];
+  afterResults: RunState["results"][number] | null;
+  beforeMatrix: Report["matrix"][string] | undefined;
+  afterMatrix: Report["matrix"][string] | undefined;
+  assertions: AssertionDef[];
+  pins: PinSpec[];
+  selected: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const [showPassed, setShowPassed] = useState(false);
+  const hasAfter = !!afterMatrix || !!afterResults;
+
+  const rank = (s: Scenario) => {
+    const before = beforeResults[s.id];
+    if (scenarioFailed(before)) {
+      return 0;
+    }
+    return 1;
+  };
+  const sorted = [...scenarios].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const failedBefore = sorted.filter((s) => rank(s) === 0);
+  const passedBoth = sorted.filter((s) => {
+    if (rank(s) === 0) {
+      return false;
+    }
+    if (!hasAfter) {
+      return !!beforeResults[s.id]?.passed;
+    }
+    const after = afterResults?.[s.id];
+    return !!beforeResults[s.id]?.passed && !!after?.passed;
+  });
+  const other = sorted.filter((s) => !failedBefore.includes(s) && !passedBoth.includes(s));
+  const primary = [...failedBefore, ...other];
+
+  const row = (s: Scenario) => (
+    <tr
+      key={s.id}
+      className={`cursor-pointer border-b border-line transition-colors last:border-b-0 hover:bg-[#FAFAFA] ${selected === s.id ? "bg-[#FAFAFA]" : ""}`}
+      onClick={() => onSelect(s.id)}
+    >
+      <td className="py-2.5 pr-4 align-middle">
+        <Tip content={s.hypothesis}>
+          <span tabIndex={0} className={selected === s.id ? "font-medium text-ink" : "text-ink"}>
+            {s.name}
+          </span>
+        </Tip>
+      </td>
+      <td className="py-2.5 text-center align-middle">
+        <SideIcon results={beforeMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+      </td>
+      {hasAfter && (
+        <td className="py-2.5 text-center align-middle">
+          <SideIcon results={afterMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+        </td>
+      )}
+    </tr>
+  );
+
   return (
     <div className="pt-4">
       <p className="mb-3 text-xs text-muted">
-        {scenarios.length} scenarios{failing ? `, ${failing} failing` : ", all passing"}
+        {scenarios.length} scenarios{failedBefore.length ? `, ${failedBefore.length} failed before` : ", all passing"}
       </p>
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-line text-xs text-muted">
-            <th className="w-8 pb-2 font-normal" />
             <th className="pb-2 pr-4 font-normal">Name</th>
-            <th className="pb-2 text-right font-normal">Result</th>
+            <th className="w-14 pb-2 text-center font-normal">Before</th>
+            {hasAfter && <th className="w-14 pb-2 text-center font-normal">After</th>}
           </tr>
         </thead>
         <tbody>
-          {sorted.map((s) => {
-            const r = results[s.id];
-            return (
-              <tr
-                key={s.id}
-                className={`cursor-pointer border-b border-line transition-colors last:border-b-0 hover:bg-[#FAFAFA] ${selected === s.id ? "bg-[#FAFAFA]" : ""}`}
-                onClick={() => onSelect(s.id)}
-              >
-                <td className="py-2.5 align-middle">
-                  {!r ? <Minus {...iconProps} className="text-muted" /> : r.passed ? <CircleCheck {...iconProps} className="text-pass" /> : <CircleX {...iconProps} className="text-fail" />}
-                </td>
-                <td className="py-2.5 pr-4 align-middle">
-                  <Tip content={s.hypothesis}>
-                    <span tabIndex={0} className={selected === s.id ? "font-medium text-ink" : "text-ink"}>
-                      {s.name}
+          {primary.map(row)}
+          {passedBoth.length > 0 && (
+            <>
+              <tr className="border-b border-line">
+                <td colSpan={hasAfter ? 3 : 2} className="py-0">
+                  <button type="button" className="flex w-full items-center gap-2 py-2.5 text-left text-sm text-muted hover:text-ink" aria-expanded={showPassed} onClick={() => setShowPassed((v) => !v)}>
+                    <CircleCheck {...iconProps} className="text-pass" />
+                    <span className="flex-1">
+                      {passedBoth.length} passed before and after
                     </span>
-                  </Tip>
-                </td>
-                <td className="num py-2.5 text-right align-middle text-xs text-muted">
-                  {!r ? "—" : r.passed ? "Pass" : r.failed.length ? `${r.failed.length} failed` : r.exit_reason}
+                    <ChevronDown {...iconProps} className={`transition-transform ${showPassed ? "rotate-180" : ""}`} />
+                  </button>
                 </td>
               </tr>
-            );
-          })}
+              {showPassed && passedBoth.map(row)}
+            </>
+          )}
         </tbody>
       </table>
     </div>
