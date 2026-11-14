@@ -4,9 +4,22 @@ import { api, AssertionDef, Bug, ContainmentRecord, Guard, PinSpec, Report, RunD
 export const STEP_ORDER = ["write", "understand", "compile", "attack", "execute", "diagnose", "fix", "verify", "report"] as const;
 export type StepName = (typeof STEP_ORDER)[number];
 
+export const STEP_LABELS: Record<StepName, string> = {
+  write: "Write firmware",
+  understand: "Understand",
+  compile: "Compile",
+  attack: "Plan attacks",
+  execute: "Execute",
+  diagnose: "Diagnose",
+  fix: "Fix",
+  verify: "Verify",
+  report: "Report",
+};
+
 export interface StepState {
   status: "pending" | "running" | "done" | "failed" | "skipped";
   detail: string;
+  logs: string[];
   startedAt?: number;
   endedAt?: number;
 }
@@ -37,6 +50,8 @@ export interface RunState {
   doneStatus: string | null;
   run: RunDetail | null;
   connectionLost: boolean;
+  loadError: string | null;
+  notFound: boolean;
 }
 
 const initial: RunState = {
@@ -55,16 +70,34 @@ const initial: RunState = {
   doneStatus: null,
   run: null,
   connectionLost: false,
+  loadError: null,
+  notFound: false,
 };
 
-type Action = { kind: "event"; event: any } | { kind: "run"; run: RunDetail } | { kind: "lost" } | { kind: "reset" };
+type Action =
+  | { kind: "event"; event: any }
+  | { kind: "run"; run: RunDetail }
+  | { kind: "lost" }
+  | { kind: "reset" }
+  | { kind: "load_error"; message: string; notFound: boolean };
+
+function pushLog(logs: string[], line: string): string[] {
+  const text = line.trim();
+  if (!text || logs[logs.length - 1] === text) {
+    return logs;
+  }
+  return [...logs, text];
+}
 
 function reducer(state: RunState, action: Action): RunState {
   if (action.kind === "reset") {
     return initial;
   }
   if (action.kind === "run") {
-    return { ...state, run: action.run };
+    return { ...state, run: action.run, loadError: null, notFound: false };
+  }
+  if (action.kind === "load_error") {
+    return { ...state, loadError: action.message, notFound: action.notFound };
   }
   if (action.kind === "lost") {
     return { ...state, connectionLost: true };
@@ -80,16 +113,26 @@ function reducer(state: RunState, action: Action): RunState {
       next.guard = e.guard;
       break;
     case "step": {
-      const prev = state.steps[e.step as StepName];
+      const name = e.step as StepName;
+      const prev = state.steps[name];
       next.steps = {
         ...state.steps,
-        [e.step]: {
+        [name]: {
           status: e.status,
-          detail: e.detail,
+          detail: e.detail ?? "",
+          logs: pushLog(prev?.logs ?? [], e.detail ?? ""),
           startedAt: prev?.startedAt ?? e.t,
           endedAt: e.status === "running" ? undefined : e.t,
         },
       };
+      break;
+    }
+    case "compile_log": {
+      const prev = state.steps.compile;
+      if (prev) {
+        const line = e.ok ? "Compile succeeded" : "Compile failed";
+        next.steps = { ...state.steps, compile: { ...prev, logs: pushLog(prev.logs, line) } };
+      }
       break;
     }
     case "device_model":
@@ -101,9 +144,15 @@ function reducer(state: RunState, action: Action): RunState {
     case "scenarios":
       next.scenarios = e.scenarios;
       break;
-    case "scenario_result":
+    case "scenario_result": {
       next.results = { ...state.results, [e.iteration]: { ...(state.results[e.iteration] ?? {}), [e.scenario_id]: e } };
+      const exec = state.steps.execute;
+      if (exec?.status === "running") {
+        const label = e.passed ? `Pass: ${e.name}` : `Fail: ${e.name}`;
+        next.steps = { ...next.steps, execute: { ...exec, logs: pushLog(exec.logs, label) } };
+      }
       break;
+    }
     case "bug":
       next.bugs = [...state.bugs, e.bug];
       break;
@@ -140,7 +189,13 @@ export function useRun(runId: string): RunState {
             dispatch({ kind: "run", run });
           }
         })
-        .catch(() => undefined);
+        .catch((err) => {
+          if (closed) {
+            return;
+          }
+          const message = (err as Error).message || "Could not load the run";
+          dispatch({ kind: "load_error", message, notFound: /^404\b/.test(message) || /no such run/i.test(message) });
+        });
     load();
 
     let last = 0;
