@@ -18,6 +18,8 @@ import { ReportTabs, ReportTabId } from "./ReportTabs";
 import { ReportVerdict } from "./ReportVerdict";
 import { RunPipeline } from "./RunPipeline";
 import { Fold, reducedMotion } from "./ui";
+import { NotFound } from "./NotFound";
+import { RunPageSkeleton } from "./Skeletons";
 
 /** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
 const LEAD_MS = 300;
@@ -52,16 +54,6 @@ function useElapsed(createdAt: number | undefined, finishedAt: number | null | u
     return "—";
   }
   return shortDuration(createdAt, finishedAt ?? (running ? now : createdAt)) || "0s";
-}
-
-function Skeleton() {
-  return (
-    <div aria-busy="true" className="space-y-6">
-      <div className="h-4 w-24 rounded bg-[#FAFAFA]" />
-      <div className="h-24 rounded-lg border border-line bg-[#FAFAFA]" />
-      <div className="h-48 rounded-lg border border-line bg-[#FAFAFA]" />
-    </div>
-  );
 }
 
 function isSecurityDemo(title: string, status: string): boolean {
@@ -304,37 +296,23 @@ export function RunView({ runId }: { runId: string }) {
   const sandboxCount = (state.run?.report?.containment?.records ?? state.records).length;
 
   if (state.notFound) {
-    return (
-      <div>
-        <a href="#/runs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink">
-          <ArrowLeft {...iconProps} />
-          Runs
-        </a>
-        <p className="mt-8 text-sm text-muted">
-          That run was not found.{" "}
-          <a href="#/runs" className="text-ink underline-offset-2 hover:underline">
-            Back to Runs
-          </a>
-          .
-        </p>
-      </div>
-    );
+    return <NotFound message="That run was not found." />;
   }
 
   if (state.loadError && !state.run) {
     return (
-      <div>
-        <a href="#/runs" className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink">
-          <ArrowLeft {...iconProps} />
-          Runs
+      <p className="pt-8 text-sm text-fail">
+        Could not load this run.{" "}
+        <a href="#/" className="text-ink underline-offset-2 hover:underline">
+          Back home
         </a>
-        <p className="mt-8 text-sm text-fail">Could not load this run.</p>
-      </div>
+        .
+      </p>
     );
   }
 
   if (!state.run) {
-    return <Skeleton />;
+    return <RunPageSkeleton />;
   }
 
   return (

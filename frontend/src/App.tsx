@@ -3,6 +3,7 @@ import { api, Health } from "./api";
 import { Chassis } from "./components/Chassis";
 import { Landing } from "./components/Landing";
 import { NewRun } from "./components/NewRun";
+import { NotFound } from "./components/NotFound";
 import { RunsPage } from "./components/RunsPage";
 import { RunView } from "./components/RunView";
 import { TipProvider } from "./components/ui";
@@ -39,7 +40,8 @@ export default function App() {
   }, [hash]);
 
   const runMatch = /^#\/runs\/([a-z0-9]+)/.exec(hash);
-  const route = runMatch ? "run" : hash === "#/runs" || hash.startsWith("#/runs?") ? "runs" : hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build") ? "new" : "landing";
+  const known = hash === "" || hash === "#" || hash === "#/" || hash.startsWith("#/runs") || hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build");
+  const route = runMatch ? "run" : hash === "#/runs" || hash.startsWith("#/runs?") ? "runs" : hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build") ? "new" : known ? "landing" : "notfound";
   const newMode = /[?&]mode=build\b/.test(hash) || hash.startsWith("#/build") ? "build" : "break";
 
   const started = (id: string) => {
@@ -49,10 +51,16 @@ export default function App() {
   return (
     <TipProvider>
       <Chassis health={health} healthError={healthError}>
+        {healthError && (
+          <p className="mb-6 rounded-md border border-fail/30 bg-fail/5 px-3 py-2 text-sm text-fail" role="status">
+            The backend is unreachable. Start the API and refresh.
+          </p>
+        )}
         {route === "landing" && <Landing health={health} onStarted={started} />}
-        {route === "runs" && <RunsPage />}
+        {route === "runs" && <RunsPage backendDown={healthError} />}
         {route === "new" && <NewRun key={newMode} health={health} onStarted={started} initialMode={newMode} />}
         {route === "run" && runMatch && <RunView key={runMatch[1]} runId={runMatch[1]} />}
+        {route === "notfound" && <NotFound />}
       </Chassis>
     </TipProvider>
   );
