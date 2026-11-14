@@ -47,6 +47,8 @@ backend/.venv/bin/python -m bench.score --baseline bench/results/….json --hexo
 
 LLM responses are cached under `bench/cache/` keyed by `(model, prompt hash)`. Budget caps stop cleanly before overspend; at most one retry per call.
 
+The match judge prefers `OPENAI_*` (`gpt-4o-mini`). If those are unset, `score.py` falls back to `LLM_*` so a local dry run can still save judgement files — set `OPENAI_API_KEY` before a formal run.
+
 ## Env
 
 Uses the app’s `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` for baseline DeepSeek (or whatever the app uses). Optional `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` for a second baseline and for the match judge. See `.env.example`. Never commit real keys.

@@ -1,0 +1,49 @@
+{
+  "case_id": "dual_hyst_failsafe",
+  "system": "hexorcist",
+  "reported": [],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single threshold causes chatter",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "No fail-safe on floating probe",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "raw": "{\"matches\":[{\"truth_id\":\"b1\",\"reported_index\":-1,\"matched\":false,\"reason\":\"No reported bugs to match against.\"},{\"truth_id\":\"b2\",\"reported_index\":-1,\"matched\":false,\"reason\":\"No reported bugs to match against.\"}],\"unmatched_reported\":[],\"notes\":\"Reported bug list is empty; both truth bugs are uncovered.\"}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "No reported bugs to match against."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "No reported bugs to match against."
+      }
+    ],
+    "unmatched_reported": [],
+    "notes": "Reported bug list is empty; both truth bugs are uncovered."
+  },
+  "usage": {
+    "model": "deepseek-chat",
+    "prompt_tokens": 362,
+    "completion_tokens": 82,
+    "cost_usd": 0.0001358,
+    "cached": false
+  }
+}

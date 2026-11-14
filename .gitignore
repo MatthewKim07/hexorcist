@@ -264,7 +264,9 @@ bench/cache/*
 !bench/cache/.gitkeep
 bench/judgements/*
 !bench/judgements/.gitkeep
+!bench/judgements/dry_*
 bench/results/*
 !bench/results/validate_latest.json
 !bench/results/.gitkeep
+!bench/results/dry_*
 bench/dropped/

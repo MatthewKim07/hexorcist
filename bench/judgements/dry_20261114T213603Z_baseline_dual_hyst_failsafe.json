@@ -1,0 +1,70 @@
+{
+  "case_id": "dual_hyst_failsafe",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No hysteresis on fan threshold",
+      "description": "Fan turns OFF as soon as temp drops below 28 \u00b0C instead of staying ON until 24 \u00b0C, causing rapid toggling around the setpoint.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b2",
+      "title": "No fail-safe for floating/out-of-range sensor",
+      "description": "Floating sensor (near 0 V) or out-of-range temps do not force the fan ON; a disconnected sensor reads ~0 \u00b0C and turns the fan OFF, and >100 \u00b0C is not handled specially.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b3",
+      "title": "Wrong unit scaling (10 mV/\u00b0C)",
+      "description": "Code assumes 100 \u00b0C per 5 V (50 mV/\u00b0C) but the sensor is 10 mV/\u00b0C, so reported temperature is 5\u00d7 too high and the 28 \u00b0C threshold trips at ~5.6 \u00b0C actual.",
+      "category": "wrong_unit_scaling"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single threshold causes chatter",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "No fail-safe on floating probe",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "raw": "{\"matches\":[{\"truth_id\":\"b1\",\"reported_index\":0,\"matched\":true,\"reason\":\"Same missing hysteresis/chatter behavior with 28/24 thresholds.\"},{\"truth_id\":\"b2\",\"reported_index\":1,\"matched\":true,\"reason\":\"Same missing fail-safe on floating/out-of-range sensor.\"}],\"unmatched_reported\":[2],\"notes\":\"Reported b3 (unit scaling) is a distinct issue not in the truth list.\"}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Same missing hysteresis/chatter behavior with 28/24 thresholds."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Same missing fail-safe on floating/out-of-range sensor."
+      }
+    ],
+    "unmatched_reported": [
+      2
+    ],
+    "notes": "Reported b3 (unit scaling) is a distinct issue not in the truth list."
+  },
+  "usage": {
+    "model": "deepseek-chat",
+    "prompt_tokens": 660,
+    "completion_tokens": 96,
+    "cost_usd": 0.00022512,
+    "cached": false
+  }
+}

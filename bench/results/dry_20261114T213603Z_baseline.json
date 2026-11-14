@@ -1,0 +1,79 @@
+{
+  "run_id": "dry_20261114T213603Z_baseline",
+  "system": "baseline",
+  "model": "deepseek-chat",
+  "endpoint": "llm",
+  "stopped": null,
+  "budget": {
+    "spent_deepseek": 0.000662,
+    "spent_openai": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "calls": 3
+  },
+  "cases": [
+    {
+      "case_id": "wrongpin_led",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "LED driven on D12 instead of D13",
+          "category": "wrong_pin",
+          "description": "setup() and loop() configure and write pin 12, so the user LED on D13 never lights; the button state is mirrored onto the wrong pin."
+        }
+      ],
+      "patched_sketch": "void setup(){pinMode(2,INPUT_PULLUP);pinMode(13,OUTPUT);}\nvoid loop(){ digitalWrite(13, digitalRead(2)==LOW ? HIGH : LOW); }\n",
+      "wall_s": 1.63,
+      "llm_calls": 1,
+      "prompt_tokens": 444,
+      "completion_tokens": 115,
+      "cost_usd": 0.00017262,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "dual_hyst_failsafe",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No hysteresis on fan threshold",
+          "category": "missing_hysteresis",
+          "description": "Fan turns OFF as soon as temp drops below 28 \u00b0C instead of staying ON until 24 \u00b0C, causing rapid toggling around the setpoint."
+        },
+        {
+          "id": "b2",
+          "title": "No fail-safe for floating/out-of-range sensor",
+          "category": "missing_failsafe",
+          "description": "Floating sensor (near 0 V) or out-of-range temps do not force the fan ON; a disconnected sensor reads ~0 \u00b0C and turns the fan OFF, and >100 \u00b0C is not handled specially."
+        },
+        {
+          "id": "b3",
+          "title": "Wrong unit scaling (10 mV/\u00b0C)",
+          "category": "wrong_unit_scaling",
+          "description": "Code assumes 100 \u00b0C per 5 V (50 mV/\u00b0C) but the sensor is 10 mV/\u00b0C, so reported temperature is 5\u00d7 too high and the 28 \u00b0C threshold trips at ~5.6 \u00b0C actual."
+        }
+      ],
+      "patched_sketch": "bool on = false;\n\nvoid setup() {\n  pinMode(9, OUTPUT);\n  digitalWrite(9, HIGH); // fail-safe: fan ON at boot\n}\n\nvoid loop() {\n  int raw = analogRead(A2);\n  // 10 mV/degC, 5 V / 1023 counts => 0.0048876 V/count => 0.48876 degC/count\n  float c = raw * (5.0 / 1023.0) * 100.0; // 10 mV/degC => 100 degC per volt\n\n  bool failSafe = (raw <= 2) || (raw >= 1020) || (c > 100.0) || (c < 0.0);\n\n  if (failSafe) {\n    on = true;\n  } else if (c >= 28.0) {\n    on = true;\n  } else if (c <= 24.0) {\n    on = false;\n  }\n  // else: keep previous state (hysteresis band 24..28)\n\n  digitalWrite(9, on ? HIGH : LOW);\n  delay(50);\n}\n",
+      "wall_s": 2.85,
+      "llm_calls": 1,
+      "prompt_tokens": 485,
+      "completion_tokens": 498,
+      "cost_usd": 0.00034496,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "correct_limit",
+      "bugs": [],
+      "patched_sketch": "void setup(){pinMode(2,INPUT_PULLUP);pinMode(13,OUTPUT);}\nvoid loop(){ digitalWrite(13, digitalRead(2)==LOW ? LOW : HIGH); }",
+      "wall_s": 0.87,
+      "llm_calls": 1,
+      "prompt_tokens": 430,
+      "completion_tokens": 56,
+      "cost_usd": 0.00014392,
+      "cached": false,
+      "model": "deepseek-chat"
+    }
+  ]
+}

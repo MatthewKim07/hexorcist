@@ -11,10 +11,14 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(_ROOT), str(_ROOT / "backend")]
 
+from dotenv import load_dotenv
+
+load_dotenv(_ROOT / ".env", override=False)
+
 from bench.case_io import PROMPTS_DIR, RESULTS_DIR, list_case_ids, load_case, write_json
 from bench.llm_budget import Budget, BudgetExceeded, BudgetLLM, endpoint_from_env
 
-# Reuse extract helpers without importing async client side effects beyond config dotenv.
+# Reuse extract helpers (app.config already loads dotenv when imported).
 from app.llm import extract_code, extract_json_text
 
 

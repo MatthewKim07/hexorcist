@@ -1,0 +1,56 @@
+{
+  "run_id": "dry_20261114T213603Z_hexorcist",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "wrongpin_led",
+      "run_id": "2f33efef27b2",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "LED driven on wrong pin (D12 instead of D13)",
+          "description": "setup() configures pin 12 as OUTPUT and loop() writes the button state to pin 12, so the required D13 output is never driven at all. The measured evidence confirms this: in the 'LED on wrong pin D12' scenario D13 was not HIGH for 1400 ms while required, and the same pin mismatch underlies the failures in the rapid-press and bounce scenarios. The button read logic itself is correct, but it is routed to the wrong pin. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "root_cause": "setup() configures pin 12 as OUTPUT and loop() writes the button state to pin 12, so the required D13 output is never driven at all. The measured evidence confirms this: in the 'LED on wrong pin D12' scenario D13 was not HIGH for 1400 ms while required, and the same pin mismatch underlies the failures in the rapid-press and bounce scenarios. The button read logic itself is correct, but it is routed to the wrong pin."
+        }
+      ],
+      "patched_sketch": "void setup(){pinMode(2,INPUT_PULLUP);pinMode(13,OUTPUT);} // LED on D13\nvoid loop(){ digitalWrite(13, digitalRead(2)==LOW ? HIGH : LOW); }\n",
+      "wall_s": 34.89,
+      "llm_calls": 4,
+      "prompt_tokens": 4952,
+      "completion_tokens": 1369,
+      "cost_usd": null,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "dual_hyst_failsafe",
+      "run_id": "1aadd45aa4da",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 43.8,
+      "llm_calls": 2,
+      "prompt_tokens": 2322,
+      "completion_tokens": 1856,
+      "cost_usd": null,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "correct_limit",
+      "run_id": "775f0ef8e3f3",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 28.74,
+      "llm_calls": 2,
+      "prompt_tokens": 1983,
+      "completion_tokens": 1503,
+      "cost_usd": null,
+      "model": "deepseek-chat"
+    }
+  ]
+}

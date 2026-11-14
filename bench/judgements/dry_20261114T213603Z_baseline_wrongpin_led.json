@@ -1,0 +1,41 @@
+{
+  "case_id": "wrongpin_led",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "LED driven on D12 instead of D13",
+      "description": "setup() and loop() configure and write pin 12, so the user LED on D13 never lights; the button state is mirrored onto the wrong pin.",
+      "category": "wrong_pin"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "raw": "{\"matches\":[{\"truth_id\":\"b1\",\"reported_index\":0,\"matched\":true,\"reason\":\"Reported bug names the same wrong pin (D12 instead of D13) as the truth bug.\"}],\"unmatched_reported\":[]}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug names the same wrong pin (D12 instead of D13) as the truth bug."
+      }
+    ],
+    "unmatched_reported": []
+  },
+  "usage": {
+    "model": "deepseek-chat",
+    "prompt_tokens": 359,
+    "completion_tokens": 52,
+    "cost_usd": 0.00012236,
+    "cached": false
+  }
+}

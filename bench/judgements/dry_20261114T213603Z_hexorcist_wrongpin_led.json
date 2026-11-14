@@ -1,0 +1,42 @@
+{
+  "case_id": "wrongpin_led",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "LED driven on wrong pin (D12 instead of D13)",
+      "description": "setup() configures pin 12 as OUTPUT and loop() writes the button state to pin 12, so the required D13 output is never driven at all. The measured evidence confirms this: in the 'LED on wrong pin D12' scenario D13 was not HIGH for 1400 ms while required, and the same pin mismatch underlies the failures in the rapid-press and bounce scenarios. The button read logic itself is correct, but it is routed to the wrong pin. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "raw": "{\"matches\":[{\"truth_id\":\"b1\",\"reported_index\":0,\"matched\":true,\"reason\":\"Reported bug explicitly states LED driven on D12 instead of D13, same wrong-pin root cause.\"}],\"unmatched_reported\":[],\"notes\":\"Single reported bug matches the sole truth bug on wrong pin D12 vs D13.\"}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug explicitly states LED driven on D12 instead of D13, same wrong-pin root cause."
+      }
+    ],
+    "unmatched_reported": [],
+    "notes": "Single reported bug matches the sole truth bug on wrong pin D12 vs D13."
+  },
+  "usage": {
+    "model": "deepseek-chat",
+    "prompt_tokens": 471,
+    "completion_tokens": 73,
+    "cost_usd": 0.00016254,
+    "cached": false
+  }
+}

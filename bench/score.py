@@ -29,6 +29,10 @@ PROMPTS = Path(__file__).resolve().parent / "prompts"
 
 def _judge_endpoint():
     ep = endpoint_from_env("OPENAI")
+    if not ep.configured:
+        # Fall back to the app LLM for local dry runs when OPENAI_* is unset.
+        ep = endpoint_from_env("LLM")
+        ep.name = "judge-fallback"
     if not ep.model:
         ep.model = DEFAULT_JUDGE_MODEL
     return ep

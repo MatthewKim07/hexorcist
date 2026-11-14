@@ -10,9 +10,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
+from dotenv import load_dotenv
 
 _ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(_ROOT)]
+load_dotenv(_ROOT / ".env", override=False)
 
 from bench.case_io import RESULTS_DIR, list_case_ids, load_case, write_json
 
