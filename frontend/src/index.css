@@ -166,6 +166,10 @@ body {
   }
 }
 
+.preset-card {
+  border-radius: var(--radius);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .preset-card:hover {
     border-color: #d4d4d4;

@@ -41,24 +41,26 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
   };
 
   const canRun = health === null || health.llm_configured;
+  const bugs = presets.filter((p) => p.id !== "containment");
+  const containment = presets.find((p) => p.id === "containment");
 
   return (
     <div>
       <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-ink">Break your firmware.</h1>
-      <p className="mt-3 max-w-[54ch] text-sm text-muted">Hexorcist attacks your Arduino sketch on an emulated chip, then proves the fix.</p>
+      <p className="mt-3 text-sm text-muted">Hexorcist attacks your Arduino sketch on an emulated chip, then proves the fix.</p>
 
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {presets.map((p) => {
+      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {bugs.map((p) => {
           const card = CARD[p.id] ?? { blurb: p.summary, tag: p.id };
           const busy = busyId === p.id;
-          const disabled = !!busyId || (p.id !== "containment" && !canRun);
+          const disabled = !!busyId || !canRun;
           return (
-            <article key={p.id} className="preset-card flex flex-col rounded-card border border-line bg-white p-5 transition-[border-color] duration-150">
+            <article key={p.id} className="preset-card flex flex-col border border-line bg-white p-5 transition-[border-color] duration-150">
               <h2 className="text-sm font-medium text-ink">{p.title}</h2>
               <p className="mt-1.5 text-sm text-muted">{card.blurb}</p>
-              <span className="mt-3 w-fit font-mono text-xs text-muted">{card.tag}</span>
-              <div className="mt-6 flex justify-end">
-                <button type="button" className="key rounded-card border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50" disabled={disabled} onClick={() => run(p)}>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <span className="font-mono text-xs text-muted">{card.tag}</span>
+                <button type="button" className="key shrink-0 border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50" style={{ borderRadius: 8 }} disabled={disabled} onClick={() => run(p)}>
                   {busy ? "Starting…" : "Run"}
                 </button>
               </div>
@@ -67,10 +69,34 @@ export function Landing({ health, onStarted }: { health: Health | null; onStarte
         })}
       </div>
 
+      {containment && (
+        <div className="mt-8">
+          <p className="mb-3 text-xs text-muted">Security</p>
+          <article className="preset-card flex flex-col gap-3 border border-line bg-white p-5 transition-[border-color] duration-150 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="text-sm font-medium text-ink">{containment.title}</h2>
+                <span className="font-mono text-xs text-muted">{CARD.containment.tag}</span>
+              </div>
+              <p className="mt-1.5 text-sm text-muted">{CARD.containment.blurb}</p>
+            </div>
+            <button
+              type="button"
+              className="key shrink-0 self-end border border-line bg-white px-3 py-1.5 text-sm !font-normal text-ink disabled:opacity-50 sm:self-center"
+              style={{ borderRadius: 8 }}
+              disabled={!!busyId}
+              onClick={() => run(containment)}
+            >
+              {busyId === containment.id ? "Starting…" : "Run"}
+            </button>
+          </article>
+        </div>
+      )}
+
       {error && <p className="mt-4 text-sm text-fail">{error}</p>}
 
       <p className="mt-10">
-        <a href="#/break" className="text-sm text-muted transition-colors hover:text-ink">
+        <a href="#/new" className="text-sm text-muted transition-colors hover:text-ink">
           Use your own sketch →
         </a>
       </p>
