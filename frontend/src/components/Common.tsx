@@ -1,9 +1,6 @@
 import { ReactNode } from "react";
 
-/** The mark for the light faceplate: dark ink hex with a gold halo. */
-export function Logo({ size = 24 }: { size?: number }) {
-  return <img src="/logo-light.svg" width={size} height={size} alt="" aria-hidden="true" className="block shrink-0" />;
-}
+export { Logo } from "./Logo";
 
 type IconName = "check" | "x" | "dash" | "dot" | "warn" | "shield" | "play" | "pause" | "restart" | "chevron" | "chevronDown" | "arrow";
 

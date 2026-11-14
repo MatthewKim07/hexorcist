@@ -38,6 +38,17 @@
 @tailwind utilities;
 
 :root {
+  --bg: #ffffff;
+  --raised: #fafafa;
+  --ink: #171717;
+  --muted: #666666;
+  --line: #eaeaea;
+  --pass: #1e6b43;
+  --fail: #b0382f;
+  --running: #c47d1a;
+  --queued: #a1a1a1;
+  --brand: #e8c15a;
+  --radius: 8px;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
@@ -48,8 +59,8 @@ html {
 }
 
 body {
-  background: #e3e5e0;
-  color: #202427;
+  background: var(--bg);
+  color: var(--ink);
   font-family: "Geist Sans", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -364,16 +375,14 @@ body {
 }
 
 /* Landing scroll story: one quiet pane at a time, board does the talking. */
-main:has(.story) {
-  container-type: size;
+.story {
   scroll-snap-type: y proximity;
 }
 .story-pane {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  height: 100cqh;
-  min-height: 100cqh;
+  min-height: calc(100dvh - 8rem);
   scroll-snap-align: start;
   padding: 1.5rem 0 2rem;
 }
@@ -401,7 +410,7 @@ main:has(.story) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  main:has(.story) {
+  .story {
     scroll-snap-type: none;
   }
   .story-pane > * {

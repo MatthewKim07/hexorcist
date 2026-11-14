@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Bug, PinSpec, Report } from "../api";
 import { duration, keyFact, rankBugs } from "../format";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
 import { BugList } from "./BugList";
-import { Mode, useStripText } from "./Chassis";
+import { useStripText } from "./Chassis";
 import { ComparePanel } from "./ComparePanel";
 import { Icon, STATUS_META, TONE_TEXT } from "./Common";
 import { ContainedRow, ContainmentDetails } from "./ContainmentPanel";
@@ -62,7 +62,7 @@ function Skeleton() {
   );
 }
 
-export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode | null) => void }) {
+export function RunView({ runId }: { runId: string }) {
   const state = useRun(runId);
   const report = state.run?.report ?? null;
   const status = state.doneStatus ?? (state.run?.status === "running" ? "running" : state.run?.status) ?? "running";
@@ -72,10 +72,6 @@ export function RunView({ runId, onMode }: { runId: string; onMode?: (mode: Mode
   const [tab, setTab] = useState<TabId | null>(null);
   const [openBug, setOpenBug] = useState<string | null>(null);
 
-  const runMode = state.run?.mode as Mode | undefined;
-  useEffect(() => {
-    onMode?.(runMode ?? null);
-  }, [runMode, onMode]);
   const finishedIn = state.run?.finished_at ? duration(state.run.created_at, state.run.finished_at) : "";
   useStripText(!state.run ? "Loading the run" : status === "running" ? (state.connectionLost ? "Reconnecting" : "Running") : finishedIn ? `Finished in ${finishedIn}` : "Finished");
 
