@@ -1,13 +1,8 @@
 import { ReactNode } from "react";
 
+/** The mark for the light faceplate: dark ink hex with a gold halo. */
 export function Logo({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="9" y="9" width="14" height="14" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M13 9V6M19 9V6M13 26v-3M19 26v-3M9 13H6M9 19H6M26 13h-3M26 19h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M13.5 16.5l2 2 3.5-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
+  return <img src="/logo-light.svg" width={size} height={size} alt="" aria-hidden="true" className="block shrink-0" />;
 }
 
 type IconName = "check" | "x" | "dash" | "dot" | "warn" | "shield" | "play" | "pause" | "restart" | "chevron" | "chevronDown" | "arrow";
