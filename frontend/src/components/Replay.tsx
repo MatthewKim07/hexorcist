@@ -132,10 +132,15 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
 
       <div className="screen overflow-hidden rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
         <div className="relative w-full pt-1 sm:px-3 sm:pt-3">
-          <div className="w-full sm:mx-auto sm:max-w-[960px]">
-            {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} className="block w-full" />}
-          </div>
-          {!trace && <p className="absolute bottom-3 left-0 right-0 text-center text-xs text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>}
+          {!trace ? (
+            <div className="flex min-h-[200px] items-center justify-center px-4 py-10 sm:min-h-[280px]" role="status">
+              <p className="text-center text-sm text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>
+            </div>
+          ) : (
+            <div className="w-full sm:mx-auto sm:max-w-[960px]">
+              {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} className="block w-full" />}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3 px-4 pb-3 pt-1">
