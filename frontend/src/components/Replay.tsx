@@ -179,8 +179,8 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
         </div>
 
         <Collapsible.Root open={chart} onOpenChange={setChart} className="border-t border-screen-line">
-          <Collapsible.Trigger className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-screen-muted transition-colors hover:text-screen-ink data-[state=open]:text-screen-ink">
-            <ChevronDown {...iconProps} className={`transition-transform ${chart ? "rotate-180" : ""}`} /> Signal trace
+          <Collapsible.Trigger className="flex w-full items-center gap-2 px-4 py-2.5 text-xs text-screen-muted transition-colors hover:text-screen-ink data-[state=open]:text-screen-ink" aria-label={chart ? "Collapse signal trace" : "Expand signal trace"}>
+            <ChevronDown {...iconProps} className={`transition-transform ${chart ? "rotate-180" : ""}`} aria-hidden="true" /> Signal trace
           </Collapsible.Trigger>
           <Collapsible.Content className="fold">
             {trace && (

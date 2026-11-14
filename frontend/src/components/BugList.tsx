@@ -74,8 +74,8 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
             }}
           >
             <article id={`bug-${bug.id}`} className={`scroll-mt-24 border border-line bg-white p-4 ${focusId === bug.id ? "border-ink/40" : ""}`} style={{ borderRadius: 8 }}>
-              <Collapsible.Trigger className="flex w-full items-start gap-3 text-left">
-                {fixed ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className={`mt-0.5 shrink-0 ${report ? "text-fail" : "text-muted"}`} />}
+              <Collapsible.Trigger className="flex w-full items-start gap-3 text-left" aria-label={isOpen ? `Collapse ${bug.title}` : `Expand ${bug.title}`}>
+                {fixed ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" aria-hidden="true" /> : <CircleX {...iconProps} className={`mt-0.5 shrink-0 ${report ? "text-fail" : "text-muted"}`} aria-hidden="true" />}
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-medium text-ink">{bug.title}</h3>
                   <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
@@ -126,8 +126,8 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
         <Collapsible.Root open={patchOpen} onOpenChange={setPatchOpen}>
           <div className="border border-line bg-white" style={{ borderRadius: 8 }}>
             <div className="flex items-center gap-2 px-4 py-3">
-              <Collapsible.Trigger className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm text-ink">
-                <FileDiff {...iconProps} className="shrink-0 text-muted" />
+              <Collapsible.Trigger className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm text-ink" aria-label={patchOpen ? "Collapse patch" : "Expand patch"}>
+                <FileDiff {...iconProps} className="shrink-0 text-muted" aria-hidden="true" />
                 <span className="font-medium">Patch</span>
                 <span className="num text-xs text-muted">
                   +{fix.diff.added} −{fix.diff.removed}
