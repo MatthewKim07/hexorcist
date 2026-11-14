@@ -111,7 +111,7 @@ export function Segmented<T extends string>({ value, onChange, options, label }:
           style={{ transform: `translateX(${pos.x}px)`, width: pos.w, opacity: pos.ready ? 1 : 0 }}
         />
         {options.map((o) => (
-          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded px-5 py-1.5 !font-normal text-muted aria-checked:text-bg">
+          <RToggle.Item key={o.value} value={o.value} className="key relative z-10 rounded px-5 py-1.5 !font-normal text-muted aria-checked:text-white">
             {o.label}
           </RToggle.Item>
         ))}

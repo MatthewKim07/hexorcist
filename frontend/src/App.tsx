@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, Health } from "./api";
-import { BreakForm } from "./components/BreakForm";
-import { BuildForm } from "./components/BuildForm";
 import { Chassis } from "./components/Chassis";
 import { Landing } from "./components/Landing";
+import { NewRun } from "./components/NewRun";
 import { RunView } from "./components/RunView";
 import { TipProvider } from "./components/ui";
 
@@ -29,8 +28,18 @@ export default function App() {
     api.health().then(setHealth).catch(() => setHealthError(true));
   }, []);
 
+  // Old Break/Build routes land on the new form.
+  useEffect(() => {
+    if (hash.startsWith("#/break")) {
+      location.replace("#/new");
+    } else if (hash.startsWith("#/build")) {
+      location.replace("#/new?mode=build");
+    }
+  }, [hash]);
+
   const runMatch = /^#\/runs\/([a-z0-9]+)/.exec(hash);
-  const route = runMatch ? "run" : hash.startsWith("#/runs") ? "runs" : hash.startsWith("#/build") ? "build" : hash.startsWith("#/break") ? "break" : "landing";
+  const route = runMatch ? "run" : hash.startsWith("#/runs") ? "runs" : hash.startsWith("#/new") || hash.startsWith("#/break") || hash.startsWith("#/build") ? "new" : "landing";
+  const newMode = /[?&]mode=build\b/.test(hash) || hash.startsWith("#/build") ? "build" : "break";
   const [historyOpen, setHistoryOpen] = useState(route === "runs");
   useEffect(() => {
     if (route === "runs") {
@@ -56,8 +65,7 @@ export default function App() {
         }}
       >
         {(route === "landing" || route === "runs") && <Landing health={health} onStarted={started} />}
-        {route === "break" && <BreakForm health={health} onStarted={started} />}
-        {route === "build" && <BuildForm onStarted={started} />}
+        {route === "new" && <NewRun key={newMode} health={health} onStarted={started} initialMode={newMode} />}
         {route === "run" && runMatch && <RunView key={runMatch[1]} runId={runMatch[1]} />}
       </Chassis>
     </TipProvider>
