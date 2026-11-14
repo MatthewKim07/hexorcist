@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#202427"/>
+  <g transform="translate(32 33) scale(0.8) translate(-32 -34)">
+    <polygon points="32,13 50.19,23.5 50.19,44.5 32,55 13.81,44.5 13.81,23.5"
+             fill="none" stroke="#E3E5E0" stroke-width="5" stroke-linejoin="miter"/>
+    <ellipse cx="32" cy="13" rx="14.6" ry="5" fill="none" stroke="#E8C15A" stroke-width="4"/>
+  </g>
+</svg>
