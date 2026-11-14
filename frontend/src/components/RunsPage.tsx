@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { api, RunSummary } from "../api";
 import { RunsTable } from "./RunsTable";
 
+const PAGE = 20;
+
 /** Full runs list, same data the old History drawer used. */
 export function RunsPage() {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState("");
+  const [visible, setVisible] = useState(PAGE);
 
   useEffect(() => {
     api
@@ -14,10 +17,12 @@ export function RunsPage() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
+  const shown = runs?.slice(0, visible) ?? [];
+  const more = (runs?.length ?? 0) > visible;
+
   return (
     <div>
       <h1 className="text-[32px] font-semibold leading-tight tracking-[-0.03em] text-ink">Runs</h1>
-      <p className="mt-3 text-sm text-muted">Every run, newest first.</p>
 
       <div className="mt-10">
         {error && <p className="text-sm text-fail">Could not load runs: {error}</p>}
@@ -31,7 +36,18 @@ export function RunsPage() {
             .
           </p>
         )}
-        {runs && runs.length > 0 && <RunsTable runs={runs} />}
+        {runs && runs.length > 0 && (
+          <>
+            <RunsTable runs={shown} />
+            {more && (
+              <div className="mt-6 flex justify-center">
+                <button type="button" className="key border border-line bg-white px-4 py-2 text-sm !font-normal text-ink" style={{ borderRadius: 8 }} onClick={() => setVisible((n) => n + PAGE)}>
+                  Load more
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

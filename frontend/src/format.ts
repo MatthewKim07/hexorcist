@@ -122,3 +122,22 @@ export function duration(from: number, to: number | null): string {
   const s = Math.round(to - from);
   return s >= 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${s} s`;
 }
+
+/** Compact run duration for tables: "33s", "1m 23s", "1h 16m". */
+export function shortDuration(from: number, to: number | null): string {
+  if (to === null) {
+    return "";
+  }
+  const s = Math.max(0, Math.round(to - from));
+  if (s < 60) {
+    return `${s}s`;
+  }
+  const m = Math.floor(s / 60);
+  if (m < 60) {
+    const rem = s % 60;
+    return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
+  }
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return remM === 0 ? `${h}h` : `${h}h ${remM}m`;
+}

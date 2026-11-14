@@ -1,28 +1,27 @@
 import { KeyboardEvent } from "react";
+import { Bug, CircleCheck, CircleHelp, CircleX, Loader2, LucideIcon, ShieldCheck, Wand2 } from "lucide-react";
 import { RunSummary } from "../api";
-import { duration } from "../format";
+import { shortDuration } from "../format";
+import { iconProps } from "../icons";
 import { Tone, TONE_TEXT } from "./Common";
+import { Tooltip } from "./ui";
 
 /** Table status labels: Fixed / Failed / Clean / Inconclusive / Running / Contained. */
-function tableStatus(status: string): { label: string; tone: Tone } {
+function tableStatus(status: string): { label: string; tone: Tone; Icon: LucideIcon; spin?: boolean } {
   switch (status) {
     case "fixed":
-      return { label: "Fixed", tone: "pass" };
+      return { label: "Fixed", tone: "pass", Icon: CircleCheck };
     case "clean":
-      return { label: "Clean", tone: "pass" };
+      return { label: "Clean", tone: "pass", Icon: CircleCheck };
     case "contained":
-      return { label: "Contained", tone: "pass" };
+      return { label: "Contained", tone: "pass", Icon: ShieldCheck };
     case "running":
-      return { label: "Running", tone: "neutral" };
+      return { label: "Running", tone: "neutral", Icon: Loader2, spin: true };
     case "inconclusive":
-      return { label: "Inconclusive", tone: "neutral" };
+      return { label: "Inconclusive", tone: "neutral", Icon: CircleHelp };
     default:
-      return { label: "Failed", tone: "fail" };
+      return { label: "Failed", tone: "fail", Icon: CircleX };
   }
-}
-
-function modeLabel(mode: string): string {
-  return mode === "build" ? "Write firmware" : "Find bugs";
 }
 
 function ago(seconds: number): string {
@@ -42,12 +41,25 @@ function ago(seconds: number): string {
 
 function StatusCell({ status }: { status: string }) {
   const meta = tableStatus(status);
-  const dot = status === "running" ? "bg-running" : meta.tone === "pass" ? "bg-pass" : meta.tone === "fail" ? "bg-fail" : "bg-queued";
+  const color = status === "running" ? "text-running" : TONE_TEXT[meta.tone];
   return (
-    <span className={`inline-flex items-center gap-2 ${status === "running" ? "text-running" : TONE_TEXT[meta.tone]}`}>
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-      {meta.label}
+    <span className={`inline-flex items-center gap-2 ${color}`}>
+      <meta.Icon {...iconProps} className={`shrink-0 ${meta.spin ? "animate-spin" : ""}`} />
+      <span className="hidden sm:inline">{meta.label}</span>
     </span>
+  );
+}
+
+function ModeCell({ mode }: { mode: string }) {
+  const build = mode === "build";
+  const label = build ? "Write firmware" : "Find bugs";
+  const Icon = build ? Wand2 : Bug;
+  return (
+    <Tooltip content={label}>
+      <span aria-label={label} className="inline-flex text-muted">
+        <Icon {...iconProps} />
+      </span>
+    </Tooltip>
   );
 }
 
@@ -65,15 +77,15 @@ function onRowKey(e: KeyboardEvent<HTMLTableRowElement>, id: string) {
 /** Deployments-style runs table. Whole row links to the run. */
 export function RunsTable({ runs }: { runs: RunSummary[] }) {
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+    <div className="w-full">
+      <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-line text-xs text-muted">
-            <th className="pb-2 pr-4 font-normal">Status</th>
-            <th className="pb-2 pr-4 font-normal">Name</th>
-            <th className="pb-2 pr-4 font-normal">Mode</th>
-            <th className="pb-2 pr-4 font-normal">Duration</th>
-            <th className="pb-2 font-normal">Time</th>
+            <th className="pb-2 pr-3 font-normal sm:pr-4">Status</th>
+            <th className="pb-2 pr-3 font-normal sm:pr-4">Name</th>
+            <th className="hidden w-10 pb-2 pr-3 font-normal sm:table-cell sm:pr-4">Mode</th>
+            <th className="hidden pb-2 pr-3 font-normal sm:table-cell sm:pr-4">Duration</th>
+            <th className="pb-2 text-right font-normal sm:text-left">Time</th>
           </tr>
         </thead>
         <tbody>
@@ -86,13 +98,15 @@ export function RunsTable({ runs }: { runs: RunSummary[] }) {
               onClick={() => openRun(run.id)}
               onKeyDown={(e) => onRowKey(e, run.id)}
             >
-              <td className="py-3 pr-4">
+              <td className="py-3 pr-3 sm:pr-4">
                 <StatusCell status={run.status} />
               </td>
-              <td className="max-w-[240px] truncate py-3 pr-4 text-ink">{run.title || "Untitled"}</td>
-              <td className="py-3 pr-4 text-muted">{modeLabel(run.mode)}</td>
-              <td className="num py-3 pr-4 text-muted">{duration(run.created_at, run.finished_at) || "—"}</td>
-              <td className="py-3 text-muted">{ago(run.created_at)}</td>
+              <td className="max-w-[1px] truncate py-3 pr-3 text-ink sm:pr-4">{run.title || "Untitled"}</td>
+              <td className="hidden py-3 pr-3 sm:table-cell sm:pr-4">
+                <ModeCell mode={run.mode} />
+              </td>
+              <td className="num hidden py-3 pr-3 text-muted sm:table-cell sm:pr-4">{shortDuration(run.created_at, run.finished_at) || "—"}</td>
+              <td className="whitespace-nowrap py-3 text-right text-muted sm:text-left">{ago(run.created_at)}</td>
             </tr>
           ))}
         </tbody>
