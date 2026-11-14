@@ -1,0 +1,76 @@
+{
+  "assertions": [
+    {
+      "id": "a_tpp",
+      "type": "toggle_per_press",
+      "input_pin": "D4",
+      "output_pin": "D10",
+      "active_level": 0,
+      "settle_ms": 50,
+      "within_ms": 150,
+      "description": "One toggle per settled press"
+    },
+    {
+      "id": "a_burst",
+      "type": "max_toggles",
+      "pin": "D10",
+      "max_toggles": 1,
+      "window_ms": 80,
+      "description": "No burst toggles"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_bounce",
+      "name": "Bouncy presses",
+      "seed": 2,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 500,
+              "value": 0,
+              "bounce_ms": 20,
+              "bounce_count": 10
+            },
+            {
+              "t_ms": 900,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2000,
+              "value": 0,
+              "bounce_ms": 18,
+              "bounce_count": 8
+            },
+            {
+              "t_ms": 2400,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 3500,
+              "value": 0,
+              "bounce_ms": 22,
+              "bounce_count": 12
+            },
+            {
+              "t_ms": 4000,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

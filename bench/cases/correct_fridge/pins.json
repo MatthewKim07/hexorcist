@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A3",
+    "role": "Temp",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D7",
+    "role": "Compressor",
+    "type": "digital_output"
+  }
+]

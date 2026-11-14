@@ -1,0 +1,65 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D8",
+      "high_when": {
+        "pin": "A0",
+        "op": "<",
+        "value": 400
+      },
+      "low_when": {
+        "pin": "A0",
+        "op": ">",
+        "value": 600
+      },
+      "within_ms": 400,
+      "description": "Relay follows light"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_dark",
+      "name": "Dark",
+      "seed": 1,
+      "duration_ms": 4000,
+      "analog": [
+        {
+          "pin": "A0",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 200
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    },
+    {
+      "id": "s_bright",
+      "name": "Bright",
+      "seed": 2,
+      "duration_ms": 4000,
+      "analog": [
+        {
+          "pin": "A0",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 800
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

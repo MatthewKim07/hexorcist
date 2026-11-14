@@ -1,0 +1,52 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D5",
+      "high_when": {
+        "pin": "A1",
+        "op": ">=",
+        "value": 35
+      },
+      "low_when": {
+        "pin": "A1",
+        "op": "<=",
+        "value": 32
+      },
+      "within_ms": 500,
+      "description": "band"
+    },
+    {
+      "id": "a_chatter",
+      "type": "max_toggles",
+      "pin": "D5",
+      "max_toggles": 2,
+      "window_ms": 5000,
+      "description": "stable"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_hover",
+      "name": "Hover",
+      "seed": 3,
+      "duration_ms": 8000,
+      "analog": [
+        {
+          "pin": "A1",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 350
+            }
+          ],
+          "noise_mv": 25,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

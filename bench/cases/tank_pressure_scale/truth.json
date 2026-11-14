@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_unit_scaling",
+    "description": "Multiplies raw ADC by 4 instead of converting mV",
+    "check_ids": [
+      "a_val"
+    ]
+  }
+]

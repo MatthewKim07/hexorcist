@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A1",
+    "role": "Duct temp",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D5",
+    "role": "Fan",
+    "type": "digital_output"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "assertions": [
+    {
+      "id": "a_period",
+      "type": "serial_period",
+      "pattern": "^tick$",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "1 Hz"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s",
+      "name": "blink",
+      "seed": 1,
+      "duration_ms": 6000,
+      "analog": [],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

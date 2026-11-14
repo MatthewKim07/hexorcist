@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A3",
+    "role": "Pressure transducer",
+    "type": "analog_input",
+    "scale": "4 mV/kPa"
+  }
+]

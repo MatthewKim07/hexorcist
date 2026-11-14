@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_hysteresis",
+    "description": "Fan toggles at a single threshold with no off band",
+    "check_ids": [
+      "a_chatter"
+    ]
+  }
+]

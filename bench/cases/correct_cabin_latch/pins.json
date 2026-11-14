@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D3",
+    "role": "Button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D8",
+    "role": "Lamp",
+    "type": "digital_output"
+  }
+]

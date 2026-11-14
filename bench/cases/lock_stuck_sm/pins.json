@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "D2",
+    "role": "Request button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D3",
+    "role": "Door closed sense",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D9",
+    "role": "Lock solenoid",
+    "type": "digital_output"
+  }
+]

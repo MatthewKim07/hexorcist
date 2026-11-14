@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "serial_format",
+    "description": "Wrong serial prefix temp= instead of Temp: ",
+    "check_ids": [
+      "a_period",
+      "a_val"
+    ]
+  }
+]

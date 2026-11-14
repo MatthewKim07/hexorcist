@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "millis_rollover",
+    "description": "uint8_t schedule wraps, drip rate wrong",
+    "check_ids": [
+      "a_period"
+    ]
+  }
+]

@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A5",
+    "role": "Tach voltage",
+    "type": "analog_input",
+    "scale": "1 mV/rpm"
+  }
+]

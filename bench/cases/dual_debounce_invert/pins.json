@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D2",
+    "role": "Toggle button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D13",
+    "role": "Lamp",
+    "type": "digital_output"
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A2",
+    "role": "Greenhouse temp",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D9",
+    "role": "Vent fan",
+    "type": "digital_output"
+  }
+]

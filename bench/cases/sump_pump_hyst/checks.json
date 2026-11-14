@@ -1,0 +1,52 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D6",
+      "high_when": {
+        "pin": "A2",
+        "op": ">=",
+        "value": 40
+      },
+      "low_when": {
+        "pin": "A2",
+        "op": "<=",
+        "value": 30
+      },
+      "within_ms": 500,
+      "description": "Pump band 40/30 cm"
+    },
+    {
+      "id": "a_chatter",
+      "type": "max_toggles",
+      "pin": "D6",
+      "max_toggles": 2,
+      "window_ms": 5000,
+      "description": "No short cycle"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_edge",
+      "name": "Hover 40 cm noise",
+      "seed": 9,
+      "duration_ms": 8000,
+      "analog": [
+        {
+          "pin": "A2",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 400
+            }
+          ],
+          "noise_mv": 40,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

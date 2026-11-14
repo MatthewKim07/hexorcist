@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A0",
+    "role": "pH probe (linearized)",
+    "type": "analog_input",
+    "scale": "500 mV/pH + 0 mV"
+  }
+]

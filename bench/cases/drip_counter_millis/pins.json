@@ -1,0 +1,7 @@
+[
+  {
+    "pin": "D8",
+    "role": "Drip pulse out",
+    "type": "digital_output"
+  }
+]

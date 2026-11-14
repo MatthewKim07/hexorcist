@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D2",
+    "role": "Button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D13",
+    "role": "User LED",
+    "type": "digital_output"
+  }
+]

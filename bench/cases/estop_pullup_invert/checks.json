@@ -1,0 +1,51 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D5",
+      "low_when": {
+        "pin": "D3",
+        "op": "==",
+        "value": 0
+      },
+      "high_when": {
+        "pin": "D3",
+        "op": "==",
+        "value": 1
+      },
+      "within_ms": 100,
+      "description": "Contactor follows e-stop"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_stop",
+      "name": "E-stop hold",
+      "seed": 3,
+      "duration_ms": 4000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D3",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 500,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 3000,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A0",
+    "role": "TMP36",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C + 500 mV"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_hysteresis",
+    "description": "Single threshold causes chatter",
+    "check_ids": [
+      "a_chatter"
+    ]
+  },
+  {
+    "id": "b2",
+    "category": "missing_failsafe",
+    "description": "No fail-safe on floating probe",
+    "check_ids": [
+      "a_fault"
+    ]
+  }
+]

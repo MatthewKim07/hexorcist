@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D2",
+    "role": "Panic button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D9",
+    "role": "Siren",
+    "type": "digital_output"
+  }
+]

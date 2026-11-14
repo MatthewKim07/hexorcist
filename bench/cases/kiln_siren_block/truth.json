@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "blocking_delay",
+    "description": "delay(2000) blocks and drops presses / stalls responsiveness",
+    "check_ids": [
+      "a_hb",
+      "a_resp"
+    ]
+  }
+]

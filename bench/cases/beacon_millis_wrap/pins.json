@@ -1,0 +1,7 @@
+[
+  {
+    "pin": "D12",
+    "role": "Beacon LED",
+    "type": "digital_output"
+  }
+]

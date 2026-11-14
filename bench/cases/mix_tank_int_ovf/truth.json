@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "integer_overflow",
+    "description": "int sum of ADC samples overflows",
+    "check_ids": [
+      "a_val"
+    ]
+  }
+]

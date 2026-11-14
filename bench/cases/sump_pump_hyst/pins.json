@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A2",
+    "role": "Water level",
+    "type": "analog_input",
+    "scale": "10 mV/cm"
+  },
+  {
+    "pin": "D6",
+    "role": "Sump pump",
+    "type": "digital_output"
+  }
+]

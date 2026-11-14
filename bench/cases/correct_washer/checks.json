@@ -1,0 +1,51 @@
+{
+  "assertions": [
+    {
+      "id": "a_motor",
+      "type": "output_follows",
+      "pin": "D10",
+      "low_when": {
+        "pin": "A0",
+        "op": "<",
+        "value": 20
+      },
+      "within_ms": 600,
+      "description": "motor off"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s",
+      "name": "cycle",
+      "seed": 7,
+      "duration_ms": 10000,
+      "analog": [
+        {
+          "pin": "A0",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 50
+            },
+            {
+              "t_ms": 1500,
+              "mv": 280
+            },
+            {
+              "t_ms": 4000,
+              "mv": 280
+            },
+            {
+              "t_ms": 5500,
+              "mv": 100
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

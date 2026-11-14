@@ -1,0 +1,61 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D7",
+      "high_when": {
+        "pin": "A3",
+        "op": ">=",
+        "value": 8
+      },
+      "low_when": {
+        "pin": "A3",
+        "op": "<=",
+        "value": 4
+      },
+      "within_ms": 500,
+      "description": "band"
+    },
+    {
+      "id": "a_fault",
+      "type": "safe_state_on_fault",
+      "fault_when": {
+        "pin": "A3",
+        "op": ">",
+        "value": 60
+      },
+      "output_pin": "D7",
+      "safe_value": 0,
+      "within_ms": 400,
+      "description": "Overrange OFF"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_over",
+      "name": "Warm then overrange",
+      "seed": 2,
+      "duration_ms": 9000,
+      "analog": [
+        {
+          "pin": "A3",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 120
+            },
+            {
+              "t_ms": 2000,
+              "mv": 800
+            }
+          ],
+          "noise_mv": 2,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

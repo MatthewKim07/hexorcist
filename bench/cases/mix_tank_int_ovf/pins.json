@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A4",
+    "role": "Concentration sensor",
+    "type": "analog_input",
+    "scale": "10 mV/%"
+  }
+]

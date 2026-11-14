@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "off_by_one_timing",
+    "description": "Pulse length 2000 ms instead of 3000 ms",
+    "check_ids": [
+      "a_pulse"
+    ]
+  }
+]

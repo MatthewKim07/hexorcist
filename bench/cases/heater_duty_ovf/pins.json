@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A0",
+    "role": "Room temperature",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D9",
+    "role": "Heater enable",
+    "type": "digital_output"
+  }
+]

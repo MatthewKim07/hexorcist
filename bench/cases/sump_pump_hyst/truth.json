@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_hysteresis",
+    "description": "Pump uses one trip level and chatters with noise",
+    "check_ids": [
+      "a_chatter"
+    ]
+  }
+]

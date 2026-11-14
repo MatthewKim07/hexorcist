@@ -1,0 +1,8 @@
+[
+  {
+    "pin": "A0",
+    "role": "pH",
+    "type": "analog_input",
+    "scale": "500 mV/pH"
+  }
+]

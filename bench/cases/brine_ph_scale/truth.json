@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_unit_scaling",
+    "description": "Prints raw/100 instead of mV/500 as pH",
+    "check_ids": [
+      "a_val"
+    ]
+  }
+]

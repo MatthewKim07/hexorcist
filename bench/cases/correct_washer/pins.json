@@ -1,0 +1,18 @@
+[
+  {
+    "pin": "A0",
+    "role": "Level",
+    "type": "analog_input",
+    "scale": "10 mV/cm"
+  },
+  {
+    "pin": "D9",
+    "role": "Valve",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D10",
+    "role": "Motor",
+    "type": "digital_output"
+  }
+]

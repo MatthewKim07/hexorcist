@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "millis_rollover",
+    "description": "uint8_t millis delta wraps and blinks too often",
+    "check_ids": [
+      "a_period"
+    ]
+  }
+]

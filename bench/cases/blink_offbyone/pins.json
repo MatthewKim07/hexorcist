@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D2",
+    "role": "Start button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D4",
+    "role": "Indicator",
+    "type": "digital_output"
+  }
+]

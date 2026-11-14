@@ -1,0 +1,58 @@
+{
+  "assertions": [
+    {
+      "id": "a_unlock",
+      "type": "output_follows",
+      "pin": "D9",
+      "low_when": {
+        "pin": "D3",
+        "op": "==",
+        "value": 1
+      },
+      "within_ms": 200,
+      "description": "Unlocked when door open"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_lock",
+      "name": "Lock then open door",
+      "seed": 1,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D3",
+          "initial": 0,
+          "events": [
+            {
+              "t_ms": 3000,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        },
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 500,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 800,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

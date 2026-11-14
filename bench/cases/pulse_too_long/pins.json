@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D4",
+    "role": "Trigger",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D9",
+    "role": "Injector",
+    "type": "digital_output"
+  }
+]

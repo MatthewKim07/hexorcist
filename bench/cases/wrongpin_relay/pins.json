@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A0",
+    "role": "Light sensor",
+    "type": "analog_input",
+    "scale": "1 mV/unit"
+  },
+  {
+    "pin": "D8",
+    "role": "Lamp relay",
+    "type": "digital_output"
+  }
+]

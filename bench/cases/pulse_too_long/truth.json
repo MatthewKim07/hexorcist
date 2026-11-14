@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "timed_pulse_length",
+    "description": "Injector pulse 2 s instead of 800 ms",
+    "check_ids": [
+      "a_pulse"
+    ]
+  }
+]

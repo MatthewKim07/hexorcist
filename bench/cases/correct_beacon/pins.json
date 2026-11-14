@@ -1,0 +1,7 @@
+[
+  {
+    "pin": "D12",
+    "role": "LED",
+    "type": "digital_output"
+  }
+]

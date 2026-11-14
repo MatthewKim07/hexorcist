@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_pin",
+    "description": "Drives D12 instead of D13",
+    "check_ids": [
+      "a_follow"
+    ]
+  }
+]

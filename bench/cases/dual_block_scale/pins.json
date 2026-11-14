@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A0",
+    "role": "Flow sensor",
+    "type": "analog_input",
+    "scale": "2 mV/Lph"
+  },
+  {
+    "pin": "D8",
+    "role": "Alarm LED",
+    "type": "digital_output"
+  }
+]

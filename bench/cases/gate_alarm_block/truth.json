@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "blocking_delay",
+    "description": "Blocking delay(1500) freezes the loop",
+    "check_ids": [
+      "a_hb",
+      "a_resp"
+    ]
+  }
+]

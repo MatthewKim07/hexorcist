@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D3",
+    "role": "Hold button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D8",
+    "role": "Armed LED",
+    "type": "digital_output"
+  }
+]

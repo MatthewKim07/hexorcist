@@ -1,0 +1,50 @@
+{
+  "assertions": [
+    {
+      "id": "a_pulse",
+      "type": "timed_pulse",
+      "pin": "D4",
+      "trigger": {
+        "pin": "D2",
+        "op": "==",
+        "value": 0
+      },
+      "duration_ms": 3000,
+      "tolerance_ms": 200,
+      "within_ms": 120,
+      "during_pulse": "ignore",
+      "min_trigger_ms": 40,
+      "description": "3 s pulse"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_press",
+      "name": "Single press",
+      "seed": 1,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 400,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 700,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D13",
+      "low_when": {
+        "pin": "D2",
+        "op": "==",
+        "value": 0
+      },
+      "high_when": {
+        "pin": "D2",
+        "op": "==",
+        "value": 1
+      },
+      "within_ms": 100,
+      "description": "Motor off while limit LOW"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_hit",
+      "name": "Press and release",
+      "seed": 1,
+      "duration_ms": 5000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 800,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2500,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

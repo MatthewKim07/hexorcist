@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_debounce",
+    "description": "Bounce causes multiple LED toggles per press",
+    "check_ids": [
+      "a_tpp",
+      "a_burst"
+    ]
+  }
+]

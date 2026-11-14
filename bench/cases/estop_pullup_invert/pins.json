@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D3",
+    "role": "E-stop to GND",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D5",
+    "role": "Contactor",
+    "type": "digital_output"
+  }
+]

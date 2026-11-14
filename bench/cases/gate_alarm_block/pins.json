@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D7",
+    "role": "Gate contact",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D11",
+    "role": "Beeper",
+    "type": "digital_output"
+  }
+]
