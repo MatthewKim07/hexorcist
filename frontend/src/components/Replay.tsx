@@ -18,6 +18,10 @@ interface Props {
   error: string;
   /** Whether this scenario has finished running for the chosen firmware version. */
   ready: boolean;
+  /** Trace request in flight (or about to start). */
+  loading?: boolean;
+  /** API confirmed there is no trace for this scenario. */
+  missing?: boolean;
   side: "before" | "after";
   onSide: (side: "before" | "after") => void;
   /** Null when there is no patch to compare against. */
@@ -34,8 +38,22 @@ interface Props {
 
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
 
+/** Dark placeholder while the Replay chunk or a trace is loading. */
+export function ReplaySkeleton() {
+  return (
+    <div className="screen overflow-hidden rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" role="status" aria-label="Loading replay">
+      <div className="mx-4 my-3 h-[200px] animate-pulse rounded-lg bg-white/5 sm:mx-6 sm:h-[280px]" />
+      <div className="flex items-center gap-3 px-4 pb-3">
+        <div className="h-9 w-9 animate-pulse rounded-md bg-white/5" />
+        <div className="h-2 flex-1 animate-pulse rounded bg-white/5" />
+        <div className="h-4 w-16 animate-pulse rounded bg-white/5" />
+      </div>
+    </div>
+  );
+}
+
 /** The board replay: one scenario, one firmware version at a time, and the single number that shows the difference. */
-export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, side, onSide, hasAfter, violations, evidence, startAt, chips, onChip, activeChip }: Props) {
+export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, ready, loading = false, missing = false, side, onSide, hasAfter, violations, evidence, startAt, chips, onChip, activeChip }: Props) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -132,13 +150,17 @@ export function Replay({ pins, scenarios, scenarioId, onScenario, trace, error, 
 
       <div className="screen overflow-hidden rounded-xl border border-[#0b0f0e] bg-screen text-screen-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
         <div className="relative w-full pt-1 sm:px-3 sm:pt-3">
-          {!trace ? (
-            <div className="flex min-h-[200px] items-center justify-center px-4 py-10 sm:min-h-[280px]" role="status">
-              <p className="text-center text-sm text-screen-muted">{error ? `Could not load the trace: ${error}` : ready ? "Loading" : "Not run yet"}</p>
-            </div>
-          ) : (
+          {trace ? (
             <div className="w-full sm:mx-auto sm:max-w-[960px]">
               {chips?.length ? <BoardStage pins={pins} trace={trace} t={t} scenario={scenario} chips={chips} onChip={onChip} activeChip={activeChip} /> : <VirtualBoard pins={pins} trace={trace} t={t} scenario={scenario} className="block w-full" />}
+            </div>
+          ) : loading || (ready && !missing && !error) ? (
+            <div className="mx-2 mb-1 sm:mx-3">
+              <div className="h-[200px] animate-pulse rounded-lg bg-white/5 sm:h-[280px]" role="status" aria-label="Loading replay" />
+            </div>
+          ) : (
+            <div className="flex min-h-[200px] items-center justify-center px-4 py-10 sm:min-h-[280px]" role="status">
+              <p className="text-center text-sm text-screen-muted">{error ? `Could not load the trace: ${error}` : "Not run yet"}</p>
             </div>
           )}
         </div>

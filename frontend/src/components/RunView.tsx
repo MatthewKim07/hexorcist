@@ -23,6 +23,20 @@ const BugList = lazy(() => import("./BugList").then((m) => ({ default: m.BugList
 const FirmwareCard = lazy(() => import("./FirmwareCard").then((m) => ({ default: m.FirmwareCard })));
 const ComparePanel = lazy(() => import("./ComparePanel").then((m) => ({ default: m.ComparePanel })));
 
+function ReplayChunkFallback() {
+  return (
+    <section id="replay" className="scroll-mt-20">
+      <div className="screen overflow-hidden rounded-xl border border-[#0b0f0e] bg-screen shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]" role="status" aria-label="Loading replay">
+        <div className="mx-4 my-3 h-[200px] animate-pulse rounded-lg bg-white/5 sm:mx-6 sm:h-[280px]" />
+        <div className="flex items-center gap-3 px-4 pb-3">
+          <div className="h-9 w-9 animate-pulse rounded-md bg-white/5" />
+          <div className="h-2 flex-1 animate-pulse rounded bg-white/5" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** The board opens paused this far ahead of the first failure, so pressing play shows it happen. */
 const LEAD_MS = 300;
 
@@ -124,8 +138,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   const afterIteration = report?.fix?.iteration ?? null;
   const iteration = side === "after" && afterIteration !== null ? afterIteration : 0;
   const scenarioId = chosenId ?? (report ? (bugs[0]?.scenario_id ?? emulated[0]?.id ?? null) : null);
-  const ready = !!scenarioId && !!state.results[iteration]?.[scenarioId];
-  const { trace, error: traceError } = useTrace(runId, iteration, scenarioId, ready);
+  // Prefer the finished report matrix so we do not wait on SSE to hydrate state.results.
+  const matrixHasScenario = !!(scenarioId && report?.matrix?.[String(iteration)] && scenarioId in report.matrix[String(iteration)]);
+  const ready = !!scenarioId && (!!state.results[iteration]?.[scenarioId] || matrixHasScenario);
+  const { trace, error: traceError, loading: traceLoading, missing: traceMissing } = useTrace(runId, iteration, scenarioId, ready);
   const results = useMemo(() => report?.matrix?.[String(iteration)]?.[scenarioId ?? ""] ?? [], [report, iteration, scenarioId]);
   const violations = useMemo(() => results.filter((r) => r.status === "fail").flatMap((r) => r.violations), [results]);
   const startAt = useMemo(() => {
@@ -247,8 +263,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         {isBuild && firmware && status !== "compile_failed" && <FirmwareCard firmware={firmware} defaultOpen={!bugs.length} />}
 
         {contained && records.length > 0 && <ContainmentDetails records={records} report={report} guard={guard} inline />}
+      </Suspense>
 
-        {hasBoard && (
+      {hasBoard && (
+        <Suspense fallback={<ReplayChunkFallback />}>
           <Replay
             pins={pins}
             scenarios={emulated}
@@ -257,6 +275,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
             trace={trace}
             error={traceError}
             ready={ready}
+            loading={traceLoading}
+            missing={traceMissing}
             side={side}
             onSide={setSide}
             hasAfter={showBeforeAfter}
@@ -267,7 +287,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
             onChip={onChip}
             activeChip={activeChip}
           />
-        )}
+        </Suspense>
+      )}
+
+      <Suspense fallback={null}>
 
         {!contained && attacked && bugs.length > 0 && (
           <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} buildMode={isBuild} />
