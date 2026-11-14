@@ -82,15 +82,21 @@ export function ContainmentDetails({ records, report, guard, inline = false }: {
       {inline && contained && (
         <div className="space-y-4">
           <ul className="space-y-2">
-            {contained.checks.map((c) => (
-              <li key={c.label} className="flex items-start gap-2 text-sm text-ink">
-                {c.ok ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className="mt-0.5 shrink-0 text-fail" />}
-                <span>
-                  <span className="font-medium">{c.label}</span>
-                  {c.detail && <span className="mt-0.5 block text-xs text-muted">{c.detail}</span>}
-                </span>
-              </li>
-            ))}
+            {contained.checks.map((c) => {
+              const detail =
+                c.label === "Input guard flagged the upload"
+                  ? `${contained.guard.reasons.length} attack pattern${contained.guard.reasons.length === 1 ? "" : "s"} flagged`
+                  : c.detail;
+              return (
+                <li key={c.label} className="flex items-start gap-2 text-sm text-ink">
+                  {c.ok ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" /> : <CircleX {...iconProps} className="mt-0.5 shrink-0 text-fail" />}
+                  <span>
+                    <span className="font-medium">{c.label}</span>
+                    {detail && <span className="mt-0.5 block text-xs text-muted">{detail}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <p className="text-sm text-muted">
             What the attacker got: <span className="text-ink">nothing</span>

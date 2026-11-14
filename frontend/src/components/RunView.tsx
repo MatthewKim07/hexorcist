@@ -63,13 +63,18 @@ function Skeleton() {
   );
 }
 
+function isSecurityDemo(title: string, status: string): boolean {
+  return status === "contained" || status === "containment_failed" || /contain/i.test(title);
+}
+
 function RunHeader({ title, mode, status, createdAt, finishedAt, sandboxCount, connectionLost }: { title: string; mode: string; status: string; createdAt: number; finishedAt: number | null; sandboxCount: number; connectionLost: boolean }) {
   const running = status === "running";
   const elapsed = useElapsed(createdAt, finishedAt, running);
   const Device = runIcon(title, mode);
   const st = headerStatus(status);
-  const ModeIcon = mode === "build" ? Wand2 : Bug;
-  const modeLabel = mode === "build" ? "Write firmware" : "Find bugs";
+  const security = isSecurityDemo(title, status);
+  const ModeIcon = security ? ShieldCheck : mode === "build" ? Wand2 : Bug;
+  const modeLabel = security ? "Security demo" : mode === "build" ? "Write firmware" : "Find bugs";
   const color = status === "running" ? "text-running" : TONE_TEXT[st.tone];
 
   return (

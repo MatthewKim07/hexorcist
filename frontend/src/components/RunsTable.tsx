@@ -50,10 +50,10 @@ function StatusCell({ status }: { status: string }) {
   );
 }
 
-function ModeCell({ mode }: { mode: string }) {
-  const build = mode === "build";
-  const label = build ? "Write firmware" : "Find bugs";
-  const Icon = build ? Wand2 : Bug;
+function ModeCell({ mode, title, status }: { mode: string; title: string; status: string }) {
+  const security = status === "contained" || status === "containment_failed" || /contain/i.test(title);
+  const label = security ? "Security demo" : mode === "build" ? "Write firmware" : "Find bugs";
+  const Icon = security ? ShieldCheck : mode === "build" ? Wand2 : Bug;
   return (
     <Tooltip content={label}>
       <span aria-label={label} className="inline-flex items-center justify-center text-muted">
@@ -112,7 +112,7 @@ export function RunsTable({ runs }: { runs: RunSummary[] }) {
                 <span className="block truncate text-ink">{displayTitle(run.title)}</span>
               </td>
               <td className="hidden align-middle py-3 pr-2 text-center sm:table-cell sm:pr-4">
-                <ModeCell mode={run.mode} />
+                <ModeCell mode={run.mode} title={run.title} status={run.status} />
               </td>
               <td className="num hidden align-middle py-3 pr-2 text-muted sm:table-cell sm:pr-4">{shortDuration(run.created_at, run.finished_at) || "—"}</td>
               <td className="align-middle whitespace-nowrap py-3 text-right text-muted">{ago(run.created_at)}</td>
