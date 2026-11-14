@@ -29,7 +29,7 @@ export function Icon({ name, className = "" }: { name: IconName; className?: str
 export function DiffView({ unified }: { unified: string }) {
   const lines = unified.split("\n").filter((l) => !l.startsWith("---") && !l.startsWith("+++"));
   return (
-    <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-raised py-2 font-mono text-xs leading-5">
+    <pre className="scroll max-h-96 overflow-auto rounded-md border border-line bg-[#FAFAFA] py-2 font-mono text-[13px] leading-5">
       {lines.map((line, i) => {
         const add = line.startsWith("+");
         const del = line.startsWith("-");
