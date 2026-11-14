@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS runs (
     firmware TEXT NOT NULL,
     spec TEXT NOT NULL,
     guard TEXT NOT NULL,
-    report TEXT
+    report TEXT,
+    archived INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS events (
     run_id TEXT NOT NULL,
@@ -53,9 +54,16 @@ class Store:
         with self._lock:
             self._db.execute("PRAGMA journal_mode=WAL")
             self._db.executescript(SCHEMA)
+            self._migrate()
             # A restart kills in-flight runs, so do not leave them claiming to be running.
             self._db.execute("UPDATE runs SET status='interrupted', finished_at=? WHERE status='running'", (time.time(),))
             self._db.commit()
+
+    def _migrate(self) -> None:
+        """Add columns that older databases are missing. Never drops data."""
+        cols = {row[1] for row in self._db.execute("PRAGMA table_info(runs)").fetchall()}
+        if "archived" not in cols:
+            self._db.execute("ALTER TABLE runs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0")
 
     def create_run(self, run_id: str, mode: str, title: str, firmware: str, spec: dict, guard: dict) -> None:
         with self._lock:
@@ -131,7 +139,7 @@ class Store:
     def list_runs(self, limit: int = 100) -> list[dict]:
         with self._lock:
             rows = self._db.execute(
-                "SELECT id, created_at, finished_at, mode, title, status, report FROM runs ORDER BY created_at DESC LIMIT ?",
+                "SELECT id, created_at, finished_at, mode, title, status, report FROM runs WHERE archived = 0 ORDER BY created_at DESC LIMIT ?",
                 (limit,),
             ).fetchall()
         out = []
@@ -149,3 +157,21 @@ class Store:
                 }
             )
         return out
+
+    def count_to_archive(self, before_ts: float) -> int:
+        with self._lock:
+            row = self._db.execute(
+                "SELECT COUNT(*) AS n FROM runs WHERE archived = 0 AND created_at < ?",
+                (before_ts,),
+            ).fetchone()
+        return int(row["n"])
+
+    def archive_before(self, before_ts: float) -> int:
+        """Mark runs created before before_ts as archived. Rows and traces stay."""
+        with self._lock:
+            cur = self._db.execute(
+                "UPDATE runs SET archived = 1 WHERE archived = 0 AND created_at < ?",
+                (before_ts,),
+            )
+            self._db.commit()
+            return cur.rowcount
