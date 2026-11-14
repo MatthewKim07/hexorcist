@@ -1,0 +1,101 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D7",
+      "high_when": {
+        "pin": "A1",
+        "op": ">=",
+        "value": 45
+      },
+      "low_when": {
+        "pin": "A1",
+        "op": "<=",
+        "value": 30
+      },
+      "within_ms": 500,
+      "description": "Pump follows 45/30 cm band",
+      "covers": "Start the pump when level reaches 45.0 cm or higher; stop the pump when level falls to 30.0 cm or lower"
+    },
+    {
+      "id": "a_chatter",
+      "type": "max_toggles",
+      "pin": "D7",
+      "max_toggles": 2,
+      "window_ms": 5000,
+      "description": "No short cycling",
+      "covers": "Pump output must not toggle more than 2 times in any 5000 ms window"
+    },
+    {
+      "id": "a_log",
+      "type": "serial_period",
+      "pattern": "^sump cm=",
+      "period_ms": 800,
+      "tolerance_ms": 120,
+      "description": "Periodic sump log",
+      "covers": "Every 800 ms print"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_edge",
+      "name": "Hover 45 cm with noise",
+      "seed": 9,
+      "duration_ms": 8000,
+      "analog": [
+        {
+          "pin": "A1",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 450
+            }
+          ],
+          "noise_mv": 35,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": []
+    },
+    {
+      "id": "s_high",
+      "name": "Steady 55 cm",
+      "seed": 2,
+      "duration_ms": 4000,
+      "analog": [
+        {
+          "pin": "A1",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 550
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": []
+    }
+  ]
+}

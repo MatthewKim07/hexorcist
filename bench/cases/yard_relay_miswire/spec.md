@@ -1,0 +1,6 @@
+- Light sensor on A0 scaled as 1 mV per unit; lamp relay on D8; manual override on D3 (pull-up).
+- Relay D8 ON when light reading is below 400 units; OFF when above 600 units.
+- While D3 is held LOW, force the relay ON.
+- Reach the commanded relay state within 400 ms of a sustained band crossing.
+- Print `yard u=<n> relay=ON` or `yard u=<n> relay=OFF` every 1000 ms.
+- Hysteresis band between 400 and 600 keeps the relay from chattering at dusk.

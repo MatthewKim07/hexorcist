@@ -1,0 +1,24 @@
+[
+  {
+    "pin": "A0",
+    "role": "Water level",
+    "type": "analog_input",
+    "scale": "10 mV/cm"
+  },
+  {
+    "pin": "D9",
+    "role": "Fill valve",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D10",
+    "role": "Drum motor",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Reset",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

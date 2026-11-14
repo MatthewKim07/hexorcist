@@ -1,0 +1,6 @@
+- E-stop on D3 with INPUT_PULLUP, active LOW when pressed. Contactor coil on D5. Run request on D6 (pull-up).
+- Contactor D5 must drop LOW when e-stop is held (D3 LOW), and run HIGH when e-stop is released.
+- React within 100 ms of a settled e-stop level change.
+- Settle the e-stop contact for 30 ms before counting a new trip.
+- Print `hoist run=<0|1> trips=<n>` every 1100 ms.
+- When e-stop is clear, keep the contactor available (HIGH) for hoist motion.

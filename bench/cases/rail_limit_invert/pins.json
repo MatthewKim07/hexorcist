@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "D2",
+    "role": "Limit switch to GND",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D13",
+    "role": "Motor enable",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Jog request",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

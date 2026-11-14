@@ -1,0 +1,101 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D5",
+      "high_when": {
+        "pin": "A3",
+        "op": ">=",
+        "value": 36
+      },
+      "low_when": {
+        "pin": "A3",
+        "op": "<=",
+        "value": 32
+      },
+      "within_ms": 500,
+      "description": "Fan follows 36/32 C band",
+      "covers": "Turn the fan ON at 36.0 °C or above; turn it OFF at 32.0 °C or below"
+    },
+    {
+      "id": "a_chatter",
+      "type": "max_toggles",
+      "pin": "D5",
+      "max_toggles": 2,
+      "window_ms": 5000,
+      "description": "Switching limit",
+      "covers": "Fan must not change state more than 2 times in any 5000 ms window"
+    },
+    {
+      "id": "a_log",
+      "type": "serial_period",
+      "pattern": "^loft: ",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "Loft status",
+      "covers": "Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_hover",
+      "name": "Hover 36 C noise",
+      "seed": 3,
+      "duration_ms": 8000,
+      "analog": [
+        {
+          "pin": "A3",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 360
+            }
+          ],
+          "noise_mv": 18,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": []
+    },
+    {
+      "id": "s_hot",
+      "name": "Steady 42 C",
+      "seed": 1,
+      "duration_ms": 4000,
+      "analog": [
+        {
+          "pin": "A3",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 420
+            }
+          ],
+          "noise_mv": 4,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).
+- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.
+- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.
+- Enter FILL from IDLE when level is below 10.0 cm.
+- Holding D4 LOW forces IDLE immediately.
+- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.

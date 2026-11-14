@@ -1,0 +1,6 @@
+- Drip solenoid driver on D8; pause button on D4 to ground with internal pull-up (active LOW).
+- Emit a 50 ms HIGH pulse on D8 every 800 ms while pause is released.
+- Print the exact line `drip` at the start of each pulse; period must stay 800 ms ±120 ms.
+- While D4 is held LOW, suppress new pulses and keep D8 LOW.
+- Every 1600 ms print `drip n=<count> pause=<0|1>`.
+- Stay responsive: complete each pulse without multi-second blocking waits.

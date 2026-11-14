@@ -1,0 +1,71 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D13",
+      "low_when": {
+        "pin": "D2",
+        "op": "==",
+        "value": 0
+      },
+      "high_when": {
+        "pin": "D2",
+        "op": "==",
+        "value": 1
+      },
+      "within_ms": 100,
+      "description": "Motor off while limit LOW",
+      "covers": "Motor enable on D13 must be LOW (disabled) while the limit is active (D2 LOW), and HIGH otherwise"
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^rail motor=",
+      "period_ms": 900,
+      "tolerance_ms": 120,
+      "description": "Rail status",
+      "covers": "Print `rail motor=<0|1> hits=<n>` every 900 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_hit",
+      "name": "Press and release limit",
+      "seed": 1,
+      "duration_ms": 5000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 800,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2500,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        },
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ]
+    }
+  ]
+}

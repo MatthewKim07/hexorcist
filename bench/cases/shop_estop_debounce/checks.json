@@ -1,0 +1,83 @@
+{
+  "assertions": [
+    {
+      "id": "a_tpp",
+      "type": "toggle_per_press",
+      "input_pin": "D6",
+      "output_pin": "D9",
+      "active_level": 0,
+      "settle_ms": 50,
+      "within_ms": 150,
+      "description": "One armed toggle per estop press",
+      "covers": "Each settled press toggles D9 exactly once within 150 ms"
+    },
+    {
+      "id": "a_beat",
+      "type": "serial_period",
+      "pattern": "^shop armed=",
+      "period_ms": 1200,
+      "tolerance_ms": 150,
+      "description": "Shop status cadence",
+      "covers": "Print `shop armed=<0|1> presses=<n>` every 1200 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_bounce",
+      "name": "Bouncy estop presses",
+      "seed": 4,
+      "duration_ms": 6500,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D6",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 400,
+              "value": 0,
+              "bounce_ms": 18,
+              "bounce_count": 9
+            },
+            {
+              "t_ms": 850,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2100,
+              "value": 0,
+              "bounce_ms": 20,
+              "bounce_count": 11
+            },
+            {
+              "t_ms": 2600,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 3800,
+              "value": 0,
+              "bounce_ms": 22,
+              "bounce_count": 10
+            },
+            {
+              "t_ms": 4300,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

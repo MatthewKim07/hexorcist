@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_unit_scaling",
+    "description": "Omits 500 mV zero offset so kPa reads 50 high",
+    "check_ids": [
+      "a_val"
+    ]
+  }
+]

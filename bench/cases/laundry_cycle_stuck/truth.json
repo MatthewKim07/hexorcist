@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "stuck_state_machine",
+    "description": "RUN state never exits when level drops",
+    "check_ids": [
+      "a_motor"
+    ]
+  }
+]

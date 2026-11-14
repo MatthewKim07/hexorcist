@@ -1,0 +1,6 @@
+- Tach input on A5 at 1 mV per rpm; over-speed lamp on D9; mute on D3 (pull-up).
+- Print `RPM:<n>` with no space after the colon once per second (1000 ms ±120 ms).
+- Printed rpm must stay within ±50 of the injected tach value.
+- Light D9 when rpm is at or above 2000 while mute is released.
+- While D3 is held LOW, keep D9 OFF regardless of rpm.
+- Each second also print `spindle min=<n> max=<n>` after the RPM line.

@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D5",
+    "role": "Foyer wall switch",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D11",
+    "role": "Foyer lamp",
+    "type": "digital_output"
+  }
+]

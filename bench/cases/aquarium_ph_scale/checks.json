@@ -1,0 +1,51 @@
+{
+  "assertions": [
+    {
+      "id": "a_period",
+      "type": "serial_period",
+      "pattern": "^pH: ",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "One pH line per second",
+      "covers": "Print exactly one line every 1000 ms matching"
+    },
+    {
+      "id": "a_val",
+      "type": "serial_value_matches",
+      "pattern": "pH: (-?[0-9.]+)",
+      "input_pin": "A0",
+      "tolerance": 0.2,
+      "max_lag_ms": 400,
+      "description": "Printed pH matches probe",
+      "covers": "Printed pH must stay within ±0.20 of the injected probe value"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_ph7",
+      "name": "pH 7 steady",
+      "seed": 1,
+      "duration_ms": 5000,
+      "analog": [
+        {
+          "pin": "A0",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 3500
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

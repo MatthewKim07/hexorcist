@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_debounce",
+    "description": "Raw edge sampling multi-toggles through bounce",
+    "check_ids": [
+      "a_tpp"
+    ]
+  }
+]

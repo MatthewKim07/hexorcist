@@ -1,0 +1,6 @@
+- Momentary wall switch on D5 to ground with internal pull-up (active LOW); foyer lamp driver on D11.
+- Each settled press toggles the lamp exactly once within 150 ms; releasing the switch must not toggle.
+- Contact bounce up to 20 ms on press and release must not produce extra toggles.
+- Debounce / settle window of 40 ms before accepting a press edge.
+- Every 1500 ms print `foyer lamp=ON` or `foyer lamp=OFF`.
+- Idle (unpressed) switch reads HIGH; a physical press is a HIGH-to-LOW transition after settle.

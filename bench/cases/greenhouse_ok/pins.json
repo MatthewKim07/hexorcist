@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A0",
+    "role": "Shed air temp",
+    "type": "analog_input",
+    "scale": "10 mV/°C"
+  },
+  {
+    "pin": "D6",
+    "role": "Shed vent fan",
+    "type": "digital_output"
+  }
+]

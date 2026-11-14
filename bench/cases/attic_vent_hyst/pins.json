@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A0",
+    "role": "Attic LM35",
+    "type": "analog_input",
+    "scale": "10 mV/°C"
+  },
+  {
+    "pin": "D8",
+    "role": "Ridge vent relay",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D3",
+    "role": "Manual override",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "pin": "D2",
+    "role": "Trigger",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D8",
+    "role": "Solenoid",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D11",
+    "role": "Armed LED",
+    "type": "digital_output"
+  }
+]

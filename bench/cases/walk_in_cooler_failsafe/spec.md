@@ -1,0 +1,6 @@
+- Cabinet probe on A3 at 10 mV/°C; compressor relay on D7; service stop on D4 (pull-up, active LOW).
+- Turn the compressor ON when temperature reaches 8.0 °C or above, and OFF when temperature falls to 4.0 °C or below.
+- If the sensor is floating, or temperature reads below 0.0 °C or above 60.0 °C, force the compressor OFF within 500 ms.
+- While D4 is held LOW, keep the compressor OFF for service.
+- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.
+- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.

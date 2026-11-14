@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A3",
+    "role": "Loft temperature",
+    "type": "analog_input",
+    "scale": "10 mV/°C"
+  },
+  {
+    "pin": "D5",
+    "role": "Loft fan",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Boost button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

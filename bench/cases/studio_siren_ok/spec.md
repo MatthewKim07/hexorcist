@@ -1,0 +1,6 @@
+- Panic button on D4 to ground with internal pull-up (active LOW); siren on D7.
+- A settled press as short as 40 ms starts a 2500 ms HIGH pulse on D7 within 150 ms.
+- Presses while the siren is already sounding are ignored (do not restart the pulse).
+- Print the exact line `hb` every 400 ms at all times, including during the siren.
+- Never remain silent (no serial and no output change) for more than 700 ms.
+- Idle button reads HIGH.

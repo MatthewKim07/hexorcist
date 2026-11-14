@@ -1,0 +1,6 @@
+- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).
+- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.
+- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms ±120 ms).
+- While D3 is held LOW, force the beacon OFF and pause the blink schedule.
+- Beacon must not change state more than 4 times in any 2000 ms window during free blink.
+- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.

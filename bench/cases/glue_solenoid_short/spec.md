@@ -1,0 +1,6 @@
+- Trigger on D2 with INPUT_PULLUP (active LOW); glue solenoid on D8; armed LED on D11.
+- A settled press as short as 30 ms starts a 2500 ms HIGH pulse on D8 within 120 ms.
+- Retriggers during an active pulse are ignored.
+- Debounce the trigger with 25 ms of stability.
+- Keep D11 HIGH when idle and LOW while the solenoid pulse is active.
+- Print `glue dots=<n> busy=<0|1>` every 500 ms.

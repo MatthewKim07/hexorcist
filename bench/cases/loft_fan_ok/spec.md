@@ -1,0 +1,6 @@
+- Temperature probe on A3 at 10 mV/°C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).
+- Turn the fan ON at 36.0 °C or above; turn it OFF at 32.0 °C or below.
+- While D4 is held LOW, force the fan ON.
+- Fan must not change state more than 2 times in any 5000 ms window.
+- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.
+- Apply fan changes within 500 ms of a sustained threshold crossing.

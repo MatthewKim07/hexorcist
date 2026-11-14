@@ -1,0 +1,6 @@
+- Shop estop pushbutton on D6 to ground with internal pull-up (active LOW); machine-armed indicator on D9.
+- Each settled press toggles D9 exactly once within 150 ms; release must not toggle.
+- Bounce bursts up to 22 ms must not produce more than one toggle per physical press.
+- Use a 50 ms settle window before accepting a press.
+- Print `shop armed=<0|1> presses=<n>` every 1200 ms.
+- Unpressed idle level is HIGH on D6.

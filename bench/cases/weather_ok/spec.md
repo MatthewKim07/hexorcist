@@ -1,0 +1,6 @@
+- TMP36 on A0 (10 mV/°C with 500 mV offset); freeze button on D5 (pull-up); range lamp on D7.
+- Every 1000 ms print exactly `Temp: <celsius>` with a space after the colon and one decimal place.
+- Printed temperature must stay within ±1.5 °C of the injected probe value.
+- While D5 is held LOW, freeze the reported value at the last sample.
+- Light D7 when the reported temperature is outside -10.0 to 50.0 °C.
+- Also print `weather n=<samples>` each second after the Temp line.

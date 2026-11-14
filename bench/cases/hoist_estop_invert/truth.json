@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "inverted_pullup",
+    "description": "E-stop polarity inverted vs pull-up wiring",
+    "check_ids": [
+      "a_follow"
+    ]
+  }
+]

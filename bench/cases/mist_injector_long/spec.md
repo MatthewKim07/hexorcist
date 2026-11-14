@@ -1,0 +1,6 @@
+- Trigger on D4 with INPUT_PULLUP (active LOW); mist injector on D9; ready lamp on D12.
+- A settled press as short as 30 ms starts an 800 ms HIGH pulse on D9 within 120 ms.
+- Retriggers during an active pulse are ignored.
+- Debounce the trigger with 25 ms of stability.
+- Keep D12 HIGH when idle and LOW while the injector pulse is active.
+- Print `mist shots=<n> busy=<0|1>` every 450 ms.

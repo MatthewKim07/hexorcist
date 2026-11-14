@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A1",
+    "role": "Sump level",
+    "type": "analog_input",
+    "scale": "10 mV/cm"
+  },
+  {
+    "pin": "D7",
+    "role": "Pump contactor",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Silence button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

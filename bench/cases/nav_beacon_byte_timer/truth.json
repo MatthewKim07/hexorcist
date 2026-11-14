@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "millis_rollover",
+    "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+    "check_ids": [
+      "a_period"
+    ]
+  }
+]

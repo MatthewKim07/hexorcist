@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_hysteresis",
+    "description": "Single 42 C trip point chatters under sensor noise",
+    "check_ids": [
+      "a_chatter"
+    ]
+  }
+]

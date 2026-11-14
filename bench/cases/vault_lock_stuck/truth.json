@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "stuck_state_machine",
+    "description": "Lock latches forever after first engage",
+    "check_ids": [
+      "a_unlock"
+    ]
+  }
+]

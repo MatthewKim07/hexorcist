@@ -1,0 +1,6 @@
+- Limit switch on D2 with INPUT_PULLUP (pressed/active = LOW). Motor enable on D13. Jog on D4 (pull-up).
+- Motor enable on D13 must be LOW (disabled) while the limit is active (D2 LOW), and HIGH otherwise.
+- Reach the commanded motor state within 100 ms of a settled limit change.
+- Debounce the limit contact with at least 25 ms of stability before acting.
+- Print `rail motor=<0|1> hits=<n>` every 900 ms.
+- Jog may request motion only when the limit is clear; limit always wins.

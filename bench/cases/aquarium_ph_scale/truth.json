@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_unit_scaling",
+    "description": "Prints millivolts as pH instead of mv/500",
+    "check_ids": [
+      "a_val"
+    ]
+  }
+]

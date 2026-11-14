@@ -1,0 +1,6 @@
+- Button on D2 with INPUT_PULLUP (active LOW); user LED on D13; blink-mode switch on D4 (pull-up).
+- While D2 is pressed and D4 is released, light D13 HIGH; release turns D13 LOW.
+- Reach the commanded LED state within 100 ms of the button level.
+- While D4 is held LOW and D2 is pressed, blink D13 with ~120 ms half-period.
+- Print `bench led=<0|1> held_ms=<n>` every 1000 ms.
+- Idle (D2 released) always keeps D13 LOW.

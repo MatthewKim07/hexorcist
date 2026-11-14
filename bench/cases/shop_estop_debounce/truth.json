@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_debounce",
+    "description": "Immediate edge detect counts bounce as presses",
+    "check_ids": [
+      "a_tpp"
+    ]
+  }
+]

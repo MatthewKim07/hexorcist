@@ -1,0 +1,81 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D7",
+      "high_when": {
+        "pin": "A3",
+        "op": ">=",
+        "value": 8
+      },
+      "low_when": {
+        "pin": "A3",
+        "op": "<=",
+        "value": 4
+      },
+      "within_ms": 500,
+      "description": "Cooling band",
+      "covers": "Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below"
+    },
+    {
+      "id": "a_fault",
+      "type": "safe_state_on_fault",
+      "floating_pin": "A3",
+      "output_pin": "D7",
+      "safe_value": 0,
+      "within_ms": 500,
+      "description": "Float forces OFF",
+      "covers": "If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms"
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^cooler: ",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "Cooler status",
+      "covers": "Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_warm",
+      "name": "Warm then float",
+      "seed": 2,
+      "duration_ms": 8000,
+      "analog": [
+        {
+          "pin": "A3",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 120
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": [
+        {
+          "pin": "A3",
+          "from_ms": 3000,
+          "to_ms": 7000
+        }
+      ]
+    }
+  ]
+}

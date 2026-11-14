@@ -1,0 +1,6 @@
+- Linearized pH probe on A1 at 500 mV/pH; out-of-band indicator on D10.
+- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 500 for pH.
+- Print `pH: <value>` every 1000 ms with two decimal places.
+- Printed pH must stay within ±0.20 of the injected probe value.
+- Drive D10 HIGH when pH is outside 6.50–8.50 inclusive; otherwise LOW.
+- Keep the 1000 ms logging cadence while the indicator is lit.

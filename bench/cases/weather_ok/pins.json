@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A0",
+    "role": "TMP36",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C + 500 mV"
+  },
+  {
+    "pin": "D5",
+    "role": "Freeze hold",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D7",
+    "role": "Out-of-range lamp",
+    "type": "digital_output"
+  }
+]

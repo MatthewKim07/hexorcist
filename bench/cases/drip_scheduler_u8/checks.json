@@ -1,0 +1,35 @@
+{
+  "assertions": [
+    {
+      "id": "a_period",
+      "type": "serial_period",
+      "pattern": "^drip$",
+      "period_ms": 800,
+      "tolerance_ms": 120,
+      "description": "drip every 800 ms",
+      "covers": "Print the exact line `drip` at the start of each pulse; period must stay 800 ms \u00b1120 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_run",
+      "name": "Steady drip",
+      "seed": 2,
+      "duration_ms": 5000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": []
+        }
+      ]
+    }
+  ]
+}

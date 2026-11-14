@@ -1,0 +1,6 @@
+- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.
+- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).
+- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.
+- Debounce the request contact with 35 ms of stability before engaging.
+- Print `vault lock=<0|1> engages=<n>` every 1000 ms.
+- Do not re-engage while already locked; wait for a new request after unlock.

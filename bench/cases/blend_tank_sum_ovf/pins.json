@@ -1,0 +1,14 @@
+[
+  {
+    "pin": "A4",
+    "role": "Concentration sensor",
+    "type": "analog_input",
+    "scale": "10 mV/%"
+  },
+  {
+    "pin": "D5",
+    "role": "Force sample",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

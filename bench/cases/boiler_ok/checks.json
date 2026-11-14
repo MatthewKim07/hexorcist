@@ -1,0 +1,83 @@
+{
+  "assertions": [
+    {
+      "id": "a_follow",
+      "type": "output_follows",
+      "pin": "D6",
+      "high_when": {
+        "pin": "A1",
+        "op": "<",
+        "value": 70
+      },
+      "low_when": {
+        "pin": "A1",
+        "op": ">",
+        "value": 75
+      },
+      "within_ms": 500,
+      "description": "Heat band",
+      "covers": "Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C"
+    },
+    {
+      "id": "a_fault",
+      "type": "safe_state_on_fault",
+      "fault_when": {
+        "pin": "A1",
+        "op": ">",
+        "value": 120
+      },
+      "output_pin": "D6",
+      "safe_value": 0,
+      "within_ms": 500,
+      "description": "Overrange closes valve",
+      "covers": "If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms"
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^boiler: ",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "Boiler status",
+      "covers": "Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_runaway",
+      "name": "Normal then overrange",
+      "seed": 4,
+      "duration_ms": 7000,
+      "analog": [
+        {
+          "pin": "A1",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 600
+            },
+            {
+              "t_ms": 2500,
+              "mv": 1300
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [
+        {
+          "pin": "D3",
+          "initial": 1,
+          "events": []
+        }
+      ],
+      "floating": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).
+- Average a rolling window of ADC samples and print `pct: <value>` about once per second.
+- Printed percent must stay within ±3.0 of the injected probe value.
+- Lines matching `pct: ` must appear every 1000 ms ±150 ms.
+- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.
+- Every 1000 ms also print `blend batches=<n>` for batch accounting.

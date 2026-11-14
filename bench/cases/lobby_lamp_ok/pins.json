@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D3",
+    "role": "Lobby switch",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D12",
+    "role": "Accent lamp",
+    "type": "digital_output"
+  }
+]

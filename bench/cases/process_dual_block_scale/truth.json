@@ -1,0 +1,19 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_unit_scaling",
+    "description": "Treats raw ADC counts as L/h",
+    "check_ids": [
+      "a_val"
+    ]
+  },
+  {
+    "id": "b2",
+    "category": "blocking_delay",
+    "description": "delay(2000) stalls log cadence and responsiveness",
+    "check_ids": [
+      "a_resp",
+      "a_period"
+    ]
+  }
+]

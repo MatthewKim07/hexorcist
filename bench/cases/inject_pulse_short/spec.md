@@ -1,0 +1,6 @@
+- Start button on D2 with INPUT_PULLUP (active LOW); inject indicator on D4.
+- Each settled press as short as 40 ms starts a 3000 ms HIGH pulse on D4 within 120 ms.
+- Presses during an active pulse are ignored.
+- Debounce the start contact with 30 ms of stability.
+- Print `go` when a pulse starts, and `inject hb shots=<n>` every 400 ms at all times.
+- Never remain silent (no serial and no output change) for more than 700 ms.

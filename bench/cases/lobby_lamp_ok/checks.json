@@ -1,0 +1,83 @@
+{
+  "assertions": [
+    {
+      "id": "a_tpp",
+      "type": "toggle_per_press",
+      "input_pin": "D3",
+      "output_pin": "D12",
+      "active_level": 0,
+      "settle_ms": 45,
+      "within_ms": 150,
+      "description": "One toggle per settled press",
+      "covers": "Each settled press toggles the lamp exactly once within 150 ms"
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^lobby lamp=",
+      "period_ms": 1400,
+      "tolerance_ms": 150,
+      "description": "Lobby status line",
+      "covers": "Print `lobby lamp=ON n=<count>` or `lobby lamp=OFF n=<count>` every 1400 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_bounce",
+      "name": "Bouncy lobby presses",
+      "seed": 2,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D3",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 500,
+              "value": 0,
+              "bounce_ms": 20,
+              "bounce_count": 9
+            },
+            {
+              "t_ms": 950,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2100,
+              "value": 0,
+              "bounce_ms": 18,
+              "bounce_count": 8
+            },
+            {
+              "t_ms": 2550,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 3700,
+              "value": 0,
+              "bounce_ms": 22,
+              "bounce_count": 11
+            },
+            {
+              "t_ms": 4200,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

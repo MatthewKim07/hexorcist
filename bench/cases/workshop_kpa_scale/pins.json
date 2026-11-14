@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A2",
+    "role": "Manifold pressure",
+    "type": "analog_input",
+    "scale": "10 mV/kPa + 500 mV"
+  },
+  {
+    "pin": "D12",
+    "role": "High pressure lamp",
+    "type": "digital_output"
+  }
+]

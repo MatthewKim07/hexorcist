@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "wrong_pin",
+    "description": "Relay driven on D7 not D8",
+    "check_ids": [
+      "a_follow"
+    ]
+  }
+]

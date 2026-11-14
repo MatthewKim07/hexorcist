@@ -1,0 +1,6 @@
+- Hold button on D3 with INPUT_PULLUP (active LOW); armed LED on D8; confirm on D5 (pull-up).
+- Armed LED D8 turns HIGH only after D3 has been held LOW continuously for 500 ms.
+- Release of D3 turns the armed LED OFF immediately (within 100 ms).
+- After a qualifying hold, D8 must be HIGH within 550 ms of the press start.
+- Print `arm lit=<0|1> events=<n>` every 1000 ms.
+- Holding D5 LOW may emit `arm confirm` lines without changing the armed LED.

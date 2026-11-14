@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A0",
+    "role": "Aquarium pH probe",
+    "type": "analog_input",
+    "scale": "500 mV/pH"
+  },
+  {
+    "pin": "D13",
+    "role": "Low pH alert LED",
+    "type": "digital_output"
+  }
+]

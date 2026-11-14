@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_failsafe",
+    "description": "No safe-OFF on floating/out-of-range probe",
+    "check_ids": [
+      "a_fault"
+    ]
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_hysteresis",
+    "description": "Single 28 C threshold chatters under hover noise",
+    "check_ids": [
+      "a_chatter"
+    ]
+  },
+  {
+    "id": "b2",
+    "category": "missing_failsafe",
+    "description": "Floating probe leaves fan off instead of fail-safe ON",
+    "check_ids": [
+      "a_fault"
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A0",
+    "role": "Cabin temperature",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D9",
+    "role": "Heater enable",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D2",
+    "role": "Frost override",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

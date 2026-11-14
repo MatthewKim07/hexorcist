@@ -1,0 +1,65 @@
+{
+  "assertions": [
+    {
+      "id": "a_pulse",
+      "type": "timed_pulse",
+      "pin": "D4",
+      "trigger": {
+        "pin": "D2",
+        "op": "==",
+        "value": 0
+      },
+      "duration_ms": 3000,
+      "tolerance_ms": 200,
+      "within_ms": 120,
+      "during_pulse": "ignore",
+      "min_trigger_ms": 40,
+      "description": "3 s pulse",
+      "covers": "Each settled press as short as 40 ms starts a 3000 ms HIGH pulse on D4 within 120 ms"
+    },
+    {
+      "id": "a_hb",
+      "type": "serial_period",
+      "pattern": "^inject hb shots=",
+      "period_ms": 400,
+      "tolerance_ms": 80,
+      "description": "Heartbeat",
+      "covers": "Print `go` when a pulse starts, and `inject hb shots=<n>` every 400 ms at all times"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_press",
+      "name": "Single press",
+      "seed": 1,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 400,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 700,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

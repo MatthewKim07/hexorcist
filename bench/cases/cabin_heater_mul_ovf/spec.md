@@ -1,0 +1,6 @@
+- Cabin LM35 on A0 at 10 mV/°C; heater enable on D9; frost override on D2 (pull-up, active LOW).
+- Turn the heater ON when temperature is below 18.0 °C and OFF when temperature is above 22.0 °C.
+- While D2 is held LOW, force the heater ON regardless of temperature.
+- Reach the commanded heater state within 600 ms of a sustained band crossing.
+- Print `cabin: <temp> C heat=ON` or `cabin: <temp> C heat=OFF` every 1000 ms with one decimal place.
+- Temperature in the status line is informational; control decisions use the comfort band above.

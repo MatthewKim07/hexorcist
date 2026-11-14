@@ -1,0 +1,6 @@
+- LM35 temperature probe on A0 scaled at 10 mV/°C; ridge-vent relay on D8; override pushbutton on D3 to ground with internal pull-up (active LOW).
+- Turn the vent fan ON when attic temperature reaches 42.0 °C or above, and turn it OFF when temperature falls to 38.0 °C or below.
+- While D3 is held LOW, force the fan ON regardless of temperature.
+- Fan must not change state more than 2 times in any 5000 ms window.
+- Print one status line every 1000 ms in the form `attic: <temp> C fan=ON` or `attic: <temp> C fan=OFF` with temperature to one decimal place.
+- Reach the commanded fan state within 500 ms of a sustained threshold crossing.

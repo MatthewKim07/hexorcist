@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D12",
+    "role": "Nav beacon LED",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D3",
+    "role": "Quiet hold",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

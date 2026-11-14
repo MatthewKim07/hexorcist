@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D2",
+    "role": "Kiln door switch",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D8",
+    "role": "Kiln siren",
+    "type": "digital_output"
+  }
+]

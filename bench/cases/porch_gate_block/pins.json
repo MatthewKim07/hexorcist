@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D3",
+    "role": "Porch gate contact",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D10",
+    "role": "Gate chime",
+    "type": "digital_output"
+  }
+]

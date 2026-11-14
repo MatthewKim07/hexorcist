@@ -1,0 +1,6 @@
+- Panel key on D2 to ground with internal pull-up (active LOW); status LED on D13.
+- Each settled press toggles D13 exactly once within 150 ms; release must not toggle.
+- Bounce up to 20 ms on press and release must not produce extra toggles.
+- Use a 40 ms settle window before accepting a press edge (HIGH-to-LOW after settle).
+- Print `panel led=<0|1> edges=<n>` every 1000 ms.
+- Idle (unpressed) key reads HIGH.

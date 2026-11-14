@@ -1,0 +1,6 @@
+- Linear water-level sensor on A1 at 10 mV/cm; sump pump contactor on D7; silence pushbutton on D4 to ground with internal pull-up (active LOW).
+- Start the pump when level reaches 45.0 cm or higher; stop the pump when level falls to 30.0 cm or lower.
+- Holding D4 LOW latches silence mode and keeps the pump OFF until reset (power cycle).
+- Pump output must not toggle more than 2 times in any 5000 ms window.
+- Every 800 ms print `sump cm=<level> pump=<0|1> mute=<0|1>` with level to one decimal place.
+- Apply pump start/stop within 500 ms of a sustained band crossing.

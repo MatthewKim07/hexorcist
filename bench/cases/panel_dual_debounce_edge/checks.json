@@ -1,0 +1,83 @@
+{
+  "assertions": [
+    {
+      "id": "a_tpp",
+      "type": "toggle_per_press",
+      "input_pin": "D2",
+      "output_pin": "D13",
+      "active_level": 0,
+      "settle_ms": 40,
+      "within_ms": 150,
+      "description": "One LED toggle per settled press",
+      "covers": "Each settled press toggles D13 exactly once within 150 ms"
+    },
+    {
+      "id": "a_report",
+      "type": "serial_period",
+      "pattern": "^panel led=",
+      "period_ms": 1000,
+      "tolerance_ms": 120,
+      "description": "Panel status cadence",
+      "covers": "Print `panel led=<0|1> edges=<n>` every 1000 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_bounce",
+      "name": "Bouncy panel presses",
+      "seed": 2,
+      "duration_ms": 6000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D2",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 400,
+              "value": 0,
+              "bounce_ms": 18,
+              "bounce_count": 8
+            },
+            {
+              "t_ms": 800,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 2000,
+              "value": 0,
+              "bounce_ms": 20,
+              "bounce_count": 10
+            },
+            {
+              "t_ms": 2500,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 3600,
+              "value": 0,
+              "bounce_ms": 16,
+              "bounce_count": 7
+            },
+            {
+              "t_ms": 4100,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_failsafe",
+    "description": "Valve stays open on sensor overrange",
+    "check_ids": [
+      "a_fault"
+    ]
+  }
+]

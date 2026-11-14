@@ -1,0 +1,18 @@
+[
+  {
+    "id": "b1",
+    "category": "missing_debounce",
+    "description": "No settle window, bounce creates extra toggles",
+    "check_ids": [
+      "a_tpp"
+    ]
+  },
+  {
+    "id": "b2",
+    "category": "inverted_pullup",
+    "description": "Acts on release edge instead of press",
+    "check_ids": [
+      "a_tpp"
+    ]
+  }
+]

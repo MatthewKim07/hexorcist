@@ -1,0 +1,6 @@
+- Boiler probe on A1 at 10 mV/°C; gas valve on D6; lockout key on D3 (pull-up, active LOW).
+- Open the valve (HIGH) when temperature is below 70.0 °C; close the valve when temperature is above 75.0 °C.
+- If temperature reads above 120.0 °C or below 5.0 °C, force the valve CLOSED (LOW) within 500 ms.
+- While D3 is held LOW, keep the valve CLOSED.
+- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.
+- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.

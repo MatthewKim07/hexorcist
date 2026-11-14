@@ -1,0 +1,6 @@
+- Porch gate contact on D3 to ground with internal pull-up (active LOW when open); chime driver on D10.
+- A settled open event as short as 40 ms starts an 1800 ms HIGH pulse on D10 within 150 ms.
+- Presses while the chime is already sounding are ignored (pulse length is not restarted).
+- Print the exact line `gate-hb` every 300 ms continuously, including while the chime is sounding.
+- Never remain silent (no serial and no output change) for more than 700 ms.
+- Closed/idle gate reads HIGH on D3.

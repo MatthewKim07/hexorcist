@@ -1,0 +1,6 @@
+- Flow transducer on A0 scaled at 2 mV/Lph; low-flow alarm lamp on D8.
+- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 2 to obtain L/h.
+- Print `flow: <value>` every 500 ms with one decimal place.
+- Printed flow must match the injected value within ±10 L/h.
+- Drive D8 HIGH when flow is below 100 L/h; otherwise LOW.
+- Firmware must never go silent (no serial and no output change) for more than 900 ms.

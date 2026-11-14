@@ -1,0 +1,6 @@
+- Lobby switch on D3 to ground with internal pull-up (active LOW); accent lamp on D12.
+- Each settled press toggles the lamp exactly once within 150 ms; release must not toggle.
+- Bounce up to 20 ms must not create extra toggles.
+- Settle window is 45 ms before accepting a press.
+- Print `lobby lamp=ON n=<count>` or `lobby lamp=OFF n=<count>` every 1400 ms.
+- Idle switch level is HIGH.

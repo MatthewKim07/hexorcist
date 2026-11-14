@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D6",
+    "role": "Shop estop",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D9",
+    "role": "Machine armed lamp",
+    "type": "digital_output"
+  }
+]

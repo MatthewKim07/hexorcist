@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "D2",
+    "role": "Button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D13",
+    "role": "User LED",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Blink mode",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

@@ -1,0 +1,6 @@
+- Pressure transducer on A2 scaled at 10 mV/kPa with a 500 mV zero offset; high-pressure gauge lamp on D12.
+- Physical pressure in kPa equals (millivolts − 500) / 10 using a 5.000 V / 1023 ADC span.
+- Emit `kPa: <value>` once every 1000 ms with one decimal place.
+- Printed pressure must match the injected value within ±2.0 kPa.
+- Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW.
+- Continue logging at the same rate while the gauge lamp is lit.

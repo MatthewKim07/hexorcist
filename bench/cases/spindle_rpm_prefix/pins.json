@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A5",
+    "role": "Tach voltage",
+    "type": "analog_input",
+    "scale": "1 mV/rpm"
+  },
+  {
+    "pin": "D9",
+    "role": "Over-speed lamp",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D3",
+    "role": "Mute",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

@@ -1,0 +1,65 @@
+{
+  "assertions": [
+    {
+      "id": "a_pulse",
+      "type": "timed_pulse",
+      "pin": "D9",
+      "trigger": {
+        "pin": "D4",
+        "op": "==",
+        "value": 0
+      },
+      "duration_ms": 800,
+      "tolerance_ms": 150,
+      "within_ms": 120,
+      "during_pulse": "ignore",
+      "min_trigger_ms": 30,
+      "description": "800 ms pulse",
+      "covers": "A settled press as short as 30 ms starts an 800 ms HIGH pulse on D9 within 120 ms"
+    },
+    {
+      "id": "a_hb",
+      "type": "serial_period",
+      "pattern": "^mist shots=",
+      "period_ms": 450,
+      "tolerance_ms": 80,
+      "description": "Mist heartbeat",
+      "covers": "Print `mist shots=<n> busy=<0|1>` every 450 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s1",
+      "name": "Press",
+      "seed": 2,
+      "duration_ms": 4000,
+      "analog": [],
+      "floating": [],
+      "digital": [
+        {
+          "pin": "D4",
+          "initial": 1,
+          "events": [
+            {
+              "t_ms": 200,
+              "value": 0,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            },
+            {
+              "t_ms": 500,
+              "value": 1,
+              "bounce_ms": 0,
+              "bounce_count": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

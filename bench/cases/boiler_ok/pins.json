@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A1",
+    "role": "Boiler temperature",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D6",
+    "role": "Gas valve",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D3",
+    "role": "Lockout key",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

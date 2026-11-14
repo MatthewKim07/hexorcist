@@ -1,0 +1,59 @@
+{
+  "assertions": [
+    {
+      "id": "a_period",
+      "type": "serial_period",
+      "pattern": "^flow: ",
+      "period_ms": 500,
+      "tolerance_ms": 120,
+      "description": "2 Hz flow log",
+      "covers": "Print `flow: <value>` every 500 ms"
+    },
+    {
+      "id": "a_val",
+      "type": "serial_value_matches",
+      "pattern": "flow: (-?[0-9.]+)",
+      "input_pin": "A0",
+      "tolerance": 10,
+      "max_lag_ms": 400,
+      "description": "Printed flow matches sensor",
+      "covers": "Printed flow must match the injected value within ±10 L/h"
+    },
+    {
+      "id": "a_resp",
+      "type": "responsive",
+      "max_gap_ms": 900,
+      "start_ms": 100,
+      "description": "Stay responsive",
+      "covers": "Firmware must never go silent (no serial and no output change) for more than 900 ms"
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_flow",
+      "name": "Steady 150 L/h",
+      "seed": 1,
+      "duration_ms": 5000,
+      "analog": [
+        {
+          "pin": "A0",
+          "segments": [
+            {
+              "t_ms": 0,
+              "mv": 300
+            }
+          ],
+          "noise_mv": 5,
+          "spikes": []
+        }
+      ],
+      "digital": [],
+      "floating": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+- LM35 greenhouse air probe on A2 at 10 mV/°C; exhaust fan relay on D9.
+- Open the fan when temperature reaches 28.0 °C or above; close the fan when temperature falls to 24.0 °C or below.
+- Fan must not change state more than 2 times in any 5000 ms window.
+- If the probe is floating, or temperature reads below 0.0 °C or above 100.0 °C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.
+- Print `gh: <temp> C fan=ON` or `gh: <temp> C fan=OFF` every 1000 ms with temperature to one decimal place.
+- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.

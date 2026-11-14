@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "blocking_delay",
+    "description": "delay(1800) stalls heartbeat during chime",
+    "check_ids": [
+      "a_hb",
+      "a_resp"
+    ]
+  }
+]

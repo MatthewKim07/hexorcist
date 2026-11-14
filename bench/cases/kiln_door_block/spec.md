@@ -1,0 +1,6 @@
+- Kiln door switch on D2 to ground with internal pull-up (active LOW); siren driver on D8.
+- A settled door-open press as short as 40 ms starts a 2000 ms HIGH pulse on D8 within 150 ms.
+- While a siren pulse is already running, additional presses are ignored (do not restart the pulse).
+- Print the exact line `hb` every 250 ms at all times, including during the siren pulse.
+- Firmware must never go silent (no serial and no pin change) for more than 700 ms.
+- Idle door contact reads HIGH.

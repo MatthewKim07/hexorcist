@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "A3",
+    "role": "Cabinet temperature",
+    "type": "analog_input",
+    "scale": "10 mV/\u00b0C"
+  },
+  {
+    "pin": "D7",
+    "role": "Compressor",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Service stop",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

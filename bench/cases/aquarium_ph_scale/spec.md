@@ -1,0 +1,6 @@
+- Linearized pH probe on A0 with scale 500 mV/pH (0 mV → pH 0.0); low-pH alert LED on D13.
+- Convert ADC samples using a 5.000 V / 1023 full-scale span, then divide millivolts by 500 to obtain pH.
+- Print exactly one line every 1000 ms matching `pH: <value>` with two decimal places.
+- Printed pH must stay within ±0.20 of the injected probe value.
+- Drive D13 HIGH when reported pH is below 7.20; otherwise drive D13 LOW.
+- Keep logging while the alert LED is on or off.
