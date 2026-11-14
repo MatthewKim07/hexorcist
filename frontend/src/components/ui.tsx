@@ -52,7 +52,7 @@ export interface Option<T extends string> {
 export function Select<T extends string>({ value, onChange, options, label, mono = false, className = "" }: { value: T; onChange: (v: T) => void; options: Option<T>[]; label: string; mono?: boolean; className?: string }) {
   return (
     <RSelect.Root value={value} onValueChange={(v) => onChange(v as T)}>
-      <RSelect.Trigger aria-label={label} className={`key field flex h-9 min-w-0 items-center justify-between gap-2 !py-0 !font-normal data-[state=open]:border-ink/40 ${mono ? "font-mono" : ""} ${className}`}>
+      <RSelect.Trigger aria-label={label} className={`key flex h-9 min-w-0 items-center justify-between gap-2 rounded-md border border-line bg-white px-3 !py-0 text-sm !font-normal text-ink ${mono ? "font-mono" : ""} ${className}`}>
         <span className="min-w-0 truncate text-left">
           <RSelect.Value />
         </span>
@@ -61,7 +61,7 @@ export function Select<T extends string>({ value, onChange, options, label, mono
         </RSelect.Icon>
       </RSelect.Trigger>
       <RSelect.Portal>
-        <RSelect.Content position="popper" sideOffset={6} className="pop z-50 max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-line bg-raised p-1 text-sm text-ink">
+        <RSelect.Content position="popper" sideOffset={6} className="pop z-50 max-h-[min(360px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-line bg-white p-1 text-sm text-ink">
           <RSelect.Viewport className="scroll">
             {options.map((o) => (
               <RSelect.Item key={o.value} value={o.value} className={`relative flex cursor-default select-none items-center rounded py-1.5 pl-7 pr-3 outline-none data-[highlighted]:bg-bg ${mono ? "font-mono" : ""}`}>
