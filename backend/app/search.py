@@ -6,9 +6,8 @@ of each scenario in small, physically plausible steps (threshold offsets, timing
 noise amplitude, press length, input ordering). It is plain Python with a fixed seed, so the same run makes the same
 variants. The orchestrator (agent.py) runs them in the sandbox and judges them with the usual assertion engine.
 
-Not supported: long-uptime fast-forward (millis() near its 32-bit rollover, hours of runtime). The harness starts every
-scenario at power-on and caps a scenario at 15 s of simulated time, with no way to set the clock, so a rollover cannot
-be reached. UNSUPPORTED says so in every report.
+Not used yet: long-uptime fast-forward (millis() near its 32-bit rollover, hours of runtime). The harness can now start a
+scenario at any millis() value (Scenario.start_millis), but the search does not vary it, so UNSUPPORTED says so.
 """
 from __future__ import annotations
 
@@ -23,7 +22,7 @@ from typing import Awaitable, Callable, Optional
 from .models import AnalogPoint, DeviceSpec, DigitalEvent, FloatingWindow, Scenario
 from .scenario_lib import VCC_MV, _thresholds_mv
 
-UNSUPPORTED = ["uptime fast-forward (millis() near rollover, hours of runtime): the harness cannot set the clock and caps a scenario at 15 s"]
+UNSUPPORTED = ["uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"]
 
 MUTATIONS = ("threshold", "timing", "bounce", "noise", "press", "order")
 

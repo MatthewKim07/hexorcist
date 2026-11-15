@@ -153,6 +153,8 @@ static const pwm_channel_t PWM_CHANNELS[] = {
 
 static avr_t *g_avr;
 static uint64_t g_rng;
+/* Clock fast-forward: where Arduino's millis() starts, in ms of uptime. 0 means a normal power-on. */
+static uint32_t g_start_millis;
 static pin_input_t g_inputs[NUM_PINS];
 static int g_last_level[NUM_PINS];
 static pin_ctx_t g_pin_ctx[NUM_PINS];
@@ -725,6 +727,11 @@ static int load_scenario(const char *path, double *duration_ms)
     *duration_ms = json_num(root, "duration_ms", DEFAULT_SIM_MS);
     seed = (uint64_t)json_num(root, "seed", 1.0);
     g_rng = (seed * 0x9E3779B97F4A7C15ULL) | 1ULL;
+    {
+        double start = json_num(root, "start_millis", 0.0);
+
+        g_start_millis = (start > 0.0 && start < 4294967296.0) ? (uint32_t)start : 0U;
+    }
 
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(root, "analog"))
     {
@@ -913,6 +920,78 @@ static void on_sigterm(int sig)
     g_term_requested = 1;
 }
 
+/*
+ * Start the emulated clock somewhere other than power-on.
+ *
+ * The Arduino core counts time in two RAM variables that timer0's overflow interrupt advances: timer0_millis (what
+ * millis() returns) and timer0_overflow_count (what micros() is built from). They live in .bss, which the C runtime
+ * clears before main(), so the harness first runs the start-up code up to main() and then writes both. A scenario
+ * can then begin at millis() = 2^32 - 5000, or after hours of uptime, without simulating them.
+ * Scenario times in the trace stay relative to the start of the run.
+ */
+static int find_symbol(const elf_firmware_t *fw, const char *name, uint32_t *addr)
+{
+    uint32_t i;
+
+    for (i = 0; i < fw->symbolcount; i++)
+    {
+        if (strcmp(fw->symbol[i]->symbol, name) == 0)
+        {
+            *addr = fw->symbol[i]->addr;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void poke32(uint32_t data_addr, uint32_t value)
+{
+    /* The linker puts RAM at 0x800000 + address. The AVR is little endian. */
+    uint32_t a = data_addr & 0xFFFFU;
+    int k;
+
+    for (k = 0; k < 4; k++)
+    {
+        g_avr->data[a + (uint32_t)k] = (uint8_t)(value >> (8 * k));
+    }
+}
+
+static void apply_start_clock(const elf_firmware_t *fw)
+{
+    uint32_t millis_addr = 0;
+    uint32_t overflow_addr = 0;
+    uint32_t main_addr = 0;
+    uint32_t guard = 0;
+
+    if (g_start_millis == 0)
+    {
+        return;
+    }
+    if (!find_symbol(fw, "timer0_millis", &millis_addr) || !find_symbol(fw, "timer0_overflow_count", &overflow_addr) ||
+        !find_symbol(fw, "main", &main_addr))
+    {
+        fprintf(stderr, "start_millis ignored: the firmware has no Arduino timer0 clock symbols\n");
+        return;
+    }
+    while (g_avr->pc != main_addr && guard++ < 2000000U)
+    {
+        int state = avr_run(g_avr);
+
+        if (state == cpu_Crashed || state == cpu_Stopped || state == cpu_Done)
+        {
+            return;
+        }
+    }
+    if (g_avr->pc != main_addr)
+    {
+        fprintf(stderr, "start_millis ignored: main() was not reached\n");
+        return;
+    }
+    poke32(millis_addr, g_start_millis);
+    /* timer0 overflows every 1.024 ms, so the overflow count that goes with an uptime is uptime / 1.024. */
+    poke32(overflow_addr, (uint32_t)((double)g_start_millis / 1.024));
+}
+
 int main(int argc, char **argv)
 {
     const char *elf_path = NULL;
@@ -1041,6 +1120,7 @@ int main(int argc, char **argv)
     avr_cycle_timer_register_usec(g_avr, TICK_US, on_tick, NULL);
     /* Apply t=0 inputs before the first instruction runs. */
     on_tick(g_avr, 0, NULL);
+    apply_start_clock(&fw);
 
     end_cycle = (uint64_t)(duration_ms * ((double)F_CPU_HZ / 1000.0));
     wall_start = wall_ms();

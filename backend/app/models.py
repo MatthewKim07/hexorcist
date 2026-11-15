@@ -148,6 +148,9 @@ class Scenario(BaseModel):
     variant: str = ""
     seed: int = Field(default=1, ge=0, le=2**31)
     duration_ms: float = Field(default=8000, gt=0, le=MAX_SCENARIO_MS)
+    # Where the firmware's millis() starts, in ms of uptime, so a short run can begin near the 2^32 ms rollover (49.7 days)
+    # or after hours of running. 0 is a normal power-on. Times in the trace and in the other fields stay relative to the run.
+    start_millis: int = Field(default=0, ge=0, lt=2**32)
     analog: list[AnalogInput] = Field(default_factory=list)
     digital: list[DigitalInput] = Field(default_factory=list)
     floating: list[FloatingWindow] = Field(default_factory=list)
@@ -157,6 +160,7 @@ class Scenario(BaseModel):
         return {
             "seed": self.seed,
             "duration_ms": self.duration_ms,
+            "start_millis": self.start_millis,
             "analog": [a.model_dump() for a in self.analog],
             "digital": [d.model_dump() for d in self.digital],
             "floating": [f.model_dump() for f in self.floating],

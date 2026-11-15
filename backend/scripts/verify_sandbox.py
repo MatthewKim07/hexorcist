@@ -134,6 +134,51 @@ def main() -> None:
     print(f"  floating A1 range {min(a1):.0f} to {max(a1):.0f} mV over {len(a1)} points")
     check(max(a1) - min(a1) > 200, "floating pin wanders")
 
+    print("\n== Clock fast-forward: scenarios can start millis() near the 2^32 ms rollover or hours into uptime")
+    naive = runner.compile((EXAMPLES / "rollover_naive.ino").read_text(), "rollover naive")
+    safe = runner.compile((EXAMPLES / "rollover_safe.ino").read_text(), "rollover safe")
+    check(naive.ok and safe.ok, "both rollover sketches compile")
+
+    def toggles(trace):
+        return [e for e in trace["pin_events"] if e["pin"] == "D13" and e["dir"] == "out"]
+
+    def clock(trace):
+        out = []
+        for line in trace["serial_log"]:
+            ms, us = (int(part.split("=")[1]) for part in line["text"].split())
+            out.append((line["t_ms"], ms, us))
+        return out
+
+    wrap = 2**32
+    from_power_on = runner.run(safe.elf, {"seed": 1, "duration_ms": 6000}, "safe from power-on").trace
+    first = clock(from_power_on)[0]
+    check(first[1] < 1000, f"without start_millis the clock starts at power-on (first line shows ms={first[1]})")
+
+    near = runner.run(safe.elf, {"seed": 1, "duration_ms": 6000, "start_millis": wrap - 2000}, "safe near rollover").trace
+    readings = clock(near)
+    print(f"  safe sketch, start_millis=2^32-2000: {[(round(t), ms) for t, ms, _ in readings[:8]]}")
+    check(readings[0][1] >= wrap - 2000, "the first reading is the injected start, just under 2^32")
+    check(readings[0][1] < wrap - 1000, "and it started right at the injected value, not later")
+    check(any(ms < 5000 for _, ms, _ in readings), "millis() wrapped to a small number inside the run")
+    check(all(b[1] != a[1] for a, b in zip(readings, readings[1:])), "the clock keeps advancing across the wrap")
+    def skew(ms, us):
+        """How far micros() is from millis() * 1000, taken modulo 2^32 like the counters themselves."""
+        d = (us - ms * 1000) % wrap
+        return d - wrap if d > wrap // 2 else d
+
+    check(all(abs(skew(ms, us)) < 3000 for _, ms, us in readings), "micros() was set consistently with millis()")
+    check(10 <= len(toggles(near)) <= 14, f"the safe blink survives the wrap: {len(toggles(near))} toggles in 6 s")
+
+    hours = 3 * 3600 * 1000
+    later = clock(runner.run(safe.elf, {"seed": 1, "duration_ms": 3000, "start_millis": hours}, "safe after 3 h").trace)
+    check(hours <= later[0][1] < hours + 1000, f"a run can begin after 3 hours of uptime (first reading ms={later[0][1]})")
+
+    normal = runner.run(naive.elf, {"seed": 1, "duration_ms": 6000}, "naive from power-on").trace
+    broken = runner.run(naive.elf, {"seed": 1, "duration_ms": 6000, "start_millis": wrap - 1200}, "naive near rollover").trace
+    print(f"  naive blink: {len(toggles(normal))} toggles from power-on, {len(toggles(broken))} when started 1200 ms before the wrap")
+    check(10 <= len(toggles(normal)) <= 14, "the absolute-deadline blink looks fine from power-on")
+    check(len(toggles(broken)) > 100, "and misbehaves at the rollover, so the fast-forward really exercises it")
+
     print("\n== exit_reason: sleep_deadlock")
     built = runner.compile((EXAMPLES / "sleep_deadlock.ino").read_text(), "sleep")
     check(built.ok, "sleep sketch compiles")
