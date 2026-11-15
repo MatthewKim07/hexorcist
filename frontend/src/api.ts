@@ -63,6 +63,9 @@ export interface Scenario {
   name: string;
   hypothesis: string;
   source: "builtin" | "llm" | "search";
+  /** Search scenarios only: the scenario this is a variant of, and what was changed. */
+  parent?: string;
+  variant?: string;
   duration_ms?: number;
   digital?: { pin: string; initial: number }[];
   floating?: { pin: string; from_ms: number; to_ms: number }[];
@@ -140,6 +143,40 @@ export interface ContainmentRecord {
   violations: { type: string; detail: string }[];
 }
 
+/** A scenario the stimulus search kept: a variant of `parent`, shrunk to the least that still breaks the check. */
+export interface SearchFinding {
+  scenario_id: string;
+  name: string;
+  assertion_id: string;
+  parent: string;
+  variant: string;
+  events_before: number;
+  events_after: number;
+  duration_before_ms: number;
+  duration_after_ms: number;
+  runs: number;
+  steps: string[];
+}
+
+export interface SearchSummary {
+  enabled: boolean;
+  seed?: number;
+  budget_s?: number;
+  variants_planned?: number;
+  variants_run?: number;
+  variants_over_budget?: number;
+  failing_variants?: number;
+  new_failing_checks?: number;
+  also_failing_known?: Record<string, number>;
+  discarded_by_clean_room?: string[];
+  kept?: SearchFinding[];
+  mutations?: Record<string, number>;
+  unsupported: string[];
+  sandbox_runs?: number;
+  sandbox_s?: number;
+  wall_s?: number;
+}
+
 export interface Bug {
   id: string;
   assertion_id: string;
@@ -158,7 +195,7 @@ export interface Bug {
   verified?: boolean;
   /** Failed only on a variant the stimulus search made up from a scenario, not on any scenario the agent planned. */
   found_by_search?: boolean;
-  reproduction?: { scenario_id: string; name: string; variant: string; events_before: number; events_after: number; duration_before_ms: number; duration_after_ms: number; runs: number };
+  reproduction?: SearchFinding;
 }
 
 export interface Report {
@@ -193,6 +230,7 @@ export interface Report {
   spec_checked?: boolean;
   unexercised?: string[];
   cross_check?: CrossCheck;
+  search?: SearchSummary;
   /** Model-written checks whose spec citation was not found in the spec were dropped. */
   grounding?: { checked: number; dropped: { type: string; description: string; quote: string; reason: string }[] };
 }

@@ -1,0 +1,295 @@
+"""Stimulus search: seeded variants, shrinking, and the pipeline with a scripted sandbox."""
+import asyncio
+
+from app.agent import Pipeline
+from app.llm import LLMCall
+from app.models import AnalogInput, AnalogPoint, Condition, DeviceSpec, DigitalEvent, DigitalInput, FloatingWindow, NoCrash, OutputFollows, PinSpec, Scenario, Spike
+from app.sandbox import CompileResult, ContainmentRecord, RunResult
+from app.scenario_lib import builtin_scenarios
+from app.search import complexity, fingerprint, make_variants, removals, shrink, simplifications
+from tests.test_api import settings
+from tests.test_cross_check import CLEAN_OK, RoomLLM
+from tests.test_fix_loop import NullBus, NullStore, fake_trace
+
+SPEC = DeviceSpec(
+    pins=[
+        PinSpec(pin="A0", role="temp", type="analog_input", scale="10 mV/°C"),
+        PinSpec(pin="D2", role="button", type="digital_input", active_low=True),
+        PinSpec(pin="D9", role="fan", type="digital_output"),
+    ],
+    behaviour="The fan must not change state more than 2 times in any 1000 ms window.",
+)
+ASSERTIONS = [
+    OutputFollows(id="a1", pin="D9", high_when=Condition(pin="A0", op=">=", value=30), low_when=Condition(pin="A0", op="<=", value=27)),
+    NoCrash(id="a2"),
+]
+
+
+def scenarios():
+    return builtin_scenarios(SPEC, ASSERTIONS)
+
+
+# ------------------------------------------------------------------ variants
+
+
+def test_the_same_seed_makes_the_same_variants():
+    a = make_variants(scenarios(), SPEC, ASSERTIONS, 30, 1337)
+    b = make_variants(scenarios(), SPEC, ASSERTIONS, 30, 1337)
+    assert [fingerprint(v) for v in a] == [fingerprint(v) for v in b]
+    assert [v.name for v in a] == [v.name for v in b]
+
+
+def test_another_seed_makes_other_variants():
+    a = make_variants(scenarios(), SPEC, ASSERTIONS, 30, 1)
+    b = make_variants(scenarios(), SPEC, ASSERTIONS, 30, 2)
+    assert [fingerprint(v) for v in a] != [fingerprint(v) for v in b]
+
+
+def test_the_count_is_honoured_and_zero_means_none():
+    assert len(make_variants(scenarios(), SPEC, ASSERTIONS, 30, 7)) == 30
+    assert len(make_variants(scenarios(), SPEC, ASSERTIONS, 5, 7)) == 5
+    assert make_variants(scenarios(), SPEC, ASSERTIONS, 0, 7) == []
+
+
+def test_variants_are_distinct_valid_and_traceable_to_a_parent():
+    base = scenarios()
+    ids = {s.id for s in base}
+    variants = make_variants(base, SPEC, ASSERTIONS, 30, 1337)
+    assert len({fingerprint(v) for v in variants}) == len(variants)
+    assert not {fingerprint(v) for v in variants} & {fingerprint(s) for s in base}
+    for v in variants:
+        assert v.source == "search" and v.parent in ids and v.variant
+        Scenario.model_validate(v.model_dump())  # still a legal scenario
+        assert 0 < v.duration_ms <= 15000
+
+
+def test_every_kind_of_change_is_used_across_a_run():
+    kinds: dict[str, str] = {}
+    make_variants(scenarios(), SPEC, ASSERTIONS, 60, 1337, kinds)
+    assert set(kinds.values()) == {"threshold", "timing", "bounce", "noise", "press", "order"}
+
+
+def test_scenarios_on_a_rail_or_on_noise_are_not_searched():
+    parents = {v.parent for v in make_variants(scenarios(), SPEC, ASSERTIONS, 60, 1337)}
+    assert not any(p.startswith(("builtin-floating-", "builtin-extremes-")) for p in parents)
+
+
+def only(kind, count=40):
+    kinds: dict[str, str] = {}
+    made = make_variants(scenarios(), SPEC, ASSERTIONS, count, 1337, kinds)
+    return [(v, next(s for s in scenarios() if s.id == v.parent)) for v in made if kinds[v.id] == kind]
+
+
+def test_a_press_change_only_changes_press_lengths():
+    for variant, parent in only("press"):
+        d = next(x for x in variant.digital if x.events and x.pin == variant.variant.split()[0])
+        p = next(x for x in parent.digital if x.pin == d.pin)
+        assert len(d.events) == len(p.events)
+        lengths = {round(b.t_ms - a.t_ms) for a, b in zip(d.events[::2], d.events[1::2])}
+        assert len(lengths) == 1
+
+
+def test_timing_shifts_keep_the_events_in_order_and_inside_the_run():
+    for variant, _ in only("timing"):
+        for a in variant.analog:
+            times = [p.t_ms for p in a.segments]
+            assert times == sorted(times) and times[-1] < variant.duration_ms
+        for d in variant.digital:
+            times = [e.t_ms for e in d.events]
+            assert times == sorted(times) and all(0 <= t < variant.duration_ms for t in times)
+
+
+def test_bounce_changes_only_bounce():
+    for variant, parent in only("bounce"):
+        for d, p in zip(variant.digital, parent.digital):
+            assert [e.t_ms for e in d.events] == [e.t_ms for e in p.events]
+
+
+# ------------------------------------------------------------------ shrinking
+
+
+def rich():
+    return Scenario(
+        id="v",
+        name="rich",
+        duration_ms=8000,
+        analog=[AnalogInput(pin="A0", segments=[AnalogPoint(t_ms=0, mv=200), AnalogPoint(t_ms=2000, mv=300), AnalogPoint(t_ms=6000, mv=400)], noise_mv=20, spikes=[Spike(t_ms=1000, width_ms=10, mv=4000)])],
+        digital=[DigitalInput(pin="D2", initial=1, events=[DigitalEvent(t_ms=t, value=v, bounce_ms=8, bounce_count=4) for t, v in ((1000, 0), (1200, 1), (3000, 0), (3200, 1), (5000, 0), (5200, 1))])],
+        floating=[FloatingWindow(pin="A0", from_ms=500, to_ms=900)],
+    )
+
+
+def run_shrink(needs, first_end=2000.0, max_runs=18):
+    """Shrink with a check that breaks whenever `needs(scenario)` holds. Returns the result and the runs it took."""
+    calls = []
+
+    async def still_fails(cands):
+        calls.append(len(cands))
+        return [needs(c) for c in cands]
+
+    return asyncio.run(shrink(rich(), first_end, still_fails, max_runs=max_runs)), calls
+
+
+def test_shrinking_removes_everything_the_failure_does_not_need():
+    # Breaks only on the press at 3000 ms.
+    result, _ = run_shrink(lambda s: any(abs(e.t_ms - 3000) < 1 for d in s.digital for e in d.events), first_end=3300.0)
+    s = result.scenario
+    # A press and its release go together: dropping only the release would change what the press means.
+    assert [e.t_ms for d in s.digital for e in d.events] == [3000, 3200]
+    assert s.duration_ms < 8000 and not s.floating and not s.analog[0].spikes and s.analog[0].noise_mv == 0
+    assert result.events_after < result.events_before and result.duration_after_ms < result.duration_before_ms
+
+
+def test_shrinking_keeps_what_the_failure_needs():
+    result, _ = run_shrink(lambda s: s.analog[0].noise_mv >= 20 and bool(s.analog[0].spikes))
+    s = result.scenario
+    assert s.analog[0].noise_mv == 20 and len(s.analog[0].spikes) == 1
+
+
+def test_shrinking_never_returns_a_scenario_that_stopped_failing():
+    needs = lambda s: any(abs(e.t_ms - 5000) < 1 for d in s.digital for e in d.events)  # noqa: E731
+    result, _ = run_shrink(needs)
+    assert needs(result.scenario)
+
+
+def test_shrinking_stays_inside_its_run_budget():
+    result, calls = run_shrink(lambda s: True, max_runs=6)
+    assert sum(calls) <= 6 and result.runs == sum(calls)
+
+
+def test_a_scenario_that_cannot_shrink_comes_back_unchanged():
+    result, _ = run_shrink(lambda s: s is not None and complexity(s) == complexity(rich()))
+    assert complexity(result.scenario) == complexity(rich())
+
+
+def test_shrinking_stops_at_the_deadline():
+    async def still_fails(cands):
+        return [True] * len(cands)
+
+    result = asyncio.run(shrink(rich(), 2000.0, still_fails, deadline=0.0))
+    assert result.runs == 0 and result.scenario.duration_ms == 8000
+
+
+def test_cutting_the_run_short_keeps_a_tail_after_the_first_violation():
+    cuts = [s for s, note in simplifications(rich(), 2000.0) if s.duration_ms < 8000]
+    assert cuts and all(s.duration_ms >= 2500 for s in cuts)
+
+
+def test_removals_never_leave_a_scenario_with_no_input():
+    for s, _ in removals(rich()):
+        assert s.analog or s.digital or s.floating
+
+
+# ------------------------------------------------------------------ the pipeline
+
+
+class NoisySandbox:
+    """Firmware marked NOISY chatters once an input has 20 mV of noise or more. Nothing else misbehaves."""
+
+    def __init__(self):
+        self.compiled: list[str] = []
+        self.ran: list[dict] = []
+
+    def compile(self, sketch, label="compile"):
+        self.compiled.append(sketch)
+        return CompileResult(ok=True, log="", elf=sketch.encode(), record=ContainmentRecord(kind="compile", label=label))
+
+    def run(self, elf, scenario, label, no_sim_cap=False):
+        self.ran.append(scenario)
+        noisy = any(a["noise_mv"] >= 20 for a in scenario["analog"])
+        code = elf.decode()
+        trace = fake_trace(code + (" CHATTER" if noisy and "NOISY" in code else ""))
+        trace["sim_ms"] = scenario["duration_ms"]
+        return RunResult(trace=trace, record=ContainmentRecord(kind="emulate", label=label, duration_ms=100.0))
+
+
+UPLOADED = "void setup() {}\nvoid loop() { heartbeat(); } // NOISY\n"
+FIXED = "void setup() {}\nvoid loop() { heartbeat(); } // calm\n"
+SPEC2 = DeviceSpec(
+    pins=[PinSpec(pin="A0", role="temp", type="analog_input", scale="10 mV/°C"), PinSpec(pin="D9", role="fan", type="digital_output")],
+    behaviour="D9 must not chatter. Heartbeat every 250 ms.",
+)
+UNDERSTAND = {
+    "assertions": [
+        {"type": "max_toggles", "pin": "D9", "max_toggles": 2, "window_ms": 1000, "description": "No chatter", "spec_quote": "D9 must not chatter"},
+    ]
+}
+
+
+class SearchLLM(RoomLLM):
+    async def json(self, system, user, schema, step):
+        return schema.model_validate(UNDERSTAND if step == "understand" else {})
+
+
+def run(patches=(FIXED,), room=(CLEAN_OK,), **overrides):
+    sandbox = NoisySandbox()
+    config = {"max_parallel": 4, "cross_check": True, "search_variants": 40, "search_budget_s": 60, **overrides}
+    pipeline = Pipeline("r", settings(**config), sandbox, NullStore(), NullBus())
+    pipeline.llm = SearchLLM(list(patches), list(room))
+    status, report = asyncio.run(pipeline.run_break(UPLOADED, SPEC2))
+    return status, report, sandbox, pipeline
+
+
+def test_the_search_finds_a_failure_the_planned_scenarios_miss():
+    status, report, _, _ = run()
+    search = report["search"]
+    assert search["variants_planned"] == 40 and search["variants_run"] == 40
+    assert search["failing_variants"] >= 1 and search["new_failing_checks"] == 1
+    assert [b["assertion_type"] for b in report["bugs"]] == ["max_toggles"]
+    bug = report["bugs"][0]
+    assert bug["found_by_search"] is True
+    repro = bug["reproduction"]
+    assert repro["events_after"] <= repro["events_before"] and repro["duration_after_ms"] <= repro["duration_before_ms"]
+    assert repro["scenario_id"] in {s["id"] for s in report["scenarios"]}
+    assert status == "fixed"
+
+
+def test_a_search_finding_is_a_scenario_in_the_report_and_is_verified_again():
+    _, report, sandbox, _ = run()
+    found = [s for s in report["scenarios"] if s["source"] == "search"]
+    assert len(found) == 1 and found[0]["name"].startswith("Found by search")
+    assert found[0]["parent"] and found[0]["variant"]
+    # The patch run covers every scenario, the finding included.
+    assert found[0]["id"] in report["matrix"]["0"] and found[0]["id"] in report["matrix"][str(report["fix"]["iteration"])]
+    # The shrunk scenario really lost its noise only if it did not need it: here the noise is what breaks it.
+    scenario = next(s for s in report["scenarios"] if s["id"] == found[0]["id"])
+    assert any(a["noise_mv"] >= 20 for a in scenario["analog"])
+
+
+def test_the_search_is_repeatable():
+    first = run()[1]["search"]
+    second = run()[1]["search"]
+    assert [k["name"] for k in first["kept"]] == [k["name"] for k in second["kept"]]
+
+
+def test_a_check_a_clean_implementation_also_fails_is_not_a_search_finding():
+    status, report, _, _ = run(patches=(), room=(UPLOADED,))
+    assert report["bugs"] == []
+    assert report["search"]["discarded_by_clean_room"] == ["a1"]
+    assert [u["assertion_id"] for u in report["cross_check"]["unconfirmed"]] == ["a1"]
+    assert status == "clean"
+
+
+def test_extra_sandbox_time_is_recorded():
+    _, report, _, _ = run()
+    search = report["search"]
+    assert search["sandbox_runs"] >= 40 and search["sandbox_s"] > 0 and search["wall_s"] >= 0
+    assert search["unsupported"] and "fast-forward" in search["unsupported"][0]
+
+
+def test_the_search_can_be_switched_off():
+    status, report, sandbox, _ = run(search_variants=0, patches=())
+    assert report["search"]["enabled"] is False
+    assert status == "clean"
+    assert not any(a["noise_mv"] >= 20 for s in sandbox.ran for a in s["analog"])
+
+
+def test_without_a_clean_room_one_odd_variant_is_not_enough():
+    # No clean-room firmware to compare with, so a check must break on two variants. This one breaks on several.
+    status, report, _, _ = run(cross_check=False)
+    assert report["search"]["new_failing_checks"] == 1 and status == "fixed"
+
+
+def test_a_search_that_runs_out_of_time_skips_variants_instead_of_hanging():
+    _, report, _, _ = run(patches=(), search_budget_s=0)
+    assert report["search"]["variants_over_budget"] == 40 and report["search"]["variants_run"] == 0

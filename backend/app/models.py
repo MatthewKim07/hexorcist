@@ -142,7 +142,10 @@ class Scenario(BaseModel):
     id: str = ""
     name: str
     hypothesis: str = ""
-    source: Literal["builtin", "llm"] = "llm"
+    source: Literal["builtin", "llm", "search"] = "llm"
+    # A search scenario is a variant of the scenario `parent`, changed as `variant` describes.
+    parent: str = ""
+    variant: str = ""
     seed: int = Field(default=1, ge=0, le=2**31)
     duration_ms: float = Field(default=8000, gt=0, le=MAX_SCENARIO_MS)
     analog: list[AnalogInput] = Field(default_factory=list)

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, CircleCheck, CircleHelp, CircleX, Minus } from "lucide-react";
+import { ChevronDown, CircleCheck, CircleHelp, CircleX, Minus, Search } from "lucide-react";
 import { AssertionDef, AssertionResult, PinSpec, Report, Scenario, Trace } from "../api";
 import { chipLabel } from "../checks";
 import { iconProps } from "../icons";
@@ -118,9 +118,15 @@ export function ScenariosTab({
       <td className="py-2.5 pr-4 align-middle">
         <Tip content={s.hypothesis}>
           <span tabIndex={0} className={selected === s.id ? "font-medium text-ink" : "text-ink"}>
-            {s.name}
+            {s.source === "search" ? s.name.replace(/^Found by search: /, "") : s.name}
           </span>
         </Tip>
+        {s.source === "search" && (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-md border border-line bg-[#FAFAFA] px-1.5 py-0.5 align-middle text-xs text-muted">
+            <Search {...iconProps} className="h-3 w-3" aria-hidden="true" />
+            Found by search
+          </span>
+        )}
       </td>
       <td className="py-2.5 text-center align-middle">
         <SideIcon results={beforeMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} ignore={ignore} />

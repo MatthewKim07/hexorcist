@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Check, ChevronDown, CircleCheck, CircleX, Copy, FileDiff, Ruler } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, CircleCheck, CircleX, Copy, FileDiff, Ruler, Search } from "lucide-react";
 import { AssertionDef, Bug, PinSpec, Report } from "../api";
 import { anchorOf, chipLabel, shortRole } from "../checks";
 import { chipEvidence } from "../format";
@@ -21,6 +21,16 @@ interface Props {
   onOpen: (id: string | null) => void;
   /** Write-firmware reports: single result chip, no Before/After wording. */
   buildMode?: boolean;
+}
+
+/** "found by search": the agent's own scenarios all passed this check, a variant of one of them broke it. */
+export function SearchBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md border border-line bg-[#FAFAFA] px-1.5 py-0.5 text-xs font-normal text-muted">
+      <Search {...iconProps} className="h-3 w-3" aria-hidden="true" />
+      Found by search
+    </span>
+  );
 }
 
 function evidenceChip(label: string, text: string, tone: "fail" | "pass") {
@@ -80,7 +90,10 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
               <Collapsible.Trigger className="flex w-full items-start gap-3 text-left" aria-label={isOpen ? `Collapse ${bug.title}` : `Expand ${bug.title}`}>
                 {fixed ? <CircleCheck {...iconProps} className="mt-0.5 shrink-0 text-pass" aria-hidden="true" /> : <CircleX {...iconProps} className={`mt-0.5 shrink-0 ${report ? "text-fail" : "text-muted"}`} aria-hidden="true" />}
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-medium text-ink">{bug.title}</h3>
+                  <h3 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-ink">
+                    {bug.title}
+                    {bug.found_by_search && <SearchBadge />}
+                  </h3>
                   <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5">
                     {buildMode ? (
                       evidenceChip("Result", beforeN || "—", fixed ? "pass" : "fail")
@@ -112,6 +125,12 @@ export function BugList({ bugs, report, assertions, pins, focusId, onFocus, open
                     </p>
                   )}
                   {bug.failing_scenarios.length > 1 && <p className="text-xs text-muted">Fails in {bug.failing_scenarios.length} scenarios</p>}
+                  {bug.reproduction && (
+                    <p className="max-w-[72ch] text-xs text-muted">
+                      Found by search: none of the planned scenarios broke this check. A variant of “{report?.scenarios?.find((s) => s.id === bug.reproduction!.parent)?.name ?? bug.reproduction.parent}” did ({bug.reproduction.variant}). Reduced to{" "}
+                      {bug.reproduction.events_after} input change{bug.reproduction.events_after === 1 ? "" : "s"} over {(bug.reproduction.duration_after_ms / 1000).toFixed(1)} s, from {bug.reproduction.events_before} over {(bug.reproduction.duration_before_ms / 1000).toFixed(1)} s, in {bug.reproduction.runs} runs.
+                    </p>
+                  )}
                 </div>
               </Collapsible.Content>
             </article>

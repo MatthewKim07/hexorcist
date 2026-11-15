@@ -44,6 +44,7 @@ from .models import (
 )
 from .sandbox import CompileResult, ContainmentRecord, SandboxError, SandboxRunner
 from .scenario_lib import builtin_scenarios, fill_defaults, idle_level
+from .search import UNSUPPORTED, complexity, make_variants, shrink
 from .store import Store
 
 if TYPE_CHECKING:
@@ -57,6 +58,17 @@ MAX_LLM_SCENARIOS = 10
 MAX_LLM_SCENARIO_MS = 12000
 MAX_STORED_PIN_EVENTS = 8000
 MAX_STORED_SERIAL = 4000
+# Stimulus search: at most this many scenarios are kept as findings, so verification stays quick.
+MAX_SEARCH_KEPT = 6
+# Variants that break a check are shown to the clean-room firmware, a few per check and this many in all.
+MAX_JUDGED_PER_CHECK = 6
+MAX_JUDGED_VARIANTS = 12
+# Without a clean-room firmware to compare against, a check must break on this many variants to count.
+MIN_VARIANTS_UNCHECKED = 2
+# Variants get this share of the search budget. Shrinking what they found gets the rest.
+VARIANT_SHARE = 0.65
+# A run killed by the wall clock says nothing about the firmware, so only these count as a crash.
+CRASH_REASONS = ("crash", "sleep_deadlock")
 
 _ASSERTION = TypeAdapter(Assertion)
 _HOST_INCLUDE_RE = re.compile(r'^\s*#\s*(?:include|include_next|import)\s*"(?:/|~|\.\./)[^"]*"\s*$', re.MULTILINE)
@@ -310,6 +322,9 @@ class Pipeline:
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
         self.cross_note = ""
+        self.search_info: Optional[dict] = None
+        self._repro: dict[str, dict] = {}
+        self._variant_names: dict[str, str] = {}
         self.grounding: Optional[dict] = None  # spec citations checked on the model's own assertions, and the ones dropped
 
     # ------------------------------------------------------------- plumbing
@@ -329,8 +344,10 @@ class Pipeline:
         await self._record(built.record)
         return built
 
-    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str, publish: bool = True, meter: Optional[Meter] = None) -> None:
+    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None) -> None:
         async with self._sem:
+            if deadline is not None and time.monotonic() > deadline:
+                return  # out of time: this scenario simply has no result
             run = await asyncio.to_thread(self.runner.run, elf, scenario.harness_json(), f"{label}: {scenario.name}")
         await self._record(run.record)
         if meter is not None:
@@ -354,9 +371,9 @@ class Pipeline:
             duration_ms=round(run.record.duration_ms, 1),
         )
 
-    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str, publish: bool = True, meter: Optional[Meter] = None) -> SuiteResult:
+    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None) -> SuiteResult:
         suite = SuiteResult(iteration=iteration)
-        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label, publish, meter) for s in scenarios))
+        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label, publish, meter, deadline) for s in scenarios))
         return suite
 
     @staticmethod
@@ -435,7 +452,7 @@ class Pipeline:
 
     def _ambiguities(self, assertions: list, scenarios: list[Scenario]) -> list[dict]:
         by_id = {a.id: a for a in assertions}
-        names = {s.id: s.name for s in scenarios}
+        names = {**self._variant_names, **{s.id: s.name for s in scenarios}}
         out: list[dict] = []
         for aid in sorted(self.unconfirmed):
             v = self.verdicts[aid]
@@ -483,6 +500,173 @@ class Pipeline:
             },
             "firmware": room.code if room is not None and room.status == "ready" else "",
         }
+
+    # -------------------------------------------------------- stimulus search
+
+    @staticmethod
+    def _breaks(suite: SuiteResult, scenario_id: str, assertion_id: str) -> bool:
+        """True when this check failed in this scenario. A crash check only counts a real crash or deadlock."""
+        for r in suite.results.get(scenario_id, []):
+            if r.assertion_id == assertion_id and r.status == "fail":
+                return r.type != "no_crash" or suite.exit_reasons.get(scenario_id) in CRASH_REASONS
+        return False
+
+    async def _search(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, baseline: SuiteResult, confirmed: set[str]) -> list[Scenario]:
+        """Run seeded variants of the scenarios on the uploaded firmware, and keep a shrunk copy of each that breaks a new check.
+
+        Only checks that passed in every scenario so far can be "found": a check that already fails has its bug.
+        Before anything is kept, the clean-room firmware sees the same variants, so a check no correct firmware passes
+        cannot produce a finding. Kept scenarios are merged into `baseline` (iteration 0), so they are reported,
+        diagnosed and re-run when a patch is verified. `confirmed` loses any check the clean room rejects.
+        """
+        bus = self.bus
+        started = time.monotonic()
+        budget = float(self.settings.search_budget_s)
+        info: dict = {
+            "enabled": True,
+            "seed": self.settings.search_seed,
+            "budget_s": budget,
+            "variants_planned": 0,
+            "variants_run": 0,
+            "variants_over_budget": 0,
+            "failing_variants": 0,
+            "new_failing_checks": 0,
+            "also_failing_known": {},
+            "discarded_by_clean_room": [],
+            "kept": [],
+            "mutations": {},
+            "unsupported": UNSUPPORTED,
+            "sandbox_runs": 0,
+            "sandbox_s": 0.0,
+            "wall_s": 0.0,
+        }
+        self.search_info = info
+        meter = Meter()
+        kinds: dict[str, str] = {}
+        variants = make_variants(scenarios, spec, assertions, self.settings.search_variants, self.settings.search_seed, kinds)
+        info["variants_planned"] = len(variants)
+        for kind in kinds.values():
+            info["mutations"][kind] = info["mutations"].get(kind, 0) + 1
+        by_id = {v.id: v for v in variants}
+        self._variant_names.update({v.id: v.name for v in variants})
+        await bus.step("execute", "running", f"Searching {len(variants)} variants of the scenarios for failures they do not reach")
+
+        suite = SuiteResult(iteration=-2)
+        await asyncio.gather(*(self._run_one(elf, v, assertions, spec, suite, "search", publish=False, meter=meter, deadline=started + budget * VARIANT_SHARE) for v in variants))
+
+        failing_now = baseline.failing_assertions()
+        eligible = confirmed - failing_now
+        found: dict[str, list[str]] = {}
+        failing_variants = 0
+        for v in variants:
+            rs = suite.results.get(v.id)
+            if rs is None:
+                info["variants_over_budget"] += 1
+                continue
+            info["variants_run"] += 1
+            hit = False
+            for r in rs:
+                if not self._breaks(suite, v.id, r.assertion_id):
+                    continue
+                if r.assertion_id in eligible:
+                    found.setdefault(r.assertion_id, []).append(v.id)
+                    hit = True
+                elif r.assertion_id in confirmed:
+                    info["also_failing_known"][r.assertion_id] = info["also_failing_known"].get(r.assertion_id, 0) + 1
+            failing_variants += 1 if hit else 0
+        info["failing_variants"] = failing_variants
+
+        def finish() -> None:
+            info["sandbox_runs"] = meter.runs
+            info["sandbox_s"] = round(meter.ms / 1000, 1)
+            info["wall_s"] = round(time.monotonic() - started, 1)
+
+        if not found:
+            finish()
+            return []
+
+        # A check no correct firmware could pass must not produce a finding: ask the clean room first.
+        order = [v.id for v in variants]
+        room = await self._cleanroom_ready()
+        if room is not None:
+            judged = sorted({i for ids in found.values() for i in sorted(ids, key=lambda i: complexity(by_id[i]))[:MAX_JUDGED_PER_CHECK]}, key=lambda i: (complexity(by_id[i]), i))[:MAX_JUDGED_VARIANTS]
+            await self._cleanroom_judge(room, [by_id[i] for i in judged], assertions, spec)
+            verdicts = classify({i: suite.results[i] for i in judged}, room.results, order, set(found))
+            for aid, verdict in verdicts.items():
+                if verdict.unconfirmed:
+                    self.verdicts[aid] = verdict
+                    self.unconfirmed.add(aid)
+                    confirmed.discard(aid)
+                    found.pop(aid, None)
+                    info["discarded_by_clean_room"].append(aid)
+            if info["discarded_by_clean_room"]:
+                await bus.emit("cross_check", unconfirmed=self._ambiguities(assertions, scenarios))
+        else:
+            found = {aid: ids for aid, ids in found.items() if len(ids) >= MIN_VARIANTS_UNCHECKED}
+        if not found:
+            finish()
+            return []
+
+        # Shrink the cleanest variant of each remaining check to the least that still breaks it.
+        picks: dict[str, str] = {}
+        for aid in sorted(found):
+            best = [i for i in sorted(found[aid], key=lambda i: (complexity(by_id[i]), i)) if i not in picks.values()]
+            if best and len(picks) < MAX_SEARCH_KEPT:
+                picks[aid] = best[0]
+        shrink_deadline = started + budget
+
+        async def shrink_one(aid: str, vid: str):
+            variant = by_id[vid]
+            first = min((viol.t_end for r in suite.results[vid] if r.assertion_id == aid for viol in r.violations), default=variant.duration_ms)
+
+            async def still_fails(cands: list[Scenario]) -> list[bool]:
+                # Candidates are clones of the variant, so give each its own id to tell the results apart.
+                for k, c in enumerate(cands):
+                    c.id = f"{vid}-try{k}"
+                probe = SuiteResult(iteration=-3)
+                await asyncio.gather(*(self._run_one(elf, c, assertions, spec, probe, "shrink", publish=False, meter=meter) for c in cands))
+                return [self._breaks(probe, c.id, aid) for c in cands]
+
+            return await shrink(variant, first, still_fails, deadline=shrink_deadline)
+
+        shrunk = await asyncio.gather(*(shrink_one(aid, vid) for aid, vid in picks.items()))
+
+        kept: list[Scenario] = []
+        meta: dict[str, dict] = {}
+        for (aid, vid), result in zip(picks.items(), shrunk):
+            s = result.scenario
+            s.id, s.source, s.parent = vid, "search", by_id[vid].parent
+            s.variant = by_id[vid].variant
+            s.name = f"Found by search: {by_id[vid].name}"[:160]
+            kept.append(s)
+            meta[vid] = {
+                "scenario_id": vid,
+                "name": s.name,
+                "assertion_id": aid,
+                "parent": s.parent,
+                "variant": s.variant,
+                "events_before": result.events_before,
+                "events_after": result.events_after,
+                "duration_before_ms": result.duration_before_ms,
+                "duration_after_ms": result.duration_after_ms,
+                "runs": result.runs,
+                "steps": result.steps,
+            }
+
+        # Run each kept scenario once more as a real result: stored with its trace, announced, part of iteration 0.
+        await bus.emit("scenarios", scenarios=[s.model_dump() for s in scenarios + kept])
+        final = await self._run_suite(elf, kept, assertions, spec, 0, "search finding", publish=True, meter=meter)
+        really = [s for (aid, _), s in zip(picks.items(), kept) if self._breaks(final, s.id, aid)]
+        for s in kept:
+            if s not in really:
+                await self._warn(f"A search finding ({s.name}) did not reproduce on its final run, so it was dropped.")
+        baseline.results.update({s.id: final.results[s.id] for s in really})
+        baseline.exit_reasons.update({s.id: final.exit_reasons[s.id] for s in really})
+        info["kept"] = [meta[s.id] for s in really]
+        info["new_failing_checks"] = len({m["assertion_id"] for m in info["kept"]})
+        finish()
+        self._repro = {m["scenario_id"]: m for m in info["kept"]}
+        return really
 
     # ---------------------------------------------------------- break mode
 
@@ -584,11 +768,17 @@ class Pipeline:
                 confirmed -= self.unconfirmed
                 if self.unconfirmed:
                     await bus.emit("cross_check", unconfirmed=self._ambiguities(assertions, scenarios))
+        found_by_search: list[Scenario] = []
+        if self.settings.search_variants > 0 and len(assertions) > 1:
+            found_by_search = await self._search(built.elf, scenarios, assertions, spec, baseline, confirmed)
+            scenarios = scenarios + found_by_search
         baseline_failures = baseline.failures(confirmed)
         failing_ids = baseline.failing_assertions(confirmed)
         detail = f"{len(baseline_failures)} failures across {len(failing_ids)} assertions"
         if self.unconfirmed:
             detail += f". {len(self.unconfirmed)} more also fail on a clean-room implementation, so they are possible spec ambiguities, not bugs"
+        if self.search_info:
+            detail += f". Search: {self.search_info['variants_run']} variants, {len(found_by_search)} new failing scenario(s) kept"
         await bus.step("execute", "done", detail)
 
         exercised = {r.assertion_id for rs in baseline.results.values() for r in rs if r.status != "not_exercised"}
@@ -621,6 +811,11 @@ class Pipeline:
         line_count = len(firmware.splitlines())
         bugs = [self._build_bug(a, baseline, scenarios, diagnoses.get(a.id), line_count) for a in live if a.id in failing_ids]
         for bug in bugs:
+            failing = [f["id"] for f in bug["failing_scenarios"]]
+            if failing and all(i in self._repro for i in failing):
+                # Only a search scenario breaks this check: the agent's own scenarios all passed it.
+                bug["found_by_search"] = True
+                bug["reproduction"] = self._repro[failing[0]]
             await bus.emit("bug", bug=bug)
         await bus.step("diagnose", "done", f"{len(bugs)} bugs found")
 
@@ -864,6 +1059,8 @@ class Pipeline:
         }
         if self.grounding is not None:
             report["grounding"] = self.grounding
+        if assertions:
+            report["search"] = self.search_info or {"enabled": False, "unsupported": UNSUPPORTED}
         if assertions:
             report["cross_check"] = self._cross_check_summary(assertions, scenarios or [])
             report["score"]["possible_ambiguities"] = len(self.unconfirmed)
