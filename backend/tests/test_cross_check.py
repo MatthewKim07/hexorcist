@@ -40,10 +40,30 @@ def test_a_pass_or_an_unmeasured_assertion_is_not_the_same_way():
     assert not same_way(user, None)
 
 
-def test_text_and_crash_checks_have_no_shared_timing_so_both_failing_is_enough():
+def test_text_checks_have_no_shared_timing_so_failing_the_same_kind_of_way_is_enough():
     user = result("a2", "s", kind="serial_period", spans=((0, 100),))
     clean = result("a2", "s", kind="serial_period", spans=((9000, 9100),))
     assert same_way(user, clean)
+
+
+def test_printing_nothing_is_not_the_way_a_slow_printer_fails():
+    # nav_beacon_byte_timer: the uploaded firmware prints the line at the wrong period (the real bug), while the clean-room
+    # sketch never printed it. That says nothing about whether the period check is fair.
+    slow = result("a2", "s", kind="serial_period")
+    slow.metrics = {"matches": 22, "worst_gap_ms": 1631}
+    silent = result("a2", "s", kind="serial_period")
+    silent.metrics = {"matches": 0}
+    assert not same_way(slow, silent)
+    assert not same_way(silent, slow)
+    assert same_way(silent, silent)
+
+
+def test_a_crash_and_a_deadlock_are_different_failures():
+    a = result("a9", "s", kind="no_crash")
+    a.metrics = {"exit_reason": "crash"}
+    b = result("a9", "s", kind="no_crash")
+    b.metrics = {"exit_reason": "sleep_deadlock"}
+    assert not same_way(a, b) and same_way(a, a)
 
 
 def run_classify(user_failing, clean_failing, total=4, kind="output_follows", clean_spans=((100, 600),)):

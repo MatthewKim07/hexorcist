@@ -22,7 +22,8 @@ SLACK_MS = 150.0
 MIN_OVERLAP_SHARE = 0.5
 
 # These types report violations as stretches of time, so "the same way" means the same stretches.
-# The others (serial text, crashes, silence) have no timing that two correct implementations would share.
+# The others (serial text, crashes, silence) have no timing that two correct implementations would share, so they must
+# fail the same kind of way: nothing seen at all, or something seen and wrong.
 TIMED_TYPES = frozenset({"output_follows", "safe_state_on_fault", "max_toggles", "timed_pulse", "toggle_per_press"})
 
 
@@ -56,12 +57,19 @@ def _covered_share(user: list[Violation], other: list[Violation]) -> float:
     return min(1.0, covered / total) if total else 0.0
 
 
+def _silent(r: AssertionResult) -> bool:
+    """The failure is that nothing matching was seen at all (no serial line to measure), not that what was seen was off."""
+    return r.metrics.get("matches") == 0 or r.metrics.get("checked") == 0
+
+
 def same_way(user: AssertionResult, clean: Optional[AssertionResult]) -> bool:
     """True when the clean-room firmware fails this assertion in this scenario as the uploaded firmware does."""
     if clean is None or user.status != "fail" or clean.status != "fail":
         return False
     if user.type not in TIMED_TYPES:
-        return True
+        # Text and crash checks have no timing to compare, but "printed nothing" and "printed it wrongly" are different
+        # failures: a firmware that never prints the line is not failing the way one that prints it too slowly is.
+        return _silent(user) == _silent(clean) and user.metrics.get("exit_reason") == clean.metrics.get("exit_reason")
     if not user.violations or not clean.violations:
         return True
     return _covered_share(user.violations, clean.violations) >= MIN_OVERLAP_SHARE
