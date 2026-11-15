@@ -17,6 +17,24 @@ Presets used for product tuning (`thermostat`, `button`, `logger`, `alarm`, `con
   - **Frozen** at commit `6a92c57`, 40 cases, 240 files. Fingerprint from `bench/freeze_hash.py` (method documented in the script): `330d5ca3f0e29c6b30c4e54e30ef7b217cf86e3c35326d7c77131e01984a98d8`. Verify with `python bench/freeze_hash.py --check`. The same value comes out of a `git archive` of the freeze commit. The earlier hash `6512d059…` in this file used an undocumented method and could not be reproduced, so it is retired.
   - Dry run `dry_v2_20261114T230218Z` (3 cases), then the full run `v2_full_20261115T003855Z`: all 40 cases, three systems, results in `bench/results/summary.md`, false-alarm review in `bench/adjudication.md`.
 
+## DEV-set results, not final evidence
+
+**v2 is now the DEV set.** The v2 cases, their specs and their frozen checks have been seen: the false alarms of the first run were read, adjudicated, and the agent was changed in response (evaluator fix for output pins in conditions, clean-room cross-check, spec grounding, stimulus search). Any v2 number produced after that, including `bench/run_dev.sh` and `bench/results/dev_comparison.md`, shows that the changes work. It does not show how the agent does on firmware it has not been shaped around. That needs a held-out **v3** test set, written and frozen before the agent is run on it, and it does not exist yet. Report v2 results as DEV-set results everywhere.
+
+The first full run (`v2_full_20261115T003855Z`, in `bench/results/summary.md`) was taken before those changes.
+
+### Dev-set rerun
+
+`bench/run_dev.sh` runs Hexorcist only, on all 40 cases or on a subset, with the same safeguards as `run_all.sh` (frozen-case check, DeepSeek pre-flight, health pre-flight, raised rate limit through the bench override and restored afterwards, resume per case, a $0.60 DeepSeek cap, log in `bench/results/run_dev.log`):
+
+```bash
+bench/run_dev.sh --list                                   # what would run, touches nothing
+bench/run_dev.sh --cases solenoid_ok,loft_fan_ok          # a subset (comma or space separated)
+bench/run_dev.sh                                          # all 40
+```
+
+Each per-case row also records what the new steps did: the checks the clean-room run left unconfirmed (with both measurements), bugs found by search, the search and clean-room usage, spec citations dropped, and the tokens per step.
+
 ## Freeze rule
 
 **`bench/cases/` is frozen.** Do not add, edit, or delete cases to improve scores. Do not tune Hexorcist prompts, judges, or agent loops against these cases. If a case is wrong, document it and ship a later versioned dataset — never silently reshape the frozen set during a leaderboard run.

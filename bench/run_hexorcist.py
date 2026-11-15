@@ -103,6 +103,8 @@ def main() -> None:
                             x for x in [b.get("root_cause") or "", b.get("evidence") or ""] if x
                         ).strip(),
                         "assertion_type": b.get("assertion_type"),
+                        "assertion_id": b.get("assertion_id"),
+                        "found_by_search": bool(b.get("found_by_search")),
                         "verified": b.get("verified"),
                         "evidence": b.get("evidence"),
                         "root_cause": b.get("root_cause"),
@@ -130,6 +132,18 @@ def main() -> None:
                     "completion_tokens": completion_tokens or None,
                     "cost_usd": cost,
                     "model": model or None,
+                    # What the cross-check, the spec grounding and the stimulus search did on this case.
+                    "claimed_fixed": run.get("status") == "fixed",
+                    "unconfirmed": [
+                        {"assertion_id": u.get("assertion_id"), "type": u.get("assertion_type"), "requirement": u.get("requirement"), "your_firmware": u.get("your_firmware"), "clean_room": u.get("clean_room"), "failing_scenarios": u.get("failing_scenarios"), "shared_scenarios": u.get("shared_scenarios")}
+                        for u in (report.get("cross_check") or {}).get("unconfirmed", [])
+                    ],
+                    "cross_check": {k: v for k, v in (report.get("cross_check") or {}).items() if k in ("status", "reason", "usage")},
+                    "search": {k: v for k, v in (report.get("search") or {}).items() if k != "mutations"},
+                    "found_by_search": [b.get("assertion_id") for b in report.get("bugs") or [] if b.get("found_by_search")],
+                    "grounding": {"checked": (report.get("grounding") or {}).get("checked"), "dropped": (report.get("grounding") or {}).get("dropped", [])},
+                    "llm_by_step": llm.get("by_step"),
+                    "assertion_ids": {b.get("id"): b.get("assertion_id") for b in report.get("bugs") or []},
                 }
             )
             print(

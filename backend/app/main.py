@@ -142,6 +142,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                 "rate_limit_per_hour": cfg.rate_limit_per_hour,
                 "max_active_runs": cfg.max_active_runs,
             },
+            "agent": {
+                "cross_check": cfg.cross_check,
+                "search_variants": cfg.search_variants,
+                "search_seed": cfg.search_seed,
+                "search_budget_s": cfg.search_budget_s,
+            },
         }
 
     @app.get("/api/presets")
