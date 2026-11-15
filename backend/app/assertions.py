@@ -110,7 +110,16 @@ def analog_series(trace: dict, pin: str) -> Optional[InputSeries]:
     )
 
 
-def digital_input_levels(trace: dict, scenario: Scenario, pin: str) -> tuple[int, list[tuple[float, int]]]:
+def digital_input_levels(trace: dict, scenario: Scenario, pin: str, spec: Optional[DeviceSpec] = None) -> tuple[int, list[tuple[float, int]]]:
+    """A digital pin's level over time: (initial level, [(t_ms, new level)]).
+
+    An input is what the scenario injected. A pin the spec declares as an output has no injected
+    value, so its level is whatever the firmware drove it to, taken from the trace (GPIO and PWM).
+    """
+    pin_spec = spec.pin(pin) if spec is not None else None
+    if pin_spec is not None and pin_spec.type in ("digital_output", "pwm_output"):
+        timeline = output_timeline(trace, pin)
+        return 0, list(zip(timeline.times, timeline.levels))
     initial = 0
     for d in scenario.digital:
         if d.pin == pin:
@@ -154,7 +163,7 @@ def condition_intervals(
             intervals.append((start, end_ms))
         return intervals
 
-    initial, events = digital_input_levels(trace, scenario, cond.pin)
+    initial, events = digital_input_levels(trace, scenario, cond.pin, spec)
     level = initial
     start = 0.0 if cond.holds(level) else None
     for t, value in events:

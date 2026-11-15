@@ -47,6 +47,14 @@ Hexorcist reported its own final status `fixed` on **15 of 40 cases**: 14 buggy 
 
 Two caveats. The frozen checks use the same `evaluate_all` as Hexorcist, so a shared evaluator weakness would pass both (see Limitations). And `panel_dual_debounce_edge` was claimed fixed although one of its two bugs was never reported; the frozen checks cover both bugs and passed.
 
+## Evaluator fix: output pins used as conditions
+
+After this run, `digital_input_levels` was changed so a condition on a pin the spec declares as an output reads the level the firmware drove (GPIO and PWM, from the trace) and no longer a constant 0 (class C above).
+
+- **Frozen verdicts did not change.** All 40 cases, sketch and reference, every frozen assertion in every frozen scenario were judged by the old and the new evaluator on the same traces: 0 status changes, and the failing sets equal `validate_latest.json` (40 ok, 0 failed). This is expected and not evidence for the fix: none of the 134 frozen assertions has a condition on an output pin.
+- **The fix does what it should on the run that exposed it.** Replaying the reference firmware through the model-written checks of the three affected runs: `solenoid_ok` a2 failed 16 of 16 scenarios before and now fails 0; `glue_solenoid_short` a2 15 before, 0 now; `mist_injector_long` a2 13 before, 0 now. The a1 checks (the true pulse-length bugs) still pass on the reference, as before.
+- Regression tests: `backend/tests/test_output_condition.py` (6 tests, 4 of which fail on the old evaluator).
+
 ## Scoring changes after the run
 
 The numbers in this document use a one-line filter that I added to `bench/score.py` after the run, when the first scoring pass showed a problem. Both versions of every affected number are below.
