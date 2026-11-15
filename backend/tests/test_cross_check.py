@@ -66,40 +66,83 @@ def test_a_crash_and_a_deadlock_are_different_failures():
     assert not same_way(a, b) and same_way(a, a)
 
 
-def run_classify(user_failing, clean_failing, total=4, kind="output_follows", clean_spans=((100, 600),)):
+def run_classify(user_failing, rooms_failing, total=10, kind="output_follows", clean_spans=((100, 600),)):
+    """Classify one assertion. rooms_failing has one set of failing scenarios per clean room."""
     scenarios = [f"s{i}" for i in range(total)]
     user = {s: [result("a1", s, "fail" if s in user_failing else "pass", kind)] for s in scenarios}
-    clean = {s: [result("a1", s, "fail" if s in clean_failing else "pass", kind, clean_spans)] for s in scenarios}
-    return classify(user, clean, scenarios)["a1"]
+    rooms = [{s: [result("a1", s, "fail" if s in failing else "pass", kind, clean_spans, evidence=f"room {k + 1} in {s}")] for s in scenarios} for k, failing in enumerate(rooms_failing)]
+    return classify(user, rooms, scenarios)["a1"]
 
 
-def test_a_check_the_clean_room_firmware_also_fails_is_unconfirmed():
-    v = run_classify({"s0", "s1", "s2", "s3"}, {"s0", "s1", "s2", "s3"})
-    assert v.unconfirmed and v.shared == ["s0", "s1", "s2", "s3"]
-    assert v.user_evidence and v.cleanroom_evidence
+def ids(n):
+    return {f"s{i}" for i in range(n)}
+
+
+def test_a_check_both_clean_rooms_fail_everywhere_is_unconfirmed():
+    v = run_classify(ids(10), [ids(10), ids(10)])
+    assert v.unconfirmed
+    assert [r["shared"] for r in v.rooms] == [10, 10]
+    assert v.user_evidence and v.cleanroom_evidence and v.rooms[1]["evidence"]
 
 
 def test_a_check_only_the_uploaded_firmware_fails_is_confirmed():
-    v = run_classify({"s0", "s1"}, set())
-    assert not v.unconfirmed and v.shared == []
+    assert not run_classify(ids(4), [set(), set()]).unconfirmed
 
 
-def test_a_majority_of_shared_failures_is_needed():
-    assert run_classify({"s0", "s1", "s2", "s3"}, {"s0", "s1"}).unconfirmed
-    assert not run_classify({"s0", "s1", "s2", "s3"}, {"s0"}).unconfirmed
+def test_each_room_must_fail_at_least_80_percent_of_the_scenarios():
+    assert run_classify(ids(10), [ids(8), ids(8)]).unconfirmed  # exactly 80%
+    assert not run_classify(ids(10), [ids(7), ids(10)]).unconfirmed  # 70% in one room
+    assert not run_classify(ids(10), [ids(10), ids(7)]).unconfirmed
 
 
-def test_the_clean_room_failing_elsewhere_does_not_excuse_the_uploaded_firmware():
+def test_a_single_room_needs_the_same_80_percent():
+    assert run_classify(ids(5), [ids(4)]).unconfirmed
+    assert not run_classify(ids(5), [ids(3)]).unconfirmed  # the old rule (a majority) would have dropped this one
+    assert not run_classify(ids(4), [{"s0", "s1"}]).unconfirmed
+
+
+def test_with_no_clean_room_nothing_is_unconfirmed():
+    assert not run_classify(ids(4), []).unconfirmed
+
+
+def test_a_room_failing_elsewhere_does_not_excuse_the_uploaded_firmware():
     # It fails the same assertion, but at other times: a different problem, so the uploaded failure stands.
-    v = run_classify({"s0", "s1"}, {"s0", "s1"}, clean_spans=((5000, 6000),))
-    assert not v.unconfirmed
+    assert not run_classify(ids(4), [ids(4), ids(4)], clean_spans=((5000, 6000),)).unconfirmed
 
 
 def test_only_assertions_that_fail_get_a_verdict():
     scenarios = ["s0"]
     user = {"s0": [result("a1", "s0", "pass"), result("a2", "s0", "fail")]}
     clean = {"s0": [result("a1", "s0", "fail"), result("a2", "s0", "pass")]}
-    assert set(classify(user, clean, scenarios)) == {"a2"}
+    assert set(classify(user, [clean, clean], scenarios)) == {"a2"}
+
+
+def test_glue_solenoid_short_pattern_one_flawed_clean_room_must_not_hide_a_real_bug():
+    # The uploaded sketch ends the pulse after 1000 ms instead of 2500 (the real bug). Clean room 1 never ends the pulse,
+    # a different failure of the same check at the same times. Clean room 2 is right, so it passes.
+    def pulse(status, ms, evidence):
+        r = result("a1", "s", status, "timed_pulse", ((1030, 1030 + ms),), evidence=evidence)
+        return r
+
+    scenarios = [f"s{i}" for i in range(14)]
+    user = {s: [pulse("fail", 1000, "4 of 4 pulse(s) had the wrong length: lasted 1000 ms, expected 2500")] for s in scenarios}
+    flawed = {s: [pulse("fail", 6900, "still on after 6968 ms, expected 2500")] for s in scenarios[:12]} | {s: [pulse("pass", 0, "ok")] for s in scenarios[12:]}
+    right = {s: [pulse("pass", 0, "ok")] for s in scenarios}
+    one_room = classify(user, [flawed], scenarios)["a1"]
+    assert one_room.unconfirmed  # with only the flawed room (12 of 14 is 86%) the real bug would have been dropped
+    both = classify(user, [flawed, right], scenarios)["a1"]
+    assert not both.unconfirmed
+    assert [r["shared"] for r in both.rooms] == [12, 0]
+
+
+def test_rail_limit_invert_pattern_the_flawed_room_shares_17_of_18_and_the_good_room_none():
+    scenarios = [f"s{i}" for i in range(18)]
+    user = {s: [result("a1", s, "fail", "output_follows", ((100, 4800),))] for s in scenarios}
+    flawed = {s: [result("a1", s, "fail" if i < 17 else "pass", "output_follows", ((100, 4100),))] for i, s in enumerate(scenarios)}
+    right = {s: [result("a1", s, "pass")] for s in scenarios}
+    assert not classify(user, [flawed, right], scenarios)["a1"].unconfirmed
+    assert not classify(user, [right, flawed], scenarios)["a1"].unconfirmed
+    assert classify(user, [flawed, flawed], scenarios)["a1"].unconfirmed  # two rooms that agree really are two opinions
 
 
 # ------------------------------------------------------------------ the pipeline
@@ -121,32 +164,40 @@ class RoomRunner(FakeRunner):
 
 
 class RoomLLM(FakeLLM):
-    def __init__(self, patches, room=None):
-        super().__init__(patches)
-        self.room = list(room if room is not None else [CLEAN_OK])
-        self.room_prompts: list[str] = []
+    """Scripted model. `rooms` holds one list of sketches per clean-room sample: the first reply, then any repair."""
 
-    async def code(self, system, user, step):
-        if step == "cleanroom":
-            self.room_prompts.append(user)
-            code = self.room.pop(0)
-            self.calls.append(LLMCall(step="cleanroom", duration_ms=1500, prompt_tokens=100, completion_tokens=50))
+    def __init__(self, patches, rooms=None):
+        super().__init__(patches)
+        self.rooms = [list(r) for r in (rooms if rooms is not None else [[CLEAN_OK], [CLEAN_OK]])]
+        self.room_prompts: dict[int, list[str]] = {1: [], 2: []}
+        self.room_sampling: dict[int, dict] = {}
+
+    async def code(self, system, user, step, temperature=None, seed=None):
+        if step.startswith("cleanroom"):
+            n = int(step[len("cleanroom"):])
+            self.room_prompts[n].append(user)
+            self.room_sampling[n] = {"temperature": temperature, "seed": seed}
+            code = self.rooms[n - 1].pop(0)
+            self.calls.append(LLMCall(step=step, duration_ms=1500, prompt_tokens=100, completion_tokens=50))
             return code, f"```cpp\n{code}```"
         return await super().code(system, user, step)
 
 
-def run(patches, room=None, **overrides):
+def run(patches, rooms=None, **overrides):
     runner = RoomRunner()
     pipeline = Pipeline("r", settings(**{"max_parallel": 2, "cross_check": True, **overrides}), runner, NullStore(), NullBus())
-    pipeline.llm = RoomLLM(patches, room)
+    pipeline.llm = RoomLLM(patches, rooms)
     status, report = asyncio.run(pipeline.run_break(ORIGINAL, SPEC))
     return status, report, runner, pipeline.llm
 
 
-def test_a_check_a_clean_implementation_fails_too_is_not_reported_as_a_bug():
-    status, report, _, llm = run([HEARTBEAT_ONLY], room=[CLEAN_CHATTERS])
+BOTH_CHATTER = [[CLEAN_CHATTERS], [CLEAN_CHATTERS]]
+
+
+def test_a_check_both_clean_rooms_fail_too_is_not_reported_as_a_bug():
+    status, report, _, llm = run([HEARTBEAT_ONLY], rooms=BOTH_CHATTER)
     cross = report["cross_check"]
-    assert cross["status"] == "ran"
+    assert cross["status"] == "ran" and cross["rule"] == "both"
     assert [u["assertion_type"] for u in cross["unconfirmed"]] == ["max_toggles"]
     assert [b["assertion_type"] for b in report["bugs"]] == ["serial_period"]
     # The patch still chatters, but the chatter check is unconfirmed, so it is not a fix target and does not block "fixed".
@@ -155,37 +206,65 @@ def test_a_check_a_clean_implementation_fails_too_is_not_reported_as_a_bug():
     assert any(a.get("unconfirmed") for a in report["assertions"])
 
 
+def test_one_flawed_clean_room_does_not_hide_a_real_bug():
+    # Room 1 repeats the bug (it chatters too), room 2 is right. The chatter check stays a bug and gets fixed.
+    status, report, _, llm = run([PERSIST_FIXED], rooms=[[CLEAN_CHATTERS], [CLEAN_OK]])
+    assert report["cross_check"]["unconfirmed"] == []
+    assert {b["assertion_type"] for b in report["bugs"]} == {"max_toggles", "serial_period"}
+    assert status == "fixed" and "No chatter" in llm.fix_prompts[0]
+    assert run([PERSIST_FIXED], rooms=[[CLEAN_OK], [CLEAN_CHATTERS]])[1]["cross_check"]["unconfirmed"] == []
+
+
 def test_the_fix_prompt_carries_confirmed_checks_only():
-    _, _, _, llm = run([HEARTBEAT_ONLY], room=[CLEAN_CHATTERS])
+    _, _, _, llm = run([HEARTBEAT_ONLY], rooms=BOTH_CHATTER)
     assert "Heartbeat" in llm.fix_prompts[0]
     assert "No chatter" not in llm.fix_prompts[0]
 
 
-def test_an_unconfirmed_failure_is_shown_with_both_measurements():
-    _, report, _, _ = run([HEARTBEAT_ONLY], room=[CLEAN_CHATTERS])
+def test_an_unconfirmed_failure_is_shown_with_every_measurement():
+    _, report, _, _ = run([HEARTBEAT_ONLY], rooms=BOTH_CHATTER)
     item = report["cross_check"]["unconfirmed"][0]
-    assert "toggled" in item["your_firmware"]
-    assert "toggled" in item["clean_room"]
+    assert "toggled" in item["your_firmware"] and "toggled" in item["clean_room"]
+    assert len(item["clean_rooms"]) == 2 and all("toggled" in r["evidence"] for r in item["clean_rooms"])
     assert item["failing_scenarios"] >= 1 and item["shared_scenarios"] >= 1
 
 
 def test_a_clean_implementation_leaves_every_failure_a_bug():
-    status, report, _, _ = run([PERSIST_FIXED], room=[CLEAN_OK])
+    status, report, _, _ = run([PERSIST_FIXED], rooms=[[CLEAN_OK], [CLEAN_OK]])
     assert report["cross_check"]["unconfirmed"] == []
     assert {b["assertion_type"] for b in report["bugs"]} == {"max_toggles", "serial_period"}
     assert status == "fixed"
 
 
-def test_the_clean_room_prompt_never_contains_the_uploaded_sketch():
+def test_the_clean_room_prompts_never_contain_the_uploaded_sketch_and_the_samples_differ_only_in_sampling():
     _, _, _, llm = run([PERSIST_FIXED])
-    assert llm.room_prompts and "CHATTER" not in llm.room_prompts[0]
-    assert "Heartbeat every 250 ms" in llm.room_prompts[0]
+    for n in (1, 2):
+        assert llm.room_prompts[n] and "CHATTER" not in llm.room_prompts[n][0]
+        assert "Heartbeat every 250 ms" in llm.room_prompts[n][0]
+        assert llm.room_sampling[n]["temperature"] == 0.7
+    assert llm.room_prompts[1][0] == llm.room_prompts[2][0]
+    assert llm.room_sampling[1]["seed"] != llm.room_sampling[2]["seed"]
 
 
-def test_a_clean_room_that_never_compiles_is_skipped_and_recorded():
-    status, report, _, _ = run([PERSIST_FIXED], room=["NOCOMPILE one\n", "NOCOMPILE two\n"])
+def test_if_one_clean_room_never_compiles_the_other_decides_alone_at_80_percent():
+    status, report, _, _ = run([HEARTBEAT_ONLY], rooms=[["NOCOMPILE one\n", "NOCOMPILE two\n"], [CLEAN_CHATTERS]])
     cross = report["cross_check"]
-    assert cross["status"] == "skipped"
+    assert cross["status"] == "ran" and cross["rule"] == "single"
+    assert [r["status"] for r in cross["rooms"]] == ["skipped", "ready"]
+    assert "one repair" in cross["rooms"][0]["reason"]
+    assert [u["assertion_type"] for u in cross["unconfirmed"]] == ["max_toggles"]
+    assert any("Falling back" in w for w in report["warnings"])
+
+
+def test_the_single_remaining_room_still_cannot_drop_a_check_it_passes():
+    _, report, _, _ = run([PERSIST_FIXED], rooms=[[CLEAN_OK], ["NOCOMPILE\n", "NOCOMPILE\n"]])
+    assert report["cross_check"]["rule"] == "single" and report["cross_check"]["unconfirmed"] == []
+
+
+def test_when_neither_clean_room_compiles_the_cross_check_is_skipped_and_recorded():
+    status, report, _, _ = run([PERSIST_FIXED], rooms=[["NOCOMPILE one\n", "NOCOMPILE two\n"], ["NOCOMPILE three\n", "NOCOMPILE four\n"]])
+    cross = report["cross_check"]
+    assert cross["status"] == "skipped" and cross["rule"] == "none"
     assert "one repair" in cross["reason"]
     assert cross["unconfirmed"] == []
     assert any("cross-check skipped" in w for w in report["warnings"])
@@ -195,31 +274,40 @@ def test_a_clean_room_that_never_compiles_is_skipped_and_recorded():
 
 
 def test_one_repair_attempt_rescues_a_clean_room_that_did_not_compile():
-    _, report, _, llm = run([PERSIST_FIXED], room=["NOCOMPILE\n", CLEAN_CHATTERS])
+    _, report, _, llm = run([PERSIST_FIXED], rooms=[["NOCOMPILE\n", CLEAN_CHATTERS], [CLEAN_CHATTERS]])
     cross = report["cross_check"]
-    assert cross["status"] == "ran" and cross["usage"]["repaired"] is True
-    assert "Compiler output" in llm.room_prompts[1]
+    assert cross["status"] == "ran" and cross["rule"] == "both" and cross["usage"]["repaired"] is True
+    assert "Compiler output" in llm.room_prompts[1][1]
+
+
+def test_one_sample_can_be_asked_for_and_then_the_single_room_rule_applies():
+    _, report, _, llm = run([HEARTBEAT_ONLY], rooms=[[CLEAN_CHATTERS]], cleanroom_samples=1)
+    assert report["cross_check"]["rule"] == "single" and len(report["cross_check"]["rooms"]) == 1
+    assert llm.room_prompts[2] == []
 
 
 def test_the_cross_check_can_be_switched_off():
     _, report, runner, llm = run([PERSIST_FIXED], cross_check=False)
     assert report["cross_check"]["status"] == "disabled"
-    assert llm.room_prompts == []
+    assert llm.room_prompts == {1: [], 2: []}
 
 
-def test_clean_room_cost_and_time_are_recorded():
-    _, report, _, _ = run([HEARTBEAT_ONLY], room=[CLEAN_CHATTERS])
-    usage = report["cross_check"]["usage"]
-    assert usage["llm_calls"] == 1 and usage["prompt_tokens"] == 100 and usage["completion_tokens"] == 50
-    assert usage["sandbox_runs"] >= 1
-    assert report["llm"]["by_step"]["cleanroom"]["calls"] == 1
+def test_both_clean_rooms_cost_and_time_are_recorded():
+    _, report, _, _ = run([HEARTBEAT_ONLY], rooms=BOTH_CHATTER)
+    cross = report["cross_check"]
+    usage = cross["usage"]
+    assert usage["llm_calls"] == 2 and usage["prompt_tokens"] == 200 and usage["completion_tokens"] == 100
+    assert usage["sandbox_runs"] >= 2 and usage["sandbox_s"] >= 0
+    assert [r["llm_calls"] for r in cross["rooms"]] == [1, 1]
+    assert all(r["prompt_tokens"] == 100 and r["firmware"] for r in cross["rooms"])
+    assert report["llm"]["by_step"]["cleanroom1"]["calls"] == 1 and report["llm"]["by_step"]["cleanroom2"]["calls"] == 1
 
 
 def test_no_failures_means_no_clean_room_run():
     # Nothing failed on the uploaded firmware, so there is nothing to classify.
     runner = RoomRunner()
     pipeline = Pipeline("r", settings(max_parallel=2, cross_check=True), runner, NullStore(), NullBus())
-    pipeline.llm = RoomLLM([], [CLEAN_OK])
+    pipeline.llm = RoomLLM([], [[CLEAN_OK], [CLEAN_OK]])
     status, report = asyncio.run(pipeline.run_break(CLEAN_OK, SPEC))
     assert status == "clean"
     assert report["cross_check"]["status"] == "not_needed"

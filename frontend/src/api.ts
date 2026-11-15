@@ -88,12 +88,32 @@ export interface SpecAmbiguity {
   scenario_name: string;
   your_firmware: string;
   clean_room: string;
+  /** One entry per clean-room sketch: how many of the failing scenarios it fails the same way, and what it measured. */
+  clean_rooms?: { shared: number; share: number; evidence: string }[];
   failing_scenarios: number;
   shared_scenarios: number;
 }
 
+export interface CleanRoomReport {
+  index: number;
+  status: "ready" | "skipped" | "pending";
+  reason: string;
+  repaired: boolean;
+  llm_calls: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  llm_s: number;
+  sandbox_runs: number;
+  sandbox_s: number;
+  build_s: number;
+  firmware: string;
+}
+
 export interface CrossCheck {
   status: "disabled" | "not_run" | "not_needed" | "ran" | "skipped";
+  /** "both": two clean rooms must agree. "single": only one compiled. "none": no clean room, nothing was dropped. */
+  rule?: "both" | "single" | "none";
+  rooms?: CleanRoomReport[];
   reason: string;
   unconfirmed: SpecAmbiguity[];
   usage: { llm_calls: number; prompt_tokens: number; completion_tokens: number; llm_s: number; sandbox_runs: number; sandbox_s: number; build_s: number; repaired: boolean };

@@ -58,6 +58,9 @@ MAX_LLM_SCENARIOS = 10
 MAX_LLM_SCENARIO_MS = 12000
 MAX_STORED_PIN_EVENTS = 8000
 MAX_STORED_SERIAL = 4000
+# The clean-room sketches are independent samples: a hot temperature makes them differ, and each gets its own seed.
+CLEANROOM_TEMPERATURE = 0.7
+CLEANROOM_SEEDS = (1101, 2202)
 # Stimulus search: at most this many scenarios are kept as findings, so verification stays quick.
 MAX_SEARCH_KEPT = 6
 # Variants that break a check are shown to the clean-room firmware, a few per check and this many in all.
@@ -104,8 +107,9 @@ class Meter:
 
 @dataclass
 class CleanRoom:
-    """The clean-room implementation: written from the spec alone, compiled once, run on demand."""
+    """One clean-room implementation: written from the spec alone, compiled once, run on demand."""
 
+    index: int = 1  # 1 or 2: the independent samples are told apart by this
     status: str = "pending"  # ready, or skipped (see reason)
     reason: str = ""
     code: str = ""
@@ -317,8 +321,8 @@ class Pipeline:
         self.warnings: list[str] = []
         self._sem = asyncio.Semaphore(settings.max_parallel)
         # Clean-room cross-check state (see crosscheck.py).
-        self._room_task: Optional[asyncio.Task] = None
-        self.room: Optional[CleanRoom] = None
+        self._room_tasks: list[asyncio.Task] = []
+        self.rooms: Optional[list[CleanRoom]] = None  # every sample that was built, ready or skipped
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
         self.cross_note = ""
@@ -406,49 +410,58 @@ class Pipeline:
 
     # ------------------------------------------------------ clean-room check
 
-    async def _build_cleanroom(self, spec: DeviceSpec) -> CleanRoom:
-        """Write the clean-room sketch from the spec and pin map alone, and compile it. One repair on a compile error."""
-        room = CleanRoom()
+    async def _build_cleanroom(self, spec: DeviceSpec, index: int) -> CleanRoom:
+        """Write one clean-room sketch from the spec and pin map alone, and compile it. One repair on a compile error."""
+        room = CleanRoom(index=index)
+        step = f"cleanroom{index}"
+        sample = {"temperature": CLEANROOM_TEMPERATURE, "seed": CLEANROOM_SEEDS[(index - 1) % len(CLEANROOM_SEEDS)]}
         started = time.monotonic()
         try:
-            code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec), "cleanroom")
+            code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec), step, **sample)
             for attempt in (1, 2):
                 screened = await asyncio.to_thread(screen_request, code, "")
                 if not screened["allowed"]:
-                    room.status, room.reason = "skipped", f"The clean-room sketch was rejected by the input guard: {screened['reasons']}"
+                    room.status, room.reason = "skipped", f"The clean-room sketch {index} was rejected by the input guard: {screened['reasons']}"
                     break
-                built = await self._compile(code, "compile clean-room implementation" if attempt == 1 else "compile clean-room implementation, repaired")
+                built = await self._compile(code, f"compile clean-room implementation {index}" if attempt == 1 else f"compile clean-room implementation {index}, repaired")
                 room.sandbox.add(built.record.duration_ms)
                 if built.ok:
                     room.status, room.code, room.elf = "ready", code, built.elf
                     break
                 if attempt == 2:
-                    room.status, room.reason = "skipped", "The clean-room implementation did not compile after one repair attempt."
+                    room.status, room.reason = "skipped", f"Clean-room implementation {index} did not compile after one repair attempt."
                     break
                 room.repaired = True
-                code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec, built.log, code), "cleanroom")
+                code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec, built.log, code), step, **sample)
         except (LLMError, SandboxError) as exc:
-            room.status, room.reason = "skipped", f"The clean-room implementation could not be built: {str(exc)[:200]}"
+            room.status, room.reason = "skipped", f"Clean-room implementation {index} could not be built: {str(exc)[:200]}"
         room.wall_ms = (time.monotonic() - started) * 1000
         return room
 
-    async def _cleanroom_ready(self) -> Optional[CleanRoom]:
-        """The clean-room firmware once it is built, or None when the check is off or the build was skipped."""
-        if self._room_task is None:
-            return None
-        if self.room is None:
-            self.room = await self._room_task
-            if self.room.status != "ready":
-                await self._warn(f"Clean-room cross-check skipped: {self.room.reason}")
-        return self.room if self.room.status == "ready" else None
+    async def _cleanroom_ready(self) -> list[CleanRoom]:
+        """The clean-room firmwares that built, in order. Empty when the check is off or no sample compiled."""
+        if not self._room_tasks:
+            return []
+        if self.rooms is None:
+            self.rooms = list(await asyncio.gather(*self._room_tasks))
+            skipped = [r for r in self.rooms if r.status != "ready"]
+            if skipped and len(skipped) == len(self.rooms):
+                await self._warn(f"Clean-room cross-check skipped: {skipped[0].reason}")
+            else:
+                for r in skipped:
+                    await self._warn(f"{r.reason} Falling back to the clean-room sketch that did build.")
+        return [r for r in self.rooms if r.status == "ready"]
 
-    async def _cleanroom_judge(self, room: CleanRoom, scenarios: list[Scenario], assertions: list, spec: DeviceSpec) -> None:
-        """Run the clean-room firmware through scenarios it has not seen yet. Nothing is stored or announced."""
-        todo = [s for s in scenarios if s.id not in room.results]
-        if not todo:
-            return
-        suite = await self._run_suite(room.elf, todo, assertions, spec, -1, "clean-room", publish=False, meter=room.sandbox)
-        room.results.update(suite.results)
+    async def _cleanroom_judge(self, rooms: list[CleanRoom], scenarios: list[Scenario], assertions: list, spec: DeviceSpec) -> None:
+        """Run every clean-room firmware through scenarios it has not seen yet. Nothing is stored or announced."""
+
+        async def one(room: CleanRoom) -> None:
+            todo = [s for s in scenarios if s.id not in room.results]
+            if todo:
+                suite = await self._run_suite(room.elf, todo, assertions, spec, -1, "clean-room", publish=False, meter=room.sandbox)
+                room.results.update(suite.results)
+
+        await asyncio.gather(*(one(r) for r in rooms))
 
     def _ambiguities(self, assertions: list, scenarios: list[Scenario]) -> list[dict]:
         by_id = {a.id: a for a in assertions}
@@ -467,38 +480,62 @@ class Pipeline:
                     "scenario_name": names.get(v.scenario_id, v.scenario_id),
                     "your_firmware": v.user_evidence,
                     "clean_room": v.cleanroom_evidence,
+                    "clean_rooms": v.rooms,
                     "failing_scenarios": len(v.failing),
-                    "shared_scenarios": len(v.shared),
+                    "shared_scenarios": min((r["shared"] for r in v.rooms), default=len(v.shared)),
                 }
             )
         return out
 
+    def _room_report(self, room: CleanRoom) -> dict:
+        calls = [c for c in self.llm.calls if c.step == f"cleanroom{room.index}"]
+        return {
+            "index": room.index,
+            "status": room.status,
+            "reason": room.reason,
+            "repaired": room.repaired,
+            "llm_calls": len(calls),
+            "prompt_tokens": sum(c.prompt_tokens for c in calls),
+            "completion_tokens": sum(c.completion_tokens for c in calls),
+            "llm_s": round(sum(c.duration_ms for c in calls) / 1000, 1),
+            "sandbox_runs": room.sandbox.runs,
+            "sandbox_s": round(room.sandbox.ms / 1000, 1),
+            "build_s": round(room.wall_ms / 1000, 1),
+            "firmware": room.code if room.status == "ready" else "",
+        }
+
     def _cross_check_summary(self, assertions: list, scenarios: list[Scenario]) -> dict:
-        room = self.room
-        step_calls = [c for c in self.llm.calls if c.step == "cleanroom"]
+        rooms = self.rooms or []
+        ready = [r for r in rooms if r.status == "ready"]
         if not self.settings.cross_check:
             status = "disabled"
-        elif room is None:
-            status = "not_needed" if self._room_task is not None else "not_run"
-        elif room.status != "ready":
+        elif not self._room_tasks:
+            status = "not_run"
+        elif not rooms:
+            status = "not_needed"  # the samples were never needed, so never awaited
+        elif not ready:
             status = "skipped"
         else:
-            status = "ran" if room.results else "not_needed"
+            status = "ran" if any(r.results for r in ready) else "not_needed"
+        per_room = [self._room_report(r) for r in rooms]
+        usage = {k: sum(r[k] for r in per_room) for k in ("llm_calls", "prompt_tokens", "completion_tokens", "sandbox_runs")}
+        usage.update(
+            {
+                "llm_s": round(sum(r["llm_s"] for r in per_room), 1),
+                "sandbox_s": round(sum(r["sandbox_s"] for r in per_room), 1),
+                # The samples are built side by side, so the wait is the slowest one.
+                "build_s": max((r["build_s"] for r in per_room), default=0.0),
+                "repaired": any(r["repaired"] for r in per_room),
+            }
+        )
         return {
             "status": status,
-            "reason": room.reason if room is not None else "",
+            "reason": next((r.reason for r in rooms if r.status != "ready"), ""),
+            "rule": "both" if len(ready) >= 2 else ("single" if len(ready) == 1 else "none"),
             "unconfirmed": self._ambiguities(assertions, scenarios),
-            "usage": {
-                "llm_calls": len(step_calls),
-                "prompt_tokens": sum(c.prompt_tokens for c in step_calls),
-                "completion_tokens": sum(c.completion_tokens for c in step_calls),
-                "llm_s": round(sum(c.duration_ms for c in step_calls) / 1000, 1),
-                "sandbox_runs": room.sandbox.runs if room is not None else 0,
-                "sandbox_s": round(room.sandbox.ms / 1000, 1) if room is not None else 0.0,
-                "build_s": round(room.wall_ms / 1000, 1) if room is not None else 0.0,
-                "repaired": room.repaired if room is not None else False,
-            },
-            "firmware": room.code if room is not None and room.status == "ready" else "",
+            "usage": usage,
+            "rooms": per_room,
+            "firmware": ready[0].code if ready else "",
         }
 
     # -------------------------------------------------------- stimulus search
@@ -587,11 +624,11 @@ class Pipeline:
 
         # A check no correct firmware could pass must not produce a finding: ask the clean room first.
         order = [v.id for v in variants]
-        room = await self._cleanroom_ready()
-        if room is not None:
+        rooms = await self._cleanroom_ready()
+        if rooms:
             judged = sorted({i for ids in found.values() for i in sorted(ids, key=lambda i: complexity(by_id[i]))[:MAX_JUDGED_PER_CHECK]}, key=lambda i: (complexity(by_id[i]), i))[:MAX_JUDGED_VARIANTS]
-            await self._cleanroom_judge(room, [by_id[i] for i in judged], assertions, spec)
-            verdicts = classify({i: suite.results[i] for i in judged}, room.results, order, set(found))
+            await self._cleanroom_judge(rooms, [by_id[i] for i in judged], assertions, spec)
+            verdicts = classify({i: suite.results[i] for i in judged}, [r.results for r in rooms], order, set(found))
             for aid, verdict in verdicts.items():
                 if verdict.unconfirmed:
                     self.verdicts[aid] = verdict
@@ -675,8 +712,9 @@ class Pipeline:
         try:
             return await self._run_break(firmware, spec, extra_report, checks)
         finally:
-            if self._room_task is not None and not self._room_task.done():
-                self._room_task.cancel()
+            for task in self._room_tasks:
+                if not task.done():
+                    task.cancel()
 
     async def _run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict], checks: Optional["CheckSet"]) -> tuple[str, dict]:
         bus = self.bus
@@ -722,7 +760,7 @@ class Pipeline:
         await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions{reused}")
         if self.settings.cross_check and len(assertions) > 1:
             # Written from the spec alone while the uploaded firmware compiles and the attack is planned.
-            self._room_task = asyncio.create_task(self._build_cleanroom(spec))
+            self._room_tasks = [asyncio.create_task(self._build_cleanroom(spec, i + 1)) for i in range(self.settings.cleanroom_samples)]
 
         # 2. COMPILE
         await bus.step("compile", "running", "Compiling in a sandbox")
@@ -760,11 +798,11 @@ class Pipeline:
         all_ids = {a.id for a in assertions}
         confirmed = set(all_ids)
         if baseline.failing_assertions():
-            room = await self._cleanroom_ready()
-            if room is not None:
-                await bus.step("execute", "running", "Cross-checking the failures against a clean-room implementation written from the spec alone")
-                await self._cleanroom_judge(room, scenarios, assertions, spec)
-                self.verdicts = classify(baseline.results, room.results, [s.id for s in scenarios], all_ids)
+            rooms = await self._cleanroom_ready()
+            if rooms:
+                await bus.step("execute", "running", f"Cross-checking the failures against {len(rooms)} clean-room implementation{'s' if len(rooms) > 1 else ''} written from the spec alone")
+                await self._cleanroom_judge(rooms, scenarios, assertions, spec)
+                self.verdicts = classify(baseline.results, [r.results for r in rooms], [s.id for s in scenarios], all_ids)
                 self.unconfirmed = unconfirmed_ids(self.verdicts)
                 confirmed -= self.unconfirmed
                 if self.unconfirmed:
@@ -777,7 +815,7 @@ class Pipeline:
         failing_ids = baseline.failing_assertions(confirmed)
         detail = f"{len(baseline_failures)} failures across {len(failing_ids)} assertions"
         if self.unconfirmed:
-            detail += f". {len(self.unconfirmed)} more also fail on a clean-room implementation, so they are possible spec ambiguities, not bugs"
+            detail += f". {len(self.unconfirmed)} more also fail on the clean-room implementation{'s' if len(self.rooms or []) > 1 else ''}, so they are possible spec ambiguities, not bugs"
         if self.search_info:
             detail += f". Search: {self.search_info['variants_run']} variants, {len(found_by_search)} new failing scenario(s) kept"
         await bus.step("execute", "done", detail)

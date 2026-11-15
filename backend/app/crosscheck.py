@@ -9,13 +9,14 @@ the spec is ambiguous, not the firmware. Everything here is deterministic. The m
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Union
 
 from .models import AssertionResult, Violation
 
-# An unconfirmed assertion fails the same way on the clean-room firmware in at least this share of the
-# scenarios where it fails on the uploaded one. A majority, not all: a second implementation differs in detail.
-MIN_SHARED_SHARE = 0.5
+# An assertion is unconfirmed only if EVERY clean-room sketch fails it the same way in at least this share of the
+# scenarios where it fails on the uploaded firmware. One clean room can be wrong itself (it misreads the spec, or
+# implements the bug), and that must not hide a real bug, so two independent sketches have to agree.
+MIN_SHARED_SHARE = 0.8
 # Violation windows that start this close still count as the same stretch of time.
 SLACK_MS = 150.0
 # A violation window must be covered at least this much by the other firmware's windows to count as the same way.
@@ -29,15 +30,17 @@ TIMED_TYPES = frozenset({"output_follows", "safe_state_on_fault", "max_toggles",
 
 @dataclass
 class Verdict:
-    """What the clean-room run says about one assertion that fails on the uploaded firmware."""
+    """What the clean-room runs say about one assertion that fails on the uploaded firmware."""
 
     assertion_id: str
     unconfirmed: bool
     failing: list[str] = field(default_factory=list)  # scenarios where the uploaded firmware fails it
-    shared: list[str] = field(default_factory=list)  # of those, where the clean-room firmware fails it the same way
+    shared: list[str] = field(default_factory=list)  # of those, where the first clean room also fails it the same way
     user_evidence: str = ""
-    cleanroom_evidence: str = ""
-    scenario_id: str = ""  # the scenario the two measurements come from
+    cleanroom_evidence: str = ""  # from the first clean room, for the report
+    scenario_id: str = ""  # the scenario the measurements come from
+    # One entry per clean room that ran: how many of the failing scenarios it shares, and its measurement.
+    rooms: list[dict] = field(default_factory=list)
 
 
 def _covered_share(user: list[Violation], other: list[Violation]) -> float:
@@ -77,16 +80,20 @@ def same_way(user: AssertionResult, clean: Optional[AssertionResult]) -> bool:
 
 def classify(
     user_results: dict[str, list[AssertionResult]],
-    clean_results: dict[str, list[AssertionResult]],
+    clean_results: Union[dict[str, list[AssertionResult]], list[dict[str, list[AssertionResult]]]],
     scenario_order: Optional[list[str]] = None,
     assertion_ids: Optional[set[str]] = None,
 ) -> dict[str, Verdict]:
     """Verdict for every assertion that fails somewhere on the uploaded firmware.
 
-    user_results and clean_results map scenario id to that scenario's assertion results.
+    user_results maps scenario id to that scenario's results. clean_results is one such mapping per clean-room
+    sketch (a single mapping is one room). With no room at all, nothing can be unconfirmed.
+    An assertion is unconfirmed when every room fails it the same way in at least MIN_SHARED_SHARE of the scenarios
+    where the uploaded firmware fails it. With one room (the other did not compile) the same share applies to it alone.
     """
+    rooms = [clean_results] if isinstance(clean_results, dict) else list(clean_results)
     order = {sid: i for i, sid in enumerate(scenario_order or [])}
-    clean_by = {(r.assertion_id, sid): r for sid, rs in clean_results.items() for r in rs}
+    by_room = [{(r.assertion_id, sid): r for sid, rs in room.items() for r in rs} for room in rooms]
     failing: dict[str, list[tuple[str, AssertionResult]]] = {}
     for sid, rs in user_results.items():
         for r in rs:
@@ -96,19 +103,22 @@ def classify(
     verdicts: dict[str, Verdict] = {}
     for aid, rows in failing.items():
         rows.sort(key=lambda row: (-len(row[1].violations), order.get(row[0], 0)))
-        shared = [(sid, r) for sid, r in rows if same_way(r, clean_by.get((aid, sid)))]
-        unconfirmed = len(shared) >= max(1.0, MIN_SHARED_SHARE * len(rows))
-        # Quote the same scenario for both measurements, so a reader can compare like with like.
-        sid, user_row = shared[0] if shared else rows[0]
-        clean_row = clean_by.get((aid, sid))
+        shared_by_room = [[(sid, r) for sid, r in rows if same_way(r, room.get((aid, sid)))] for room in by_room]
+        unconfirmed = bool(by_room) and all(len(s) * 100 >= round(MIN_SHARED_SHARE * 100) * len(rows) and len(s) > 0 for s in shared_by_room)
+        # Quote one scenario for every measurement, so a reader can compare like with like: one all rooms share if any.
+        common = [sid for sid, _ in rows if all(sid in {x for x, _ in s} for s in shared_by_room)] if by_room else []
+        sid = common[0] if common else (shared_by_room[0][0][0] if by_room and shared_by_room[0] else rows[0][0])
+        user_row = next(r for s, r in rows if s == sid)
+        evidence = [room[(aid, sid)].evidence if (aid, sid) in room else "" for room in by_room]
         verdicts[aid] = Verdict(
             assertion_id=aid,
             unconfirmed=unconfirmed,
             failing=[s for s, _ in rows],
-            shared=[s for s, _ in shared],
+            shared=[s for s, _ in shared_by_room[0]] if shared_by_room else [],
             user_evidence=user_row.evidence,
-            cleanroom_evidence=clean_row.evidence if clean_row is not None else "",
+            cleanroom_evidence=evidence[0] if evidence else "",
             scenario_id=sid,
+            rooms=[{"shared": len(s), "share": round(len(s) / len(rows), 2), "evidence": e} for s, e in zip(shared_by_room, evidence)],
         )
     return verdicts
 

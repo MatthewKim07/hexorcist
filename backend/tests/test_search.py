@@ -221,11 +221,11 @@ class SearchLLM(RoomLLM):
         return schema.model_validate(UNDERSTAND if step == "understand" else {})
 
 
-def run(patches=(FIXED,), room=(CLEAN_OK,), **overrides):
+def run(patches=(FIXED,), rooms=((CLEAN_OK,), (CLEAN_OK,)), **overrides):
     sandbox = NoisySandbox()
     config = {"max_parallel": 4, "cross_check": True, "search_variants": 40, "search_budget_s": 60, **overrides}
     pipeline = Pipeline("r", settings(**config), sandbox, NullStore(), NullBus())
-    pipeline.llm = SearchLLM(list(patches), list(room))
+    pipeline.llm = SearchLLM(list(patches), [list(r) for r in rooms])
     status, report = asyncio.run(pipeline.run_break(UPLOADED, SPEC2))
     return status, report, sandbox, pipeline
 
@@ -263,7 +263,7 @@ def test_the_search_is_repeatable():
 
 
 def test_a_check_a_clean_implementation_also_fails_is_not_a_search_finding():
-    status, report, _, _ = run(patches=(), room=(UPLOADED,))
+    status, report, _, _ = run(patches=(), rooms=((UPLOADED,), (UPLOADED,)))
     assert report["bugs"] == []
     assert report["search"]["discarded_by_clean_room"] == ["a1"]
     assert [u["assertion_id"] for u in report["cross_check"]["unconfirmed"]] == ["a1"]

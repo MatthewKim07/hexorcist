@@ -44,6 +44,8 @@ class Settings:
     # Clean-room cross-check: an implementation written from the spec alone, used to tell a firmware bug
     # from a check that no correct firmware could pass.
     cross_check: bool = True
+    # How many independent clean-room sketches to write (1 or 2). A check is dropped only if every one of them fails it.
+    cleanroom_samples: int = 2
     # Stimulus search: bounded variants of each scenario, run on the uploaded firmware. 0 turns it off.
     search_variants: int = 30
     search_seed: int = 1337
@@ -71,6 +73,7 @@ def load_settings() -> Settings:
         max_active_runs=_int("MAX_ACTIVE_RUNS", 3),
         llm_timeout_s=_int("LLM_TIMEOUT_S", 180),
         cross_check=_flag("CLEANROOM", True),
+        cleanroom_samples=max(1, min(2, _int("CLEANROOM_SAMPLES", 2))),
         search_variants=max(0, _int("SEARCH_VARIANTS", 30)),
         search_seed=_int("SEARCH_SEED", 1337),
         search_budget_s=max(0, _int("SEARCH_BUDGET_S", 90)),

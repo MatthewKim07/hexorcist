@@ -181,6 +181,8 @@ if lim.get("rate_limit_per_hour", 0) < 100:
     errs.append("rate limit override not applied (need >= 100/hour)")
 if not agent:
     errs.append("the running backend is not the current agent (no 'agent' settings in /api/health): the rebuild did not take")
+elif agent.get("cleanroom_samples") != 2:
+    errs.append(f"this run is for two independent clean-room sketches, the stack has {agent.get('cleanroom_samples')}")
 elif not agent.get("cross_check") or not agent.get("search_variants"):
     errs.append(f"cross-check or search is off in this stack: {agent}")
 if h.get("passcode_required") and not os.environ.get("DEMO_PASSCODE"):

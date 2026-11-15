@@ -106,7 +106,7 @@ def summarize(run: str, replay: dict | None) -> dict:
         out["search_wall_median"] = med([(raw[c].get("search") or {}).get("wall_s", 0) or 0 for c in ids])
         out["search_sandbox_s"] = sum((raw[c].get("search") or {}).get("sandbox_s", 0) or 0 for c in ids)
         out["cross_sandbox_s"] = sum(((raw[c].get("cross_check") or {}).get("usage") or {}).get("sandbox_s", 0) or 0 for c in ids)
-        out["cross_tokens"] = sum(((raw[c].get("llm_by_step") or {}).get("cleanroom") or {}).get("prompt_tokens", 0) + ((raw[c].get("llm_by_step") or {}).get("cleanroom") or {}).get("completion_tokens", 0) for c in ids)
+        out["cross_tokens"] = sum(v.get("prompt_tokens", 0) + v.get("completion_tokens", 0) for c in ids for k, v in (raw[c].get("llm_by_step") or {}).items() if k.startswith("cleanroom"))
         out["grounding_checked"] = sum((raw[c].get("grounding") or {}).get("checked") or 0 for c in ids)
         out["grounding_dropped"] = sum(len((raw[c].get("grounding") or {}).get("dropped") or []) for c in ids)
     if replay is not None:

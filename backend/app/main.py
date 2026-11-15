@@ -144,6 +144,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             },
             "agent": {
                 "cross_check": cfg.cross_check,
+                "cleanroom_samples": cfg.cleanroom_samples,
                 "search_variants": cfg.search_variants,
                 "search_seed": cfg.search_seed,
                 "search_budget_s": cfg.search_budget_s,

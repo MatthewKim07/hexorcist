@@ -134,4 +134,4 @@ def test_events_can_be_polled_as_json():
 
 def test_health_reports_the_agent_settings_the_bench_checks():
     body = TestClient(create_app(settings(cross_check=True, search_variants=30))).get("/api/health").json()
-    assert body["agent"] == {"cross_check": True, "search_variants": 30, "search_seed": 1337, "search_budget_s": 90}
+    assert body["agent"] == {"cross_check": True, "cleanroom_samples": 2, "search_variants": 30, "search_seed": 1337, "search_budget_s": 90}

@@ -65,6 +65,7 @@ class LLMClient:
     _client: Optional[AsyncOpenAI] = None
     _json_mode: bool = True
     _send_temperature: bool = True
+    _send_seed: bool = True
 
     @property
     def client(self) -> AsyncOpenAI:
@@ -79,10 +80,12 @@ class LLMClient:
             )
         return self._client
 
-    async def _complete(self, messages: list[dict], step: str, json_mode: bool) -> str:
+    async def _complete(self, messages: list[dict], step: str, json_mode: bool, temperature: Optional[float] = None, seed: Optional[int] = None) -> str:
         kwargs: dict = {"model": self.settings.llm_model, "messages": messages}
         if self._send_temperature:
-            kwargs["temperature"] = 0.2
+            kwargs["temperature"] = 0.2 if temperature is None else temperature
+        if seed is not None and self._send_seed:
+            kwargs["seed"] = seed
         if json_mode and self._json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
@@ -101,6 +104,10 @@ class LLMClient:
                 if exc.status_code == 400 and "temperature" in kwargs and "temperature" in body:
                     self._send_temperature = False
                     kwargs.pop("temperature")
+                    continue
+                if exc.status_code == 400 and "seed" in kwargs and "seed" in body:
+                    self._send_seed = False
+                    kwargs.pop("seed")
                     continue
                 raise LLMError(f"LLM request failed with HTTP {exc.status_code}: {_short(exc)}") from exc
             except APIError as exc:
@@ -143,10 +150,10 @@ class LLMClient:
             except (ValidationError, ValueError, json.JSONDecodeError) as exc:
                 raise LLMError(f"LLM output for {step} was still invalid after one repair: {str(exc)[:600]}") from exc
 
-    async def code(self, system: str, user: str, step: str) -> tuple[str, str]:
+    async def code(self, system: str, user: str, step: str, temperature: Optional[float] = None, seed: Optional[int] = None) -> tuple[str, str]:
         """Return (code, full reply). Code travels in a fence because JSON escaping breaks on weak models."""
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        reply = await self._complete(messages, step, json_mode=False)
+        reply = await self._complete(messages, step, json_mode=False, temperature=temperature, seed=seed)
         code = extract_code(reply)
         if code is not None:
             return code, reply
@@ -154,7 +161,7 @@ class LLMClient:
             {"role": "assistant", "content": reply[:12000]},
             {"role": "user", "content": "Your reply had no fenced code block. Reply again with the complete sketch in one ```cpp fenced block."},
         ]
-        repaired = await self._complete(messages, step, json_mode=False)
+        repaired = await self._complete(messages, step, json_mode=False, temperature=temperature, seed=seed)
         self.calls[-1].repaired = True
         code = extract_code(repaired)
         if code is None:
