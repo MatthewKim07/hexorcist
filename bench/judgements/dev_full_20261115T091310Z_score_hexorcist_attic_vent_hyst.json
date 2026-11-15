@@ -1,0 +1,106 @@
+{
+  "case_id": "attic_vent_hyst",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "No hysteresis: fan turns off below 42 C instead of holding until 38 C",
+      "description": "The control logic uses a single trip point: line 66 turns the fan ON only when lastTempC >= FAN_ON_C (42.0) and the else branch at lines 70-73 turns it OFF for any value below 42.0, so the required 38.0 C release threshold is never implemented. With the override released at a temperature between 38 and 42 C the fan is driven LOW even though the spec requires it to stay ON, producing the measured 'D8 was not LOW for 809 ms while required' violation starting at 1.00 s in the 'Override held during cold then hot' scenario. D8 was in the wrong state for 3053 ms across 3 interval(s), first at 1.00 s: D8 was not LOW for 1051 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Relay chatters because each 50 ms sample re-evaluates a noisy threshold with no filtering or debounce",
+      "description": "Every 50 ms sample (line 53-56) reads A0 and immediately drives the relay from that single raw reading via lines 66-73, with no averaging, no hysteresis band, and no minimum-state-time guard. Sensor noise around the trip point therefore flips D8 on every sample, giving the measured '57 toggles' in a 5000 ms window starting at 900 ms and '34 toggles' in the rapid-oscillation scenario, far above the limit of 2. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "attic_vent_hyst",
+    "spec": "- LM35 temperature probe on A0 scaled at 10 mV/\u00b0C; ridge-vent relay on D8; override pushbutton on D3 to ground with internal pull-up (active LOW).\n- Turn the vent fan ON when attic temperature reaches 42.0 \u00b0C or above, and turn it OFF when temperature falls to 38.0 \u00b0C or below.\n- While D3 is held LOW, force the fan ON regardless of temperature.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print one status line every 1000 ms in the form `attic: <temp> C fan=ON` or `attic: <temp> C fan=OFF` with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 42 C trip point chatters under sensor noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "No hysteresis: fan turns off below 42 C instead of holding until 38 C",
+        "description": "The control logic uses a single trip point: line 66 turns the fan ON only when lastTempC >= FAN_ON_C (42.0) and the else branch at lines 70-73 turns it OFF for any value below 42.0, so the required 38.0 C release threshold is never implemented. With the override released at a temperature between 38 and 42 C the fan is driven LOW even though the spec requires it to stay ON, producing the measured 'D8 was not LOW for 809 ms while required' violation starting at 1.00 s in the 'Override held during cold then hot' scenario. D8 was in the wrong state for 3053 ms across 3 interval(s), first at 1.00 s: D8 was not LOW for 1051 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Relay chatters because each 50 ms sample re-evaluates a noisy threshold with no filtering or debounce",
+        "description": "Every 50 ms sample (line 53-56) reads A0 and immediately drives the relay from that single raw reading via lines 66-73, with no averaging, no hysteresis band, and no minimum-state-time guard. Sensor noise around the trip point therefore flips D8 on every sample, giving the measured '57 toggles' in a 5000 ms window starting at 900 ms and '34 toggles' in the rapid-oscillation scenario, far above the limit of 2. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes missing hysteresis causing fan to turn off at 42 C instead of holding until 38 C.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"Reported bug-a3 describes a related issue but does not match the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes missing hysteresis causing fan to turn off at 42 C instead of holding until 38 C."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "Reported bug-a3 describes a related issue but does not match the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1169,
+    "completion_tokens": 105,
+    "cost_usd": 0.00023835,
+    "cached": false
+  }
+}

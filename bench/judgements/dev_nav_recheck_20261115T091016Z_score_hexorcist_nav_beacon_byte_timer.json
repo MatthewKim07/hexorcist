@@ -1,0 +1,121 @@
+{
+  "case_id": "nav_beacon_byte_timer",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Tick interval is half the required period",
+      "description": "The blink slice is compared against HALF_MS (500) on line 61, so the beacon toggles every 500 ms and emitTick() on line 68 fires on every other toggle, i.e. every ~1000 ms only if the phase is preserved. However, line 59 resets lastSlice to nowSlice on every quiet-held iteration, and the (uint8_t)millis() truncation on lines 53/61 means the phase restarts from release time, so measured tick gaps were 487-519 ms instead of 1000\u00b1120 ms (e.g. gap of 487 ms from 250.588 to 738.013). Expected /^tick$/ every 1000 \u00b1 120 ms; 19 of 20 intervals were out of tolerance, worst gap 546 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Beacon toggles exceed limit due to no debounce and phase reset",
+      "description": "readQuiet() on line 37 is sampled every loop with no debounce, so a bouncing D3 release near a blink edge causes multiple setBeacon() calls on line 65 within milliseconds, measured as 9 toggles in a 2000 ms window (limit 5). Additionally, line 59 continuously refreshes lastSlice while quiet is held, so on release the blink restarts immediately and can produce extra toggles, measured as 8 toggles in windows starting at 245 ms and 4343.927 ms. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+        },
+        {
+          "check_id": "a_max",
+          "type": "max_toggles",
+          "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "nav_beacon_byte_timer",
+    "spec": "- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).\n- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.\n- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms \u00b1120 ms).\n- While D3 is held LOW, force the beacon OFF and pause the blink schedule.\n- Beacon must not change state more than 5 times in any 2000 ms window during free blink.\n- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+        "check_ids": [
+          "a_period",
+          "a_max"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+          },
+          {
+            "check_id": "a_max",
+            "type": "max_toggles",
+            "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Tick interval is half the required period",
+        "description": "The blink slice is compared against HALF_MS (500) on line 61, so the beacon toggles every 500 ms and emitTick() on line 68 fires on every other toggle, i.e. every ~1000 ms only if the phase is preserved. However, line 59 resets lastSlice to nowSlice on every quiet-held iteration, and the (uint8_t)millis() truncation on lines 53/61 means the phase restarts from release time, so measured tick gaps were 487-519 ms instead of 1000\u00b1120 ms (e.g. gap of 487 ms from 250.588 to 738.013). Expected /^tick$/ every 1000 \u00b1 120 ms; 19 of 20 intervals were out of tolerance, worst gap 546 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Beacon toggles exceed limit due to no debounce and phase reset",
+        "description": "readQuiet() on line 37 is sampled every loop with no debounce, so a bouncing D3 release near a blink edge causes multiple setBeacon() calls on line 65 within milliseconds, measured as 9 toggles in a 2000 ms window (limit 5). Additionally, line 59 continuously refreshes lastSlice while quiet is held, so on release the blink restarts immediately and can produce extra toggles, measured as 8 toggles in windows starting at 245 ms and 4343.927 ms. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported bug describes the same observable behavior of tick intervals being incorrect due to millis truncation\"},\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"reported bug describes the same observable behavior of exceeding toggle limits due to phase reset and debounce issues\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs match the truth bug based on observable behaviors.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported bug describes the same observable behavior of tick intervals being incorrect due to millis truncation"
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "reported bug describes the same observable behavior of exceeding toggle limits due to phase reset and debounce issues"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs match the truth bug based on observable behaviors."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1155,
+    "completion_tokens": 136,
+    "cost_usd": 0.00025485,
+    "cached": false
+  }
+}

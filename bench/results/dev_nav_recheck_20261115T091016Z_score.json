@@ -1,0 +1,63 @@
+{
+  "run_id": "dev_nav_recheck_20261115T091016Z_score",
+  "created_at": "2026-11-15T18:06:50.933395+00:00",
+  "systems": [
+    {
+      "system": "hexorcist",
+      "cases": 1,
+      "detection_recall": 1.0,
+      "bugs_detected": 1,
+      "bugs_truth": 1,
+      "false_alarms": 0,
+      "compile_rate": 1.0,
+      "fix_rate": 0.0,
+      "per_category": {
+        "millis_rollover": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        }
+      },
+      "rows": [
+        {
+          "case_id": "nav_beacon_byte_timer",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_max",
+            "a_period"
+          ],
+          "wall_s": 164.53,
+          "llm_calls": 8,
+          "prompt_tokens": 20695,
+          "completion_tokens": 5558,
+          "cost_usd": 0.00812896,
+          "model": "deepseek-chat"
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.000255,
+    "spent_strong": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "cap_strong": 2.0,
+    "calls": 1
+  }
+}

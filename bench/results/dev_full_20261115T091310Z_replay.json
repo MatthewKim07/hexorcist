@@ -1,0 +1,1316 @@
+{
+  "aquarium_ph_scale": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-hover-a0",
+          "builtin-extremes-a0"
+        ],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "attic_vent_hyst": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-5",
+          "llm-9"
+        ],
+        "ref_exercised": 9
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 3
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "llm-5"
+        ],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "bench_led_miswire": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-3",
+          "llm-4",
+          "llm-6",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 18
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d2",
+          "builtin-shortpress-d2",
+          "builtin-rapid-d2",
+          "builtin-floating-d2",
+          "builtin-bounce-d4",
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4",
+          "builtin-floating-d4",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "blend_tank_sum_ovf": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-ramp-a4",
+          "builtin-hover-a4",
+          "builtin-spike-a4",
+          "builtin-floating-a4",
+          "builtin-oscillation-a4",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7"
+        ],
+        "ref_exercised": 21
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d5",
+          "builtin-rapid-d5",
+          "builtin-floating-d5",
+          "llm-1",
+          "llm-2",
+          "llm-10"
+        ],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "boiler_ok": {
+    "scenarios": 22,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-3",
+          "llm-4",
+          "llm-8"
+        ],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 4
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 1
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      }
+    }
+  },
+  "boiler_valve_failsafe": {
+    "scenarios": 22,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-4",
+          "llm-5",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 4
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 4
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      }
+    }
+  },
+  "cabin_heater_mul_ovf": {
+    "scenarios": 20,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-4",
+          "llm-8"
+        ],
+        "ref_exercised": 8
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 4
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 20
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 20
+      }
+    }
+  },
+  "cellar_pump_hyst": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-3",
+          "llm-4",
+          "llm-8"
+        ],
+        "ref_exercised": 11
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "cooler_ok": {
+    "scenarios": 22,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 3
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 0
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 5
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 1
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      }
+    }
+  },
+  "drip_scheduler_u8": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d4",
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4",
+          "builtin-pulse-length-d8",
+          "builtin-pulse-retrigger-d8",
+          "llm-2",
+          "llm-3",
+          "llm-5",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 16
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d4",
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4",
+          "builtin-floating-d4",
+          "builtin-pulse-length-d8",
+          "builtin-pulse-retrigger-d8",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-bounce-d4",
+          "builtin-rapid-d4",
+          "builtin-pulse-length-d8",
+          "builtin-pulse-retrigger-d8",
+          "llm-3",
+          "llm-5",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 10
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a5": {
+        "ref_fail": [
+          "builtin-bounce-d4",
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4",
+          "builtin-floating-d4",
+          "builtin-pulse-length-d8",
+          "builtin-pulse-retrigger-d8",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 16
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "foyer_lamp_debounce": {
+    "scenarios": 14,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 11
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      }
+    }
+  },
+  "glue_solenoid_short": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "greenhouse_dual": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 8
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 3
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 5
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a7": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "greenhouse_ok": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 8
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 4
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a7": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "hoist_estop_invert": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "hold_to_arm_late": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-rapid-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 18
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "inject_pulse_short": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "kiln_door_block": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "lab_ph_ok": {
+    "scenarios": 15,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a1",
+          "builtin-hover-a1",
+          "builtin-spike-a1",
+          "builtin-disconnect-a1",
+          "builtin-extremes-a1",
+          "builtin-oscillation-a1",
+          "llm-1",
+          "llm-2",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9"
+        ],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-ramp-a1",
+          "builtin-hover-a1",
+          "builtin-extremes-a1",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-6",
+          "llm-8",
+          "llm-9"
+        ],
+        "ref_exercised": 13
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      }
+    }
+  },
+  "laundry_cycle_stuck": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 10
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-extremes-a0",
+          "llm-1",
+          "llm-4",
+          "llm-9"
+        ],
+        "ref_exercised": 15
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 6
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 6
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "laundry_ok": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 8
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-extremes-a0",
+          "llm-2",
+          "llm-5",
+          "llm-6",
+          "llm-9"
+        ],
+        "ref_exercised": 15
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 6
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 6
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "lobby_lamp_ok": {
+    "scenarios": 12,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 8
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 12
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 12
+      }
+    }
+  },
+  "lock_ok": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d2",
+          "builtin-shortpress-d2",
+          "builtin-rapid-d2",
+          "llm-1",
+          "llm-2"
+        ],
+        "ref_exercised": 12
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d2",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-9"
+        ],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "loft_fan_ok": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-5"
+        ],
+        "ref_exercised": 7
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-ramp-a3",
+          "builtin-hover-a3",
+          "builtin-floating-a3",
+          "builtin-extremes-a3",
+          "llm-1",
+          "llm-3",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-10"
+        ],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4",
+          "llm-2",
+          "llm-6"
+        ],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "mist_injector_long": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "nav_beacon_byte_timer": {
+    "scenarios": 14,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      }
+    }
+  },
+  "panel_dual_debounce_edge": {
+    "scenarios": 14,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 6
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      }
+    }
+  },
+  "porch_gate_block": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "process_dual_block_scale": {
+    "scenarios": 17,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-hover-a0",
+          "builtin-extremes-a0"
+        ],
+        "ref_exercised": 13
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      }
+    }
+  },
+  "rail_limit_invert": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "shop_estop_debounce": {
+    "scenarios": 13,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 9
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      }
+    }
+  },
+  "solenoid_ok": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "spindle_rpm_prefix": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [
+          "llm-1",
+          "llm-3",
+          "llm-6",
+          "llm-7",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-ramp-a5",
+          "builtin-hover-a5",
+          "builtin-spike-a5",
+          "builtin-disconnect-a5",
+          "builtin-floating-a5",
+          "builtin-extremes-a5",
+          "builtin-oscillation-a5",
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-2",
+          "llm-4",
+          "llm-5",
+          "llm-8",
+          "llm-9"
+        ],
+        "ref_exercised": 21
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "studio_siren_ok": {
+    "scenarios": 15,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 12
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 15
+      }
+    }
+  },
+  "vault_lock_stuck": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d2",
+          "builtin-shortpress-d2",
+          "builtin-rapid-d2",
+          "llm-6"
+        ],
+        "ref_exercised": 11
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d2",
+          "builtin-shortpress-d2",
+          "builtin-rapid-d2",
+          "builtin-floating-d2",
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "walk_in_cooler_failsafe": {
+    "scenarios": 22,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 0
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 5
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 2
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 22
+      }
+    }
+  },
+  "weather_line_prefix": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a0",
+          "builtin-hover-a0",
+          "builtin-spike-a0",
+          "builtin-disconnect-a0",
+          "builtin-extremes-a0",
+          "builtin-oscillation-a0",
+          "builtin-bounce-d5",
+          "builtin-shortpress-d5",
+          "builtin-rapid-d5",
+          "builtin-floating-d5",
+          "llm-2",
+          "llm-3",
+          "llm-5"
+        ],
+        "ref_exercised": 19
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-hover-a0",
+          "builtin-extremes-a0",
+          "llm-1",
+          "llm-2",
+          "llm-4",
+          "llm-6",
+          "llm-7",
+          "llm-8"
+        ],
+        "ref_exercised": 14
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "weather_ok": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a0",
+          "builtin-hover-a0",
+          "builtin-spike-a0",
+          "builtin-disconnect-a0",
+          "builtin-extremes-a0",
+          "builtin-oscillation-a0",
+          "builtin-bounce-d5",
+          "builtin-shortpress-d5",
+          "builtin-rapid-d5",
+          "builtin-floating-d5",
+          "llm-2",
+          "llm-6",
+          "llm-7",
+          "llm-9"
+        ],
+        "ref_exercised": 18
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-hover-a0",
+          "builtin-extremes-a0",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-6",
+          "llm-7",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 15
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "workshop_kpa_scale": {
+    "scenarios": 17,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a2",
+          "builtin-spike-a2",
+          "builtin-extremes-a2",
+          "llm-7",
+          "llm-9"
+        ],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      }
+    }
+  },
+  "yard_relay_miswire": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-1",
+          "llm-3",
+          "llm-8"
+        ],
+        "ref_exercised": 13
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-ramp-a0",
+          "builtin-hover-a0",
+          "builtin-spike-a0",
+          "builtin-disconnect-a0",
+          "builtin-floating-a0",
+          "builtin-extremes-a0",
+          "builtin-oscillation-a0",
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-4",
+          "llm-6",
+          "llm-7",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  }
+}

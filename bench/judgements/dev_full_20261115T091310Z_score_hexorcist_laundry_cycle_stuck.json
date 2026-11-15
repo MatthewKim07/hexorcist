@@ -1,0 +1,107 @@
+{
+  "case_id": "laundry_cycle_stuck",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Fill valve drops out on noisy or floating level readings",
+      "description": "The FILL state is entered only when a single instantaneous analogRead sample is below 10 cm (line 73), and the state machine re-evaluates that same raw sample every 40 ms tick (lines 64-80) with no hysteresis or filtering. A brief noise spike above 10 cm therefore leaves ST_FILL and turns D9 LOW, measured as 'D9 was not HIGH for 970 ms while required (grace 500 ms)' starting at 1.53 s, and the floating-A0 case held D9 wrong for 2500 ms. Because there is no debounce, the valve chatters with the input instead of staying HIGH until 25 cm. D9 was in the wrong state for 4350 ms across 5 interval(s), first at 1.53 s: D9 was not HIGH for 970 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "No RUN-to-IDLE exit when level falls below 20 cm",
+      "description": "The state machine has transitions IDLE->FILL (line 73) and FILL->RUN (line 77) but no branch that returns ST_RUN to ST_IDLE when levelCm drops below RUN_MIN_CM; RUN_MIN_CM is declared (line 11) yet never used. Once RUN is entered, driveOutputs keeps D10 HIGH (line 38) regardless of level, measured as 'D10 was not LOW for 2370 ms while required (grace 600 ms)' from 3.63 s and 3370 ms in the second interval. A spurious spike to 25 cm during FILL (line 77) latches the motor on permanently while the drum is below the safe level. D10 was in the wrong state for 3850 ms across 5 interval(s), first at 1.63 s: D10 was not LOW for 870 ms while required (grace 600 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "RUN state never exits when level drops",
+      "check_ids": [
+        "a_motor"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "RUN state never exits when level drops",
+      "check_ids": [
+        "a_motor"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_motor",
+          "type": "output_follows",
+          "behaviour": "D10 must follow its stimulus; LOW when A0 < 20; within 600 ms (Motor off below 20 cm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "laundry_cycle_stuck",
+    "spec": "- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).\n- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.\n- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.\n- Enter FILL from IDLE when level is below 10.0 cm.\n- Holding D4 LOW forces IDLE immediately.\n- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "stuck_state_machine",
+        "description": "RUN state never exits when level drops",
+        "check_ids": [
+          "a_motor"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_motor",
+            "type": "output_follows",
+            "behaviour": "D10 must follow its stimulus; LOW when A0 < 20; within 600 ms (Motor off below 20 cm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Fill valve drops out on noisy or floating level readings",
+        "description": "The FILL state is entered only when a single instantaneous analogRead sample is below 10 cm (line 73), and the state machine re-evaluates that same raw sample every 40 ms tick (lines 64-80) with no hysteresis or filtering. A brief noise spike above 10 cm therefore leaves ST_FILL and turns D9 LOW, measured as 'D9 was not HIGH for 970 ms while required (grace 500 ms)' starting at 1.53 s, and the floating-A0 case held D9 wrong for 2500 ms. Because there is no debounce, the valve chatters with the input instead of staying HIGH until 25 cm. D9 was in the wrong state for 4350 ms across 5 interval(s), first at 1.53 s: D9 was not HIGH for 970 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "No RUN-to-IDLE exit when level falls below 20 cm",
+        "description": "The state machine has transitions IDLE->FILL (line 73) and FILL->RUN (line 77) but no branch that returns ST_RUN to ST_IDLE when levelCm drops below RUN_MIN_CM; RUN_MIN_CM is declared (line 11) yet never used. Once RUN is entered, driveOutputs keeps D10 HIGH (line 38) regardless of level, measured as 'D10 was not LOW for 2370 ms while required (grace 600 ms)' from 3.63 s and 3370 ms in the second interval. A spurious spike to 25 cm during FILL (line 77) latches the motor on permanently while the drum is below the safe level. D10 was in the wrong state for 3850 ms across 5 interval(s), first at 1.63 s: D10 was not LOW for 870 ms while required (grace 600 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Describes the failure to exit RUN state when level drops below 20 cm.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 2}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same true bug regarding the state machine behavior.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Describes the failure to exit RUN state when level drops below 20 cm."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 2
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same true bug regarding the state machine behavior."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1181,
+    "completion_tokens": 113,
+    "cost_usd": 0.00024495,
+    "cached": false
+  }
+}

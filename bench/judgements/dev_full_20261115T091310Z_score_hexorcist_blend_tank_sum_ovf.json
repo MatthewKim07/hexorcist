@@ -1,0 +1,106 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "ADC sum overflows int, producing wildly wrong percent values",
+      "description": "Line 11 declares `sum` as a 16-bit `int`, but line 54 accumulates up to 50 raw ADC readings (each up to 1023) into it, so the sum overflows past 32767 and wraps negative. Line 59 then divides this corrupted sum by n, and line 60 converts it to a percent, yielding the measured garbage such as \"printed -297.7 % ... off by 647.7 %\" and \"printed -203.8 % ... off by 664.8 %\". The accumulator must be a 32-bit type (e.g. `long`/`uint32_t`). Firmware printed -297.7 % at 4.00 s while the injected input was 350.0 to 350.0 %: off by 647.7 % (tolerance \u00b13). 7 of 7 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Blocking delay in button handling and window-based printing break the 1 s cadence",
+      "description": "The `pct:` line is only emitted when the sample window fills (lines 57-63), not on a 1000 ms timer, and each loop iteration adds `delay(IDLE_MS)` (line 79) plus a `delay(30)` while the button is held (line 68). With the button held LOW, forceSampleNote() and the 30 ms delay repeat every iteration, starving the window and stretching the gap to the measured \"worst gap 2526 ms\" and \"first line only at 2.18 s\". The periodic print must be driven by the millis() timer independent of the averaging window and without blocking delays. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "ADC sum overflows int, producing wildly wrong percent values",
+        "description": "Line 11 declares `sum` as a 16-bit `int`, but line 54 accumulates up to 50 raw ADC readings (each up to 1023) into it, so the sum overflows past 32767 and wraps negative. Line 59 then divides this corrupted sum by n, and line 60 converts it to a percent, yielding the measured garbage such as \"printed -297.7 % ... off by 647.7 %\" and \"printed -203.8 % ... off by 664.8 %\". The accumulator must be a 32-bit type (e.g. `long`/`uint32_t`). Firmware printed -297.7 % at 4.00 s while the injected input was 350.0 to 350.0 %: off by 647.7 % (tolerance \u00b13). 7 of 7 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Blocking delay in button handling and window-based printing break the 1 s cadence",
+        "description": "The `pct:` line is only emitted when the sample window fills (lines 57-63), not on a 1000 ms timer, and each loop iteration adds `delay(IDLE_MS)` (line 79) plus a `delay(30)` while the button is held (line 68). With the button held LOW, forceSampleNote() and the 30 ms delay repeat every iteration, starving the window and stretching the gap to the measured \"worst gap 2526 ms\" and \"first line only at 2.18 s\". The periodic print must be driven by the millis() timer independent of the averaging window and without blocking delays. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes integer overflow causing incorrect percent values\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes integer overflow causing incorrect percent values"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1146,
+    "completion_tokens": 86,
+    "cost_usd": 0.0002235,
+    "cached": false
+  }
+}

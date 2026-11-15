@@ -1,0 +1,192 @@
+{
+  "case_id": "process_dual_block_scale",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Log emitted every 2000 ms instead of 500 ms",
+      "description": "loop() unconditionally calls emitLog() once per iteration (line 74) and then blocks in delay(2000) (line 75), so the only serial line per cycle arrives every ~2000 ms. Measured intervals were all out of tolerance with a worst gap of 2000 ms, far exceeding the 500 \u00b1 100 ms requirement. Expected /^flow: / every 500 \u00b1 100 ms; 5 of 5 intervals were out of tolerance, worst gap 2000 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Printed flow is raw ADC counts, not converted L/h",
+      "description": "readFlowLph() returns the raw analogRead() count directly (line 18) with no 5.000 V/1023 scaling and no division of millivolts by 2, so the printed value is an ADC code rather than L/h. Measured output was 205 Lph while the injected value was ~500 Lph, off by 293.8 Lph against a \u00b110 Lph tolerance. Firmware printed 205 Lph at 14 ms while the injected input was 498.8 to 503.05 Lph: off by 293.8 Lph (tolerance \u00b110). 5 of 5 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Alarm threshold compared against raw ADC counts",
+      "description": "flowLooksLow() compares the unconverted ADC reading against LOW_FLOW_LPH=100 (lines 29, 6), so the 100 L/h threshold is effectively applied to ADC counts, not L/h. Measured D8 was in the wrong state for 3410 ms in the nominal ramp, including 2451 ms not LOW while required, because the comparison triggers at the wrong physical flow. D8 was in the wrong state for 3410 ms across 2 interval(s), first at 1.55 s: D8 was not LOW for 2451 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Firmware silent for 2000 ms due to blocking delay",
+      "description": "The single delay(2000) at the end of loop() (line 75) blocks all sampling, serial output, and pin updates for two seconds per cycle. Measured silence gaps of 2000 ms with no serial or pin activity recurred every cycle, exceeding the 900 ms limit. Firmware went silent for 2000 ms with no serial output or pin activity (limit 900 ms); 5 such gap(s).",
+      "category": "responsive"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Treats raw ADC counts as L/h",
+      "check_ids": [
+        "a_val"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "blocking_delay",
+      "description": "delay(2000) stalls log cadence and responsiveness",
+      "check_ids": [
+        "a_resp",
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Treats raw ADC counts as L/h",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'flow: (-?[0-9.]+)' match the stimulus (tolerance 10) (Printed flow matches sensor)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "blocking_delay",
+      "description": "delay(2000) stalls log cadence and responsiveness",
+      "check_ids": [
+        "a_resp",
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_resp",
+          "type": "responsive",
+          "behaviour": " responds to stimulus within None ms (Stay responsive)"
+        },
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^flow: ' every 500 ms (2 Hz flow log)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "process_dual_block_scale",
+    "spec": "- Flow transducer on A0 scaled at 2 mV/Lph; low-flow alarm lamp on D8.\n- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 2 to obtain L/h.\n- Print `flow: <value>` every 500 ms with one decimal place.\n- Printed flow must match the injected value within \u00b110 L/h.\n- Drive D8 HIGH when flow is below 100 L/h; otherwise LOW.\n- Firmware must never go silent (no serial and no output change) for more than 900 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Treats raw ADC counts as L/h",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'flow: (-?[0-9.]+)' match the stimulus (tolerance 10) (Printed flow matches sensor)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "blocking_delay",
+        "description": "delay(2000) stalls log cadence and responsiveness",
+        "check_ids": [
+          "a_resp",
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_resp",
+            "type": "responsive",
+            "behaviour": " responds to stimulus within None ms (Stay responsive)"
+          },
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^flow: ' every 500 ms (2 Hz flow log)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Log emitted every 2000 ms instead of 500 ms",
+        "description": "loop() unconditionally calls emitLog() once per iteration (line 74) and then blocks in delay(2000) (line 75), so the only serial line per cycle arrives every ~2000 ms. Measured intervals were all out of tolerance with a worst gap of 2000 ms, far exceeding the 500 \u00b1 100 ms requirement. Expected /^flow: / every 500 \u00b1 100 ms; 5 of 5 intervals were out of tolerance, worst gap 2000 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Printed flow is raw ADC counts, not converted L/h",
+        "description": "readFlowLph() returns the raw analogRead() count directly (line 18) with no 5.000 V/1023 scaling and no division of millivolts by 2, so the printed value is an ADC code rather than L/h. Measured output was 205 Lph while the injected value was ~500 Lph, off by 293.8 Lph against a \u00b110 Lph tolerance. Firmware printed 205 Lph at 14 ms while the injected input was 498.8 to 503.05 Lph: off by 293.8 Lph (tolerance \u00b110). 5 of 5 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Alarm threshold compared against raw ADC counts",
+        "description": "flowLooksLow() compares the unconverted ADC reading against LOW_FLOW_LPH=100 (lines 29, 6), so the 100 L/h threshold is effectively applied to ADC counts, not L/h. Measured D8 was in the wrong state for 3410 ms in the nominal ramp, including 2451 ms not LOW while required, because the comparison triggers at the wrong physical flow. D8 was in the wrong state for 3410 ms across 2 interval(s), first at 1.55 s: D8 was not LOW for 2451 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Firmware silent for 2000 ms due to blocking delay",
+        "description": "The single delay(2000) at the end of loop() (line 75) blocks all sampling, serial output, and pin updates for two seconds per cycle. Measured silence gaps of 2000 ms with no serial or pin activity recurred every cycle, exceeding the 900 ms limit. Firmware went silent for 2000 ms with no serial output or pin activity (limit 900 ms); 5 such gap(s).",
+        "category": "responsive"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Printed flow is raw ADC counts, not converted L/h matches wrong unit scaling.\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 3, \"matched\": true, \"reason\": \"Firmware silent for 2000 ms due to blocking delay matches blocking delay.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b2\", \"reported_index\": 0}\n  ],\n  \"unmatched_reported\": [2],\n  \"unique_false_alarm_indices\": [2],\n  \"notes\": \"The reported bug about the alarm threshold is a false alarm as it does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Printed flow is raw ADC counts, not converted L/h matches wrong unit scaling."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 3,
+        "matched": true,
+        "reason": "Firmware silent for 2000 ms due to blocking delay matches blocking delay."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b2",
+        "reported_index": 0
+      }
+    ],
+    "unmatched_reported": [
+      2
+    ],
+    "unique_false_alarm_indices": [
+      2
+    ],
+    "notes": "The reported bug about the alarm threshold is a false alarm as it does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1471,
+    "completion_tokens": 162,
+    "cost_usd": 0.00031785,
+    "cached": false
+  }
+}

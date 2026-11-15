@@ -1,0 +1,146 @@
+{
+  "case_id": "greenhouse_dual",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Fan relay chatters on noise and threshold hover",
+      "description": "The control logic at lines 72-79 is a bare threshold with no hysteresis and no debounce: every 50 ms tick (line 65) it calls setFan(true) when tempC >= 28.0 and setFan(false) otherwise, so any noise or a signal hovering at the threshold flips D9 on each sample. Measured evidence confirms this: 8 toggles in a 5000 ms window in the glitch-spike scenario, 46 toggles in the threshold-hover scenario, and 34 toggles in the rapid-oscillation scenario, all far above the limit of 2. The spec's 24.0 \u00b0C close threshold is never implemented, so there is no dead band to suppress chatter. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No fault detection or forced safe state for out-of-range probe",
+      "description": "The firmware never checks for a floating probe or for temperatures below 5.0 \u00b0C or above 100.0 \u00b0C; readTempC (lines 19-24) returns the raw conversion and loop only compares against OPEN_C at line 72, so a 3 \u00b0C reading simply drives the fan OFF via line 78. Measured evidence shows D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 3400 ms during the max/min range fault, versus the 600 ms allowed, and the sub-5 \u00b0C scenario shows repeated non-safe intervals (780 ms, 160 ms, 120 ms). No safe-state hold exists anywhere in the code. During the fault, D9 was not in safe state HIGH for 1080 ms (allowed 600 ms to react).",
+      "category": "safe_state_on_fault"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D9 must not toggle more than 2 times in any 5000 ms window (Switching limit)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D9 must stay 1 during sensor fault ({'pin': 'A2', 'op': '<', 'value': 5}) (Underrange forces fan ON)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "greenhouse_dual",
+    "spec": "- LM35 greenhouse air probe on A2 at 10 mV/\u00b0C; exhaust fan relay on D9.\n- Open the fan when temperature reaches 28.0 \u00b0C or above; close the fan when temperature falls to 24.0 \u00b0C or below.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- If the probe is floating, or temperature reads below 5.0 \u00b0C or above 100.0 \u00b0C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.\n- Print `gh: <temp> C fan=ON` or `gh: <temp> C fan=OFF` every 1000 ms with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 28 C threshold chatters under hover noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D9 must not toggle more than 2 times in any 5000 ms window (Switching limit)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "missing_failsafe",
+        "description": "Floating probe leaves fan off instead of fail-safe ON",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D9 must stay 1 during sensor fault ({'pin': 'A2', 'op': '<', 'value': 5}) (Underrange forces fan ON)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Fan relay chatters on noise and threshold hover",
+        "description": "The control logic at lines 72-79 is a bare threshold with no hysteresis and no debounce: every 50 ms tick (line 65) it calls setFan(true) when tempC >= 28.0 and setFan(false) otherwise, so any noise or a signal hovering at the threshold flips D9 on each sample. Measured evidence confirms this: 8 toggles in a 5000 ms window in the glitch-spike scenario, 46 toggles in the threshold-hover scenario, and 34 toggles in the rapid-oscillation scenario, all far above the limit of 2. The spec's 24.0 \u00b0C close threshold is never implemented, so there is no dead band to suppress chatter. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No fault detection or forced safe state for out-of-range probe",
+        "description": "The firmware never checks for a floating probe or for temperatures below 5.0 \u00b0C or above 100.0 \u00b0C; readTempC (lines 19-24) returns the raw conversion and loop only compares against OPEN_C at line 72, so a 3 \u00b0C reading simply drives the fan OFF via line 78. Measured evidence shows D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 3400 ms during the max/min range fault, versus the 600 ms allowed, and the sub-5 \u00b0C scenario shows repeated non-safe intervals (780 ms, 160 ms, 120 ms). No safe-state hold exists anywhere in the code. During the fault, D9 was not in safe state HIGH for 1080 ms (allowed 600 ms to react).",
+        "category": "safe_state_on_fault"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of toggling D9 due to missing hysteresis.\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of not detecting a floating probe.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs match true bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of toggling D9 due to missing hysteresis."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of not detecting a floating probe."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs match true bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1346,
+    "completion_tokens": 126,
+    "cost_usd": 0.0002775,
+    "cached": false
+  }
+}
