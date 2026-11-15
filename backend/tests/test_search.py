@@ -6,7 +6,7 @@ from app.llm import LLMCall
 from app.models import AnalogInput, AnalogPoint, Condition, DeviceSpec, DigitalEvent, DigitalInput, FloatingWindow, NoCrash, OutputFollows, PinSpec, Scenario, Spike
 from app.sandbox import CompileResult, ContainmentRecord, RunResult
 from app.scenario_lib import builtin_scenarios
-from app.search import complexity, fingerprint, make_variants, removals, shrink, simplifications
+from app.search import complexity, fingerprint, make_variants, removals, reproduction_point, shrink, simplifications
 from tests.test_api import settings
 from tests.test_cross_check import CLEAN_OK, RoomLLM
 from tests.test_fix_loop import NullBus, NullStore, fake_trace
@@ -293,3 +293,32 @@ def test_without_a_clean_room_one_odd_variant_is_not_enough():
 def test_a_search_that_runs_out_of_time_skips_variants_instead_of_hanging():
     _, report, _, _ = run(patches=(), search_budget_s=0)
     assert report["search"]["variants_over_budget"] == 40 and report["search"]["variants_run"] == 0
+
+
+# ------------------------------------------------------------------ shrinking, round two
+
+
+def oscillation():
+    points = [AnalogPoint(t_ms=0, mv=250)] + [AnalogPoint(t_ms=500 + 150 * k, mv=300 + (12 if k % 2 else -12)) for k in range(48)]
+    return Scenario(id="o", name="osc", duration_ms=8000, analog=[AnalogInput(pin="A0", segments=points, noise_mv=20)])
+
+
+def test_a_long_sequence_shrinks_in_halves_so_few_rounds_reach_its_core():
+    async def still_fails(cands):
+        return [c.analog[0].noise_mv >= 20 for c in cands]  # the noise breaks it, the oscillation is incidental
+
+    result = asyncio.run(shrink(oscillation(), 1500.0, still_fails))
+    assert len(result.scenario.analog[0].segments) <= 10
+    assert result.scenario.analog[0].noise_mv == 20
+    assert result.runs <= 18
+
+
+def test_the_reproduction_point_uses_the_checks_window_not_a_violation_that_runs_to_the_end():
+    from app.models import MaxToggles, Violation
+
+    a = MaxToggles(id="m", pin="D9", max_toggles=2, window_ms=5000)
+    chatter_to_the_end = [Violation(t_start=1200, t_end=7900)]
+    assert reproduction_point(a, chatter_to_the_end, 8000) == 6200
+    short = [Violation(t_start=1200, t_end=1500)]
+    assert reproduction_point(a, short, 8000) == 1500
+    assert reproduction_point(a, [], 8000) == 8000

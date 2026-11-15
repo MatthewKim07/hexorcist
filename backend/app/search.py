@@ -38,7 +38,7 @@ ORDER_SHIFTS_MS = (-700, -300, -100, 100, 300, 700)
 
 # Shrinking: never spend more than this many sandbox runs on one scenario, and look at this many removals per round.
 SHRINK_MAX_RUNS = 18
-SHRINK_MAX_ROUNDS = 3
+SHRINK_MAX_ROUNDS = 4
 SHRINK_CANDIDATES_PER_ROUND = 8
 # Keep the run going this long after the first violation ends when cutting a scenario short, so a check that needs a
 # little context (a window, a grace period) still sees it.
@@ -317,6 +317,19 @@ def _cut(s: Scenario, end_ms: float) -> Scenario:
     return out
 
 
+def reproduction_point(assertion, violations: list, duration_ms: float) -> float:
+    """When the failure is already established, so that cutting the run a little after it still reproduces it.
+
+    A violation can run to the end of the scenario (chatter that never stops), so its end says little.
+    The check's own window (a toggle window, a response deadline) says how long it needs to see.
+    """
+    if not violations:
+        return duration_ms
+    first = min(violations, key=lambda v: v.t_start)
+    span = max(float(getattr(assertion, "window_ms", 0.0) or 0.0), 2 * float(getattr(assertion, "within_ms", 0.0) or 0.0), 1000.0)
+    return first.t_start + min(first.t_end - first.t_start, span)
+
+
 def simplifications(s: Scenario, first_end_ms: float) -> list[tuple[Scenario, str]]:
     """Whole-scenario reductions to try first: end the run early, silence noise, drop bounce, and all three together."""
     cut_at = max(MIN_SHRUNK_MS, math.ceil((first_end_ms + SHRINK_TAIL_MS) / 100.0) * 100.0)
@@ -342,21 +355,46 @@ def simplifications(s: Scenario, first_end_ms: float) -> list[tuple[Scenario, st
     return out
 
 
+def _units(d) -> list[list[int]]:
+    """A digital input's events as removable units: a press with its release, or a lone event. Indices into the time-sorted events."""
+    events = sorted(d.events, key=lambda e: e.t_ms)
+    units: list[list[int]] = []
+    j = 0
+    while j < len(events):
+        if events[j].value != d.initial and j + 1 < len(events) and events[j + 1].value == d.initial:
+            units.append([j, j + 1])
+            j += 2
+        else:
+            units.append([j])
+            j += 1
+    return units
+
+
 def removals(s: Scenario) -> list[tuple[Scenario, str]]:
-    """Every way to take one thing out of the scenario, latest first (an early failure survives losing late events)."""
+    """Ways to take things out of the scenario: halves of long sequences first, then single items, latest first."""
     out: list[tuple[Scenario, str]] = []
+    # Long sequences (a rapid oscillation has dozens of points) shrink in halves, so a few rounds reach the core.
+    for i, a in enumerate(s.analog):
+        interior = list(range(1, len(a.segments) - 1))
+        if len(interior) >= 6:
+            half = len(interior) // 2
+            for label, drop in (("later half", interior[half:]), ("earlier half", interior[:half])):
+                y = _clone(s)
+                y.analog[i].segments = [p for k, p in enumerate(a.segments) if k not in drop]
+                out.append((y, f"{a.pin}: dropped the {label} of its points"))
+    for i, d in enumerate(s.digital):
+        pairs = _units(d)
+        if len(pairs) >= 4:
+            half = len(pairs) // 2
+            for label, drop in (("later half", pairs[half:]), ("earlier half", pairs[:half])):
+                y = _clone(s)
+                gone = {k for unit in drop for k in unit}
+                ordered = sorted(d.events, key=lambda e: e.t_ms)
+                y.digital[i].events = [e for k, e in enumerate(ordered) if k not in gone]
+                out.append((y, f"{d.pin}: dropped the {label} of its presses"))
     for i, d in enumerate(s.digital):
         events = sorted(d.events, key=lambda e: e.t_ms)
-        j = 0
-        units: list[list[int]] = []
-        while j < len(events):
-            if events[j].value != d.initial and j + 1 < len(events) and events[j + 1].value == d.initial:
-                units.append([j, j + 1])
-                j += 2
-            else:
-                units.append([j])
-                j += 1
-        for unit in reversed(units):
+        for unit in reversed(_units(d)):
             y = _clone(s)
             y.digital[i].events = [e for k, e in enumerate(events) if k not in unit]
             out.append((y, f"{d.pin}: dropped the event at {events[unit[0]].t_ms:.0f} ms"))

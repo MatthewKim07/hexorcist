@@ -44,7 +44,7 @@ from .models import (
 )
 from .sandbox import CompileResult, ContainmentRecord, SandboxError, SandboxRunner
 from .scenario_lib import builtin_scenarios, fill_defaults, idle_level
-from .search import UNSUPPORTED, complexity, make_variants, shrink
+from .search import UNSUPPORTED, complexity, make_variants, reproduction_point, shrink
 from .store import Store
 
 if TYPE_CHECKING:
@@ -617,7 +617,8 @@ class Pipeline:
 
         async def shrink_one(aid: str, vid: str):
             variant = by_id[vid]
-            first = min((viol.t_end for r in suite.results[vid] if r.assertion_id == aid for viol in r.violations), default=variant.duration_ms)
+            target = next(a for a in assertions if a.id == aid)
+            first = reproduction_point(target, [viol for r in suite.results[vid] if r.assertion_id == aid for viol in r.violations], variant.duration_ms)
 
             async def still_fails(cands: list[Scenario]) -> list[bool]:
                 # Candidates are clones of the variant, so give each its own id to tell the results apart.
