@@ -223,6 +223,33 @@ def build_code_user(spec: DeviceSpec, compile_error: Optional[str] = None, previ
     return text
 
 
+# ------------------------------------------------------------- clean room
+# A second, independent implementation written from the specification alone. It is never shown the
+# uploaded sketch, so it cannot copy that sketch's bugs. It is run through the same checks to tell a
+# firmware bug from a check that no correct firmware could pass.
+
+CLEANROOM_SYSTEM = f"""You are a firmware engineer. Write a minimal, straightforward Arduino Uno sketch that implements the specification and nothing else.
+
+{UNTRUSTED}
+
+Rules:
+- Implement every stated requirement with its exact numbers. Where the specification is silent, take the simplest reading. Add no features, no logging and no extras.
+- Use the pin map as given. Buttons wired to ground with the internal pull-up are active LOW.
+- Keep it plain: read inputs, decide, write outputs. Use millis() for timing and never block in delay() longer than a few milliseconds.
+- Use Allman brace style. Use only the Arduino core. Never reference host files.
+
+Reply with the COMPLETE sketch in one ```cpp fenced code block."""
+
+
+def cleanroom_user(spec: DeviceSpec, compile_error: Optional[str] = None, previous: Optional[str] = None) -> str:
+    text = spec_block(spec)
+    if compile_error and previous:
+        text += f"\n\nYour previous sketch failed to compile.\n```cpp\n{previous}\n```\nCompiler output:\n{compile_error[:3000]}\n\nFix it and return the complete sketch."
+    else:
+        text += "\n\nWrite the sketch."
+    return text
+
+
 # ---------------------------------------------------------------- review
 # The "LLM guesses" side of the comparison panel: an ordinary code review with no emulator.
 # Deliberately plain, so the comparison is fair. It is not told to hedge or to be vague.

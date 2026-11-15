@@ -18,6 +18,13 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+def _flag(name: str, default: bool) -> bool:
+    raw = os.environ.get(name, "").strip().lower()
+    if not raw:
+        return default
+    return raw not in ("0", "false", "no", "off")
+
+
 @dataclass(frozen=True)
 class Settings:
     llm_base_url: str
@@ -34,6 +41,13 @@ class Settings:
     rate_limit_per_hour: int
     max_active_runs: int
     llm_timeout_s: int
+    # Clean-room cross-check: an implementation written from the spec alone, used to tell a firmware bug
+    # from a check that no correct firmware could pass.
+    cross_check: bool = True
+    # Stimulus search: bounded variants of each scenario, run on the uploaded firmware. 0 turns it off.
+    search_variants: int = 30
+    search_seed: int = 1337
+    search_budget_s: int = 90
 
     @property
     def llm_configured(self) -> bool:
@@ -56,6 +70,10 @@ def load_settings() -> Settings:
         rate_limit_per_hour=_int("RATE_LIMIT_PER_HOUR", 20),
         max_active_runs=_int("MAX_ACTIVE_RUNS", 3),
         llm_timeout_s=_int("LLM_TIMEOUT_S", 180),
+        cross_check=_flag("CLEANROOM", True),
+        search_variants=max(0, _int("SEARCH_VARIANTS", 30)),
+        search_seed=_int("SEARCH_SEED", 1337),
+        search_budget_s=max(0, _int("SEARCH_BUDGET_S", 90)),
     )
 
 

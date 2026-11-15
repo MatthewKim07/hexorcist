@@ -2,12 +2,23 @@ import { Report } from "./api";
 
 export type StatTile = { key: string; value: string; label: string };
 
-function failingScenarioCount(matrix: Report["matrix"] | undefined, iteration: string): number {
+/** Checks that fail on the uploaded firmware and on a clean-room one: possible spec ambiguities, not bugs. */
+export function unconfirmedIds(report: Pick<Report, "cross_check" | "assertions"> | null | undefined): Set<string> {
+  const ids = new Set<string>((report?.cross_check?.unconfirmed ?? []).map((u) => u.assertion_id));
+  for (const a of report?.assertions ?? []) {
+    if (a.unconfirmed) {
+      ids.add(a.id);
+    }
+  }
+  return ids;
+}
+
+function failingScenarioCount(matrix: Report["matrix"] | undefined, iteration: string, ignore: Set<string>): number {
   const row = matrix?.[iteration];
   if (!row) {
     return 0;
   }
-  return Object.values(row).filter((rs) => rs.some((r) => r.status === "fail")).length;
+  return Object.values(row).filter((rs) => rs.some((r) => r.status === "fail" && !ignore.has(r.assertion_id))).length;
 }
 
 /** True when this run produced at least one scenario result in matrix iteration 0. */
@@ -75,8 +86,9 @@ export function statTilesForReport(report: Report | null, status: string, mode: 
   if (hasVerifyResults(report)) {
     const verified = report.score?.bugs_verified ?? report.bugs?.filter((b) => b.verified).length ?? 0;
     out.push({ key: "fixed", value: `${verified}/${found || verified}`, label: "Fixed" });
-    const beforeFail = failingScenarioCount(report.matrix, "0");
-    const afterFail = failingScenarioCount(report.matrix, String(report.fix!.iteration));
+    const ignore = unconfirmedIds(report);
+    const beforeFail = failingScenarioCount(report.matrix, "0", ignore);
+    const afterFail = failingScenarioCount(report.matrix, String(report.fix!.iteration), ignore);
     out.push({ key: "failing", value: `${beforeFail} → ${afterFail}`, label: "Failing scenarios" });
   }
   if (hasVerifyResults(report) && report.fix?.diff) {

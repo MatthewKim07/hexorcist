@@ -21,6 +21,9 @@ def settings(**overrides) -> Settings:
         rate_limit_per_hour=5,
         max_active_runs=1,
         llm_timeout_s=1,
+        # Older tests expect the plain pipeline. The cross-check and search tests switch these on.
+        cross_check=False,
+        search_variants=0,
     )
     base.update(overrides)
     return Settings(**base)

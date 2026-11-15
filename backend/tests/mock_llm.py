@@ -98,6 +98,9 @@ async def completions(request: Request) -> dict:
         bugs = [{"assertion_id": i, "title": f"Scripted bug {i}", "severity": "high", "root_cause": "Scripted test explanation.", "code_lines": [1, 9999]} for i in ids]
         return reply(json.dumps({"bugs": bugs}))
 
+    if "implements the specification and nothing else" in system:
+        return reply(f"The simplest reading of the spec.\n```cpp\n{CORRECT_FIRMWARE[preset]}```")
+
     if "patching Arduino firmware" in system:
         key = f"{model}:{preset}"
         attempts[key] = attempts.get(key, 0) + 1

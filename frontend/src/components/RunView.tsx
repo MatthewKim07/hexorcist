@@ -4,7 +4,7 @@ import { Bug as BugType, PinSpec } from "../api";
 import { displayTitle, keyFact, rankBugs, shortDuration } from "../format";
 import { iconCardProps, iconProps } from "../icons";
 import { runIcon } from "../presetIcons";
-import { hasAttackResults, hasVerifyResults } from "../reportStats";
+import { hasAttackResults, hasVerifyResults, unconfirmedIds } from "../reportStats";
 import { useRun } from "../useRun";
 import { useTrace } from "../useTrace";
 import { StageChip } from "./BoardStage";
@@ -22,6 +22,7 @@ const Replay = lazy(() => import("./Replay").then((m) => ({ default: m.Replay })
 const BugList = lazy(() => import("./BugList").then((m) => ({ default: m.BugList })));
 const FirmwareCard = lazy(() => import("./FirmwareCard").then((m) => ({ default: m.FirmwareCard })));
 const ComparePanel = lazy(() => import("./ComparePanel").then((m) => ({ default: m.ComparePanel })));
+const SpecAmbiguity = lazy(() => import("./SpecAmbiguity").then((m) => ({ default: m.SpecAmbiguity })));
 
 function ReplayChunkFallback() {
   return (
@@ -143,9 +144,10 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
   const ready = !!scenarioId && (!!state.results[iteration]?.[scenarioId] || matrixHasScenario);
   const { trace, error: traceError, loading: traceLoading, missing: traceMissing } = useTrace(runId, iteration, scenarioId, ready);
   const results = useMemo(() => report?.matrix?.[String(iteration)]?.[scenarioId ?? ""] ?? [], [report, iteration, scenarioId]);
-  const violations = useMemo(() => results.filter((r) => r.status === "fail").flatMap((r) => r.violations), [results]);
+  const unconfirmed = useMemo(() => unconfirmedIds(report), [report]);
+  const violations = useMemo(() => results.filter((r) => r.status === "fail" && !unconfirmed.has(r.assertion_id)).flatMap((r) => r.violations), [results, unconfirmed]);
   const startAt = useMemo(() => {
-    const failing = (report?.matrix?.["0"]?.[scenarioId ?? ""] ?? []).filter((r) => r.status === "fail");
+    const failing = (report?.matrix?.["0"]?.[scenarioId ?? ""] ?? []).filter((r) => r.status === "fail" && !unconfirmed.has(r.assertion_id));
     const bug = bugs.find((b) => b.scenario_id === scenarioId);
     const own = failing.filter((r) => r.assertion_id === bug?.assertion_id);
     const first = (own.length ? own : failing).flatMap((r) => r.violations).sort((a, b) => a.t_start - b.t_start)[0];
@@ -157,7 +159,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
       return trace ? 0 : null;
     }
     return Math.max(0, Math.floor((anchor - LEAD_MS) / 100) * 100);
-  }, [report, bugs, scenarioId, trace]);
+  }, [report, bugs, scenarioId, trace, unconfirmed]);
 
   const assertions = report?.assertions ?? state.assertions;
   const chips: StageChip[] = useMemo(
@@ -167,10 +169,13 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         if (a.type === "no_crash" && r?.status !== "fail") {
           return [];
         }
+        if (unconfirmed.has(a.id)) {
+          return [{ key: a.id, check: a, tone: "off", status: "possible spec ambiguity, not counted as a bug" }];
+        }
         const tone = r?.status === "fail" ? "fail" : r?.status === "pass" ? "pass" : "off";
         return [{ key: a.id, check: a, tone, status: tone === "fail" ? "broken in this scenario" : tone === "pass" ? "held in this scenario" : "not measured in this scenario" }];
       }),
-    [assertions, results],
+    [assertions, results, unconfirmed],
   );
 
   const showReplay = () => {
@@ -296,6 +301,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
           <BugList bugs={bugs} report={report} assertions={assertions} pins={pins} focusId={focus?.id ?? null} onFocus={onFocus} open={openBug} onOpen={setOpenBug} buildMode={isBuild} />
         )}
 
+        {!contained && attacked && (report?.cross_check?.unconfirmed?.length ?? 0) > 0 && <SpecAmbiguity items={report!.cross_check!.unconfirmed} />}
+
         {tabs.length > 0 && (
           <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>
             {activeTab === "scenarios" && (
@@ -305,6 +312,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
                 afterResults={afterResults}
                 beforeMatrix={beforeMatrix}
                 afterMatrix={afterMatrix}
+                ignore={unconfirmed}
                 assertions={assertions}
                 pins={pins}
                 selected={scenarioId}
@@ -312,7 +320,7 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
                 buildMode={isBuild}
               />
             )}
-            {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={isBuild ? "run" : side} />}
+            {activeTab === "checks" && <ChecksTab results={results} assertions={report?.assertions ?? state.assertions} scenarioName={scenario?.name ?? ""} side={isBuild ? "run" : side} ignore={unconfirmed} />}
             {activeTab === "containment" && <ContainmentDetails records={records} report={report} guard={guard} />}
             {activeTab === "compare" && <ComparePanel runId={runId} bugs={bugs} report={report} finished available={comparable} />}
             {activeTab === "logs" && <LogsTab trace={trace} report={report} warnings={warnings} deviceModel={report?.device_model ?? state.deviceModel} hideCompile={status === "compile_failed"} />}

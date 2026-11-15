@@ -10,6 +10,7 @@ import difflib
 import json
 import logging
 import re
+import time
 import traceback
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Optional
@@ -20,6 +21,7 @@ from . import prompts
 from .approach import Attempt, find_code_reversion, find_measured_reversion
 from .assertions import evaluate_all
 from .config import Settings
+from .crosscheck import Verdict, classify, unconfirmed_ids
 from .events import RunBus
 from .guard import screen_request
 from .llm import LLMClient, LLMError
@@ -66,11 +68,39 @@ class SuiteResult:
     results: dict[str, list[AssertionResult]] = field(default_factory=dict)
     exit_reasons: dict[str, str] = field(default_factory=dict)
 
-    def failures(self) -> set[tuple[str, str]]:
-        return {(r.assertion_id, r.scenario_id) for rs in self.results.values() for r in rs if r.status == "fail"}
+    def failures(self, confirmed: Optional[set[str]] = None) -> set[tuple[str, str]]:
+        """Failing (assertion, scenario) pairs. With `confirmed`, only those assertions count: the rest are
+        unconfirmed by the clean-room run, so they are neither reported as bugs nor used as fix targets."""
+        return {(r.assertion_id, r.scenario_id) for rs in self.results.values() for r in rs if r.status == "fail" and (confirmed is None or r.assertion_id in confirmed)}
 
-    def failing_assertions(self) -> set[str]:
-        return {a for a, _ in self.failures()}
+    def failing_assertions(self, confirmed: Optional[set[str]] = None) -> set[str]:
+        return {a for a, _ in self.failures(confirmed)}
+
+
+@dataclass
+class Meter:
+    """Sandbox time spent on one extra job (clean-room runs, stimulus search)."""
+
+    runs: int = 0
+    ms: float = 0.0
+
+    def add(self, record_ms: float) -> None:
+        self.runs += 1
+        self.ms += record_ms
+
+
+@dataclass
+class CleanRoom:
+    """The clean-room implementation: written from the spec alone, compiled once, run on demand."""
+
+    status: str = "pending"  # ready, or skipped (see reason)
+    reason: str = ""
+    code: str = ""
+    elf: Optional[bytes] = None
+    repaired: bool = False
+    wall_ms: float = 0.0
+    sandbox: Meter = field(default_factory=Meter)
+    results: dict[str, list[AssertionResult]] = field(default_factory=dict)  # scenario id -> judged results
 
 
 def _describe(a: Any) -> str:
@@ -260,6 +290,12 @@ class Pipeline:
         self.records: list[dict] = []
         self.warnings: list[str] = []
         self._sem = asyncio.Semaphore(settings.max_parallel)
+        # Clean-room cross-check state (see crosscheck.py).
+        self._room_task: Optional[asyncio.Task] = None
+        self.room: Optional[CleanRoom] = None
+        self.verdicts: dict[str, Verdict] = {}
+        self.unconfirmed: set[str] = set()
+        self.cross_note = ""
 
     # ------------------------------------------------------------- plumbing
 
@@ -278,13 +314,17 @@ class Pipeline:
         await self._record(built.record)
         return built
 
-    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str) -> None:
+    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str, publish: bool = True, meter: Optional[Meter] = None) -> None:
         async with self._sem:
             run = await asyncio.to_thread(self.runner.run, elf, scenario.harness_json(), f"{label}: {scenario.name}")
         await self._record(run.record)
+        if meter is not None:
+            meter.add(run.record.duration_ms)
         results = evaluate_all(assertions, run.trace, scenario, spec)
         suite.results[scenario.id] = results
         suite.exit_reasons[scenario.id] = run.trace.get("exit_reason", "unknown")
+        if not publish:
+            return
         await asyncio.to_thread(self.store.add_trace, self.run_id, suite.iteration, scenario.id, trim_trace(run.trace))
         failed = [r.assertion_id for r in results if r.status == "fail"]
         await self.bus.emit(
@@ -299,9 +339,9 @@ class Pipeline:
             duration_ms=round(run.record.duration_ms, 1),
         )
 
-    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str) -> SuiteResult:
+    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str, publish: bool = True, meter: Optional[Meter] = None) -> SuiteResult:
         suite = SuiteResult(iteration=iteration)
-        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label) for s in scenarios))
+        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label, publish, meter) for s in scenarios))
         return suite
 
     @staticmethod
@@ -332,9 +372,113 @@ class Pipeline:
             )
         return out
 
+    # ------------------------------------------------------ clean-room check
+
+    async def _build_cleanroom(self, spec: DeviceSpec) -> CleanRoom:
+        """Write the clean-room sketch from the spec and pin map alone, and compile it. One repair on a compile error."""
+        room = CleanRoom()
+        started = time.monotonic()
+        try:
+            code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec), "cleanroom")
+            for attempt in (1, 2):
+                screened = await asyncio.to_thread(screen_request, code, "")
+                if not screened["allowed"]:
+                    room.status, room.reason = "skipped", f"The clean-room sketch was rejected by the input guard: {screened['reasons']}"
+                    break
+                built = await self._compile(code, "compile clean-room implementation" if attempt == 1 else "compile clean-room implementation, repaired")
+                room.sandbox.add(built.record.duration_ms)
+                if built.ok:
+                    room.status, room.code, room.elf = "ready", code, built.elf
+                    break
+                if attempt == 2:
+                    room.status, room.reason = "skipped", "The clean-room implementation did not compile after one repair attempt."
+                    break
+                room.repaired = True
+                code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec, built.log, code), "cleanroom")
+        except (LLMError, SandboxError) as exc:
+            room.status, room.reason = "skipped", f"The clean-room implementation could not be built: {str(exc)[:200]}"
+        room.wall_ms = (time.monotonic() - started) * 1000
+        return room
+
+    async def _cleanroom_ready(self) -> Optional[CleanRoom]:
+        """The clean-room firmware once it is built, or None when the check is off or the build was skipped."""
+        if self._room_task is None:
+            return None
+        if self.room is None:
+            self.room = await self._room_task
+            if self.room.status != "ready":
+                await self._warn(f"Clean-room cross-check skipped: {self.room.reason}")
+        return self.room if self.room.status == "ready" else None
+
+    async def _cleanroom_judge(self, room: CleanRoom, scenarios: list[Scenario], assertions: list, spec: DeviceSpec) -> None:
+        """Run the clean-room firmware through scenarios it has not seen yet. Nothing is stored or announced."""
+        todo = [s for s in scenarios if s.id not in room.results]
+        if not todo:
+            return
+        suite = await self._run_suite(room.elf, todo, assertions, spec, -1, "clean-room", publish=False, meter=room.sandbox)
+        room.results.update(suite.results)
+
+    def _ambiguities(self, assertions: list, scenarios: list[Scenario]) -> list[dict]:
+        by_id = {a.id: a for a in assertions}
+        names = {s.id: s.name for s in scenarios}
+        out: list[dict] = []
+        for aid in sorted(self.unconfirmed):
+            v = self.verdicts[aid]
+            a = by_id[aid]
+            out.append(
+                {
+                    "assertion_id": aid,
+                    "assertion_type": a.type,
+                    "requirement": a.description,
+                    "spec_quote": getattr(a, "spec_quote", ""),
+                    "scenario_id": v.scenario_id,
+                    "scenario_name": names.get(v.scenario_id, v.scenario_id),
+                    "your_firmware": v.user_evidence,
+                    "clean_room": v.cleanroom_evidence,
+                    "failing_scenarios": len(v.failing),
+                    "shared_scenarios": len(v.shared),
+                }
+            )
+        return out
+
+    def _cross_check_summary(self, assertions: list, scenarios: list[Scenario]) -> dict:
+        room = self.room
+        step_calls = [c for c in self.llm.calls if c.step == "cleanroom"]
+        if not self.settings.cross_check:
+            status = "disabled"
+        elif room is None:
+            status = "not_needed" if self._room_task is not None else "not_run"
+        elif room.status != "ready":
+            status = "skipped"
+        else:
+            status = "ran" if room.results else "not_needed"
+        return {
+            "status": status,
+            "reason": room.reason if room is not None else "",
+            "unconfirmed": self._ambiguities(assertions, scenarios),
+            "usage": {
+                "llm_calls": len(step_calls),
+                "prompt_tokens": sum(c.prompt_tokens for c in step_calls),
+                "completion_tokens": sum(c.completion_tokens for c in step_calls),
+                "llm_s": round(sum(c.duration_ms for c in step_calls) / 1000, 1),
+                "sandbox_runs": room.sandbox.runs if room is not None else 0,
+                "sandbox_s": round(room.sandbox.ms / 1000, 1) if room is not None else 0.0,
+                "build_s": round(room.wall_ms / 1000, 1) if room is not None else 0.0,
+                "repaired": room.repaired if room is not None else False,
+            },
+            "firmware": room.code if room is not None and room.status == "ready" else "",
+        }
+
     # ---------------------------------------------------------- break mode
 
     async def run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict] = None, checks: Optional["CheckSet"] = None) -> tuple[str, dict]:
+        try:
+            return await self._run_break(firmware, spec, extra_report, checks)
+        finally:
+            if self._room_task is not None and not self._room_task.done():
+                self._room_task.cancel()
+
+    async def _run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict], checks: Optional["CheckSet"]) -> tuple[str, dict]:
         bus = self.bus
 
         # 1. UNDERSTAND
@@ -373,6 +517,9 @@ class Pipeline:
         await bus.emit("device_model", device_model=device_model.model_dump())
         await bus.emit("assertions", assertions=[a.model_dump(exclude_none=True) for a in assertions])
         await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions{reused}")
+        if self.settings.cross_check and len(assertions) > 1:
+            # Written from the spec alone while the uploaded firmware compiles and the attack is planned.
+            self._room_task = asyncio.create_task(self._build_cleanroom(spec))
 
         # 2. COMPILE
         await bus.step("compile", "running", "Compiling in a sandbox")
@@ -407,9 +554,24 @@ class Pipeline:
         # 4. EXECUTE
         await bus.step("execute", "running", f"Running {len(scenarios)} scenarios in parallel sandboxes")
         baseline = await self._run_suite(built.elf, scenarios, assertions, spec, 0, "attack")
-        baseline_failures = baseline.failures()
-        failing_ids = baseline.failing_assertions()
-        await bus.step("execute", "done", f"{len(baseline_failures)} failures across {len(failing_ids)} assertions")
+        all_ids = {a.id for a in assertions}
+        confirmed = set(all_ids)
+        if baseline.failing_assertions():
+            room = await self._cleanroom_ready()
+            if room is not None:
+                await bus.step("execute", "running", "Cross-checking the failures against a clean-room implementation written from the spec alone")
+                await self._cleanroom_judge(room, scenarios, assertions, spec)
+                self.verdicts = classify(baseline.results, room.results, [s.id for s in scenarios], all_ids)
+                self.unconfirmed = unconfirmed_ids(self.verdicts)
+                confirmed -= self.unconfirmed
+                if self.unconfirmed:
+                    await bus.emit("cross_check", unconfirmed=self._ambiguities(assertions, scenarios))
+        baseline_failures = baseline.failures(confirmed)
+        failing_ids = baseline.failing_assertions(confirmed)
+        detail = f"{len(baseline_failures)} failures across {len(failing_ids)} assertions"
+        if self.unconfirmed:
+            detail += f". {len(self.unconfirmed)} more also fail on a clean-room implementation, so they are possible spec ambiguities, not bugs"
+        await bus.step("execute", "done", detail)
 
         exercised = {r.assertion_id for rs in baseline.results.values() for r in rs if r.status != "not_exercised"}
         for a in assertions:
@@ -417,7 +579,7 @@ class Pipeline:
                 await self._warn(f"No scenario exercised {a.id} ({a.description}), so it was not really tested.")
         extra_report = {**(extra_report or {}), "spec_checked": spec_checked, "unexercised": [a.id for a in assertions if a.id not in exercised]}
 
-        iterations: list[dict] = [self._iteration_row(0, baseline, set(), set(), "Uploaded firmware", True, assertions)]
+        iterations: list[dict] = [self._iteration_row(0, baseline, set(), set(), "Uploaded firmware", True, confirmed)]
         if not baseline_failures:
             for step in ("diagnose", "fix", "verify"):
                 await bus.step(step, "skipped", "No bugs to work on")
@@ -429,7 +591,9 @@ class Pipeline:
 
         # 5. DIAGNOSE
         await bus.step("diagnose", "running", f"Explaining {len(failing_ids)} failing assertions")
-        payload = self._failure_payload(baseline, assertions, scenarios)
+        # Only confirmed checks are fix targets and guards: an unconfirmed one may be a check no correct firmware passes.
+        live = [a for a in assertions if a.id in confirmed]
+        payload = self._failure_payload(baseline, live, scenarios)
         diagnoses: dict[str, prompts.BugDiagnosis] = {}
         try:
             diag = await self.llm.json(prompts.DIAGNOSE_SYSTEM, prompts.diagnose_user(firmware, spec, payload), prompts.DiagnoseReply, "diagnose")
@@ -437,13 +601,13 @@ class Pipeline:
         except LLMError as exc:
             await self._warn(f"Diagnosis failed, so the bug cards carry measured evidence only: {exc}")
         line_count = len(firmware.splitlines())
-        bugs = [self._build_bug(a, baseline, scenarios, diagnoses.get(a.id), line_count) for a in assertions if a.id in failing_ids]
+        bugs = [self._build_bug(a, baseline, scenarios, diagnoses.get(a.id), line_count) for a in live if a.id in failing_ids]
         for bug in bugs:
             await bus.emit("bug", bug=bug)
         await bus.step("diagnose", "done", f"{len(bugs)} bugs found")
 
         # 6 and 7. FIX and VERIFY
-        assertions_json = [a.model_dump(exclude_none=True) for a in assertions]
+        assertions_json = [a.model_dump(exclude_none=True) for a in live]
         current = firmware
         failures = payload
         previous: Optional[dict] = None
@@ -525,10 +689,10 @@ class Pipeline:
 
             suite = await self._run_suite(patched.elf, scenarios, assertions, spec, n, f"verify patch {n}")
             suites[n] = suite
-            now_failing = suite.failures()
+            now_failing = suite.failures(confirmed)
             still = now_failing & baseline_failures
             regressions = now_failing - baseline_failures
-            row = self._iteration_row(n, suite, still, regressions, summary, True, assertions)
+            row = self._iteration_row(n, suite, still, regressions, summary, True, confirmed)
             row["patch"] = code
 
             # A patch must beat the best so far to replace it, so a tie keeps the earlier, smaller change.
@@ -550,7 +714,7 @@ class Pipeline:
 
             # Always build on the best measured patch. A worse patch is a dead end, not a starting point.
             current = best["code"]
-            failures = self._failure_payload(best_suite, assertions, scenarios)
+            failures = self._failure_payload(best_suite, live, scenarios)
             previous = {
                 "latest_patch": f"attempt {n}: {len(now_failing)} failing checks, {len(still)} of them from the original firmware, {len(regressions)} new",
                 "new_regressions": [{"assertion": a, "scenario": s} for a, s in sorted(regressions)][:10],
@@ -586,13 +750,13 @@ class Pipeline:
         )
         return status, report
 
-    def _iteration_row(self, n: int, suite: SuiteResult, still: set, regressions: set, summary: str, compile_ok: bool, assertions: list) -> dict:
+    def _iteration_row(self, n: int, suite: SuiteResult, still: set, regressions: set, summary: str, compile_ok: bool, confirmed: Optional[set[str]] = None) -> dict:
         return {
             "n": n,
             "compile_ok": compile_ok,
             "summary": summary,
-            "failing": len(suite.failures()),
-            "failing_assertions": sorted(suite.failing_assertions()),
+            "failing": len(suite.failures(confirmed)),
+            "failing_assertions": sorted(suite.failing_assertions(confirmed)),
             "still_failing": sorted(f"{a}:{s}" for a, s in still),
             "regressions": sorted(f"{a}:{s}" for a, s in regressions),
         }
@@ -661,7 +825,7 @@ class Pipeline:
             "firmware": firmware,
             "spec": spec.model_dump(),
             "device_model": device_model.model_dump() if device_model else None,
-            "assertions": [a.model_dump(exclude_none=True) for a in (assertions or [])],
+            "assertions": [{**a.model_dump(exclude_none=True), **({"unconfirmed": True} if a.id in self.unconfirmed else {})} for a in (assertions or [])],
             "scenarios": [s.model_dump() for s in (scenarios or [])],
             "matrix": {str(n): {sid: [r.model_dump() for r in rs] for sid, rs in suite.results.items()} for n, suite in suites.items()},
             "exit_reasons": {str(n): suite.exit_reasons for n, suite in suites.items()},
@@ -680,6 +844,9 @@ class Pipeline:
                 "fix_attempts": max(0, len(iterations or []) - 1),
             },
         }
+        if assertions:
+            report["cross_check"] = self._cross_check_summary(assertions, scenarios or [])
+            report["score"]["possible_ambiguities"] = len(self.unconfirmed)
         if best is not None:
             report["fix"] = {
                 "iteration": best["n"],
@@ -708,12 +875,20 @@ class Pipeline:
 
     def _llm_summary(self) -> dict:
         calls = self.llm.calls
+        by_step: dict[str, dict] = {}
+        for c in calls:
+            row = by_step.setdefault(c.step, {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "seconds": 0.0})
+            row["calls"] += 1
+            row["prompt_tokens"] += c.prompt_tokens
+            row["completion_tokens"] += c.completion_tokens
+            row["seconds"] = round(row["seconds"] + c.duration_ms / 1000, 1)
         return {
             "model": self.settings.llm_model,
             "calls": len(calls),
             "repairs": sum(1 for c in calls if c.repaired),
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
+            "by_step": by_step,
         }
 
     # ---------------------------------------------------- containment mode

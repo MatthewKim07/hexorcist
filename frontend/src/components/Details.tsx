@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, CircleCheck, CircleX, Minus } from "lucide-react";
+import { ChevronDown, CircleCheck, CircleHelp, CircleX, Minus } from "lucide-react";
 import { AssertionDef, AssertionResult, PinSpec, Report, Scenario, Trace } from "../api";
 import { chipLabel } from "../checks";
 import { iconProps } from "../icons";
@@ -8,12 +8,19 @@ import { Fold, Tip } from "./ui";
 
 type ScenarioResult = RunState["results"][number][string] | undefined;
 
+const NONE = new Set<string>();
+
 function scenarioFailed(r: ScenarioResult): boolean {
   return !!r && !r.passed;
 }
 
-function failTip(results: AssertionResult[] | undefined, assertions: AssertionDef[], pins: PinSpec[]): string {
-  const fails = (results ?? []).filter((x) => x.status === "fail");
+/** A result that counts against the firmware: it failed, and the check is not a possible spec ambiguity. */
+function counts(r: AssertionResult, ignore: Set<string>): boolean {
+  return r.status === "fail" && !ignore.has(r.assertion_id);
+}
+
+function failTip(results: AssertionResult[] | undefined, assertions: AssertionDef[], pins: PinSpec[], ignore: Set<string>): string {
+  const fails = (results ?? []).filter((x) => counts(x, ignore));
   if (!fails.length) {
     return "Passed";
   }
@@ -25,12 +32,12 @@ function failTip(results: AssertionResult[] | undefined, assertions: AssertionDe
     .join(" · ");
 }
 
-function SideIcon({ results, assertions, pins }: { results: AssertionResult[] | undefined; assertions: AssertionDef[]; pins: PinSpec[] }) {
+function SideIcon({ results, assertions, pins, ignore }: { results: AssertionResult[] | undefined; assertions: AssertionDef[]; pins: PinSpec[]; ignore: Set<string> }) {
   if (!results) {
     return <Minus {...iconProps} className="text-muted" />;
   }
-  const fail = results.some((r) => r.status === "fail");
-  const tip = failTip(results, assertions, pins);
+  const fail = results.some((r) => counts(r, ignore));
+  const tip = failTip(results, assertions, pins, ignore);
   return (
     <Tip content={tip}>
       <span tabIndex={0} className="inline-flex" aria-label={tip}>
@@ -47,6 +54,7 @@ export function ScenariosTab({
   afterResults,
   beforeMatrix,
   afterMatrix,
+  ignore = NONE,
   assertions,
   pins,
   selected,
@@ -58,6 +66,8 @@ export function ScenariosTab({
   afterResults: RunState["results"][number] | null;
   beforeMatrix: Report["matrix"][string] | undefined;
   afterMatrix: Report["matrix"][string] | undefined;
+  /** Checks that are possible spec ambiguities: their failures do not turn a scenario red. */
+  ignore?: Set<string>;
   assertions: AssertionDef[];
   pins: PinSpec[];
   selected: string | null;
@@ -68,13 +78,10 @@ export function ScenariosTab({
   const hasAfter = !buildMode && (!!afterMatrix || !!afterResults);
   const resultLabel = buildMode || !hasAfter ? "Result" : "Before";
 
-  const rank = (s: Scenario) => {
-    const before = beforeResults[s.id];
-    if (scenarioFailed(before)) {
-      return 0;
-    }
-    return 1;
-  };
+  // The report matrix knows which checks are ambiguities. The live event stream does not.
+  const failedHere = (s: Scenario, matrix: Report["matrix"][string] | undefined, live: ScenarioResult) => (matrix?.[s.id] ? matrix[s.id].some((r) => counts(r, ignore)) : scenarioFailed(live));
+  const passedHere = (s: Scenario, matrix: Report["matrix"][string] | undefined, live: ScenarioResult) => (matrix?.[s.id] ? !matrix[s.id].some((r) => counts(r, ignore)) : !!live?.passed);
+  const rank = (s: Scenario) => (failedHere(s, beforeMatrix, beforeResults[s.id]) ? 0 : 1);
   const sorted = [...scenarios].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
   const failedBefore = sorted.filter((s) => rank(s) === 0);
   const passedBoth = sorted.filter((s) => {
@@ -82,10 +89,9 @@ export function ScenariosTab({
       return false;
     }
     if (!hasAfter) {
-      return !!beforeResults[s.id]?.passed;
+      return passedHere(s, beforeMatrix, beforeResults[s.id]);
     }
-    const after = afterResults?.[s.id];
-    return !!beforeResults[s.id]?.passed && !!after?.passed;
+    return passedHere(s, beforeMatrix, beforeResults[s.id]) && passedHere(s, afterMatrix, afterResults?.[s.id]);
   });
   const other = sorted.filter((s) => !failedBefore.includes(s) && !passedBoth.includes(s));
   const primary = [...failedBefore, ...other];
@@ -117,11 +123,11 @@ export function ScenariosTab({
         </Tip>
       </td>
       <td className="py-2.5 text-center align-middle">
-        <SideIcon results={beforeMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+        <SideIcon results={beforeMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} ignore={ignore} />
       </td>
       {hasAfter && (
         <td className="py-2.5 text-center align-middle">
-          <SideIcon results={afterMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} />
+          <SideIcon results={afterMatrix?.[s.id] ?? undefined} assertions={assertions} pins={pins} ignore={ignore} />
         </td>
       )}
     </tr>
@@ -161,9 +167,9 @@ export function ScenariosTab({
 }
 
 /** The checks that ran in the scenario on the board, with what each one measured. */
-export function ChecksTab({ results, assertions, scenarioName, side }: { results: AssertionResult[]; assertions: AssertionDef[]; scenarioName: string; side: string }) {
+export function ChecksTab({ results, assertions, scenarioName, side, ignore = NONE }: { results: AssertionResult[]; assertions: AssertionDef[]; scenarioName: string; side: string; ignore?: Set<string> }) {
   const names = new Map(assertions.map((a) => [a.id, a.description]));
-  const failed = results.filter((r) => r.status === "fail").length;
+  const failed = results.filter((r) => counts(r, ignore)).length;
   return (
     <div className="pt-4">
       <p className="mb-3 text-xs text-muted">
@@ -183,11 +189,13 @@ export function ChecksTab({ results, assertions, scenarioName, side }: { results
             <tr key={r.assertion_id} className="border-b border-line last:border-b-0">
               <td className="py-2.5 align-middle">
                 {r.status === "pass" && <CircleCheck {...iconProps} className="text-pass" />}
-                {r.status === "fail" && <CircleX {...iconProps} className="text-fail" />}
+                {r.status === "fail" && ignore.has(r.assertion_id) && <CircleHelp {...iconProps} className="text-muted" />}
+                {counts(r, ignore) && <CircleX {...iconProps} className="text-fail" />}
                 {r.status === "not_exercised" && <Minus {...iconProps} className="text-muted" />}
               </td>
               <td className="py-2.5 pr-4 align-middle text-ink">
                 {names.get(r.assertion_id) ?? r.type}
+                {ignore.has(r.assertion_id) && r.status === "fail" && <span className="mt-0.5 block text-xs text-muted">Possible spec ambiguity, not counted as a bug</span>}
                 <span className="mt-0.5 block text-xs text-muted sm:hidden">{r.evidence}</span>
               </td>
               <td className="hidden py-2.5 align-middle font-mono text-xs text-muted sm:table-cell">{r.evidence}</td>

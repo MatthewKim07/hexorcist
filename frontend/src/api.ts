@@ -62,7 +62,7 @@ export interface Scenario {
   id: string;
   name: string;
   hypothesis: string;
-  source: "builtin" | "llm";
+  source: "builtin" | "llm" | "search";
   duration_ms?: number;
   digital?: { pin: string; initial: number }[];
   floating?: { pin: string; from_ms: number; to_ms: number }[];
@@ -71,6 +71,30 @@ export interface Scenario {
 export interface AssertionDef extends Check {
   id: string;
   description: string;
+  /** Fails on the uploaded firmware and on a clean-room implementation too: not a reported bug. */
+  unconfirmed?: boolean;
+}
+
+/** A check that fails on the uploaded firmware and on an implementation written from the spec alone. */
+export interface SpecAmbiguity {
+  assertion_id: string;
+  assertion_type: string;
+  requirement: string;
+  spec_quote: string;
+  scenario_id: string;
+  scenario_name: string;
+  your_firmware: string;
+  clean_room: string;
+  failing_scenarios: number;
+  shared_scenarios: number;
+}
+
+export interface CrossCheck {
+  status: "disabled" | "not_run" | "not_needed" | "ran" | "skipped";
+  reason: string;
+  unconfirmed: SpecAmbiguity[];
+  usage: { llm_calls: number; prompt_tokens: number; completion_tokens: number; llm_s: number; sandbox_runs: number; sandbox_s: number; build_s: number; repaired: boolean };
+  firmware: string;
 }
 
 export interface Violation {
@@ -132,6 +156,9 @@ export interface Bug {
   before?: { status: string; evidence: string } | null;
   after?: { status: string; evidence: string } | null;
   verified?: boolean;
+  /** Failed only on a variant the stimulus search made up from a scenario, not on any scenario the agent planned. */
+  found_by_search?: boolean;
+  reproduction?: { scenario_id: string; name: string; variant: string; events_before: number; events_after: number; duration_before_ms: number; duration_after_ms: number; runs: number };
 }
 
 export interface Report {
@@ -149,7 +176,7 @@ export interface Report {
   warnings: string[];
   containment: { records: ContainmentRecord[]; total: number; removed: number; secrets_found: number; timeouts: number; oom_kills: number; network_none: boolean | null; violations: number };
   llm: { model: string; calls: number; repairs: number; prompt_tokens: number; completion_tokens: number };
-  score: { bugs_found: number; bugs_verified: number; scenarios: number; assertions: number; fix_attempts: number; checks_passed?: number; checks_total?: number };
+  score: { bugs_found: number; bugs_verified: number; scenarios: number; assertions: number; fix_attempts: number; checks_passed?: number; checks_total?: number; possible_ambiguities?: number };
   fix?: { iteration: number; summary: string; patched_firmware: string; diff: { unified: string; added: number; removed: number }; all_passing: boolean; regressions: string[] };
   contained?: {
     contained: boolean;
@@ -165,6 +192,7 @@ export interface Report {
   build?: { description: string; title: string; attempts: { attempt: number; ok: boolean; error: string }[] };
   spec_checked?: boolean;
   unexercised?: string[];
+  cross_check?: CrossCheck;
 }
 
 export interface RunSummary {
