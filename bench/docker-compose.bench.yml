@@ -1,0 +1,12 @@
+# Benchmark-only override for the local stack. Used by bench/run_all.sh, never by default.
+# The default limit (20 runs/hour per IP) stays in backend/app/config.py and docker-compose.yml.
+# `environment:` wins over `env_file:`, so this does not touch .env.
+services:
+  frontend:
+    # Loopback only: the bench stack has no passcode, so it must not listen on the LAN.
+    ports: !override
+      - "127.0.0.1:${HEXORCIST_PORT:-8080}:80"
+
+  backend:
+    environment:
+      RATE_LIMIT_PER_HOUR: "1000"
