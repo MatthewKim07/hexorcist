@@ -23,6 +23,7 @@ from .assertions import evaluate_all
 from .config import Settings
 from .crosscheck import Verdict, classify, unconfirmed_ids
 from .events import RunBus
+from .grounding import find_quote
 from .guard import screen_request
 from .llm import LLMClient, LLMError
 from .models import (
@@ -111,8 +112,12 @@ def _describe(a: Any) -> str:
     return a.type.replace("_", " ")
 
 
-def normalize_assertions(raw: list[dict], spec: DeviceSpec) -> tuple[list, list[str]]:
-    """Keep only assertions that validate against the schema and this device."""
+def normalize_assertions(raw: list[dict], spec: DeviceSpec, ground: bool = False, drops: Optional[list[dict]] = None) -> tuple[list, list[str]]:
+    """Keep only assertions that validate against the schema and this device.
+
+    With `ground`, an assertion must also cite the spec sentence it enforces, and the citation must occur in the
+    spec text. Dropped ones are logged as warnings and appended to `drops` (type, description, quote, reason).
+    """
     warnings: list[str] = []
     kept: list = []
     seen: set[str] = set()
@@ -156,6 +161,15 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec) -> tuple[list, list[
         if problem:
             warnings.append(f"Dropped {parsed.type}: {problem}")
             continue
+        if ground and not isinstance(parsed, NoCrash):
+            found, reason = find_quote(parsed.spec_quote, spec.behaviour)
+            if not found:
+                what = parsed.description or parsed.type.replace("_", " ")
+                warnings.append(f"Dropped {parsed.type} ({what[:80]}): {reason}.")
+                log.info("grounding dropped %s %r: %s", parsed.type, what[:80], reason)
+                if drops is not None:
+                    drops.append({"type": parsed.type, "description": what, "quote": parsed.spec_quote, "reason": reason})
+                continue
         if isinstance(parsed, (SerialPeriod, SerialValueMatches)):
             try:
                 compiled = re.compile(parsed.pattern)
@@ -165,7 +179,7 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec) -> tuple[list, list[
             if isinstance(parsed, SerialValueMatches) and compiled.groups < 1:
                 warnings.append(f"Dropped {parsed.type}: the regex has no capture group")
                 continue
-        key = json.dumps(parsed.model_dump(exclude={"id", "description"}), sort_keys=True)
+        key = json.dumps(parsed.model_dump(exclude={"id", "description", "spec_quote"}), sort_keys=True)
         if key in seen or isinstance(parsed, NoCrash):
             continue
         seen.add(key)
@@ -296,6 +310,7 @@ class Pipeline:
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
         self.cross_note = ""
+        self.grounding: Optional[dict] = None  # spec citations checked on the model's own assertions, and the ones dropped
 
     # ------------------------------------------------------------- plumbing
 
@@ -500,7 +515,10 @@ class Pipeline:
             try:
                 reply = await self.llm.json(prompts.UNDERSTAND_SYSTEM, prompts.understand_user(firmware, spec), prompts.UnderstandReply, "understand")
                 device_model = reply.device_model
-                assertions, warnings = normalize_assertions(reply.assertions, spec)
+                proposed = len(reply.assertions)
+                drops: list[dict] = []
+                assertions, warnings = normalize_assertions(reply.assertions, spec, ground=True, drops=drops)
+                self.grounding = {"checked": proposed, "dropped": drops}
                 for w in warnings:
                     await self._warn(w)
                 if len(assertions) <= 1:
@@ -844,6 +862,8 @@ class Pipeline:
                 "fix_attempts": max(0, len(iterations or []) - 1),
             },
         }
+        if self.grounding is not None:
+            report["grounding"] = self.grounding
         if assertions:
             report["cross_check"] = self._cross_check_summary(assertions, scenarios or [])
             report["score"]["possible_ambiguities"] = len(self.unconfirmed)

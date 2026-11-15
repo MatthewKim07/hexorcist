@@ -8,7 +8,7 @@ from app.llm import LLMCall
 from app.models import AssertionResult, DeviceSpec, PinSpec, Violation
 from app.sandbox import CompileResult, ContainmentRecord
 from tests.test_api import settings
-from tests.test_fix_loop import FakeLLM, FakeRunner, NullBus, NullStore, ORIGINAL, PERSIST_FIXED
+from tests.test_fix_loop import FakeLLM, FakeRunner, NullBus, NullStore, ORIGINAL, PERSIST_FIXED, SPEC_TEXT
 
 
 def result(aid, sid, status="fail", kind="output_follows", spans=((100, 600),), evidence=""):
@@ -84,7 +84,7 @@ def test_only_assertions_that_fail_get_a_verdict():
 
 # ------------------------------------------------------------------ the pipeline
 
-SPEC = DeviceSpec(pins=[PinSpec(pin="D9", type="digital_output")], behaviour="Heartbeat every 250 ms. D9 must not chatter.")
+SPEC = DeviceSpec(pins=[PinSpec(pin="D9", type="digital_output")], behaviour=SPEC_TEXT)
 CLEAN_OK = "void setup() {}\nvoid loop() { heartbeat(); }\n"
 CLEAN_CHATTERS = "void setup() {}\nvoid loop() { heartbeat(); } // CHATTER\n"
 # Fixes the silent heartbeat but still chatters.

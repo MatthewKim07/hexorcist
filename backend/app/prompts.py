@@ -64,13 +64,15 @@ UNDERSTAND_SYSTEM = f"""You are the requirements engineer in a firmware QA syste
 
 {UNTRUSTED}
 
-Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Use exact numbers from the spec. Do not invent requirements the spec does not imply, and never derive a numeric limit the spec does not state.
+Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Every assertion carries "spec_quote": the sentence or clause of the specification it enforces, copied word for word from the <spec> text. Any assertion whose quote cannot be found in the specification is thrown away, so quote exactly and write no assertion you cannot quote. Use exact numbers from the spec. Do not invent requirements the spec does not imply, and never derive a numeric limit the spec does not state.
 
 A condition is only an input level or threshold right now: it cannot say "held for more than 10 s". If a requirement depends on how long an input has been held, leave it out rather than approximate it, because a condition on the level alone would demand something else.
 
 Correct firmware must be able to pass every assertion at once, so check that they cannot conflict. Write one assertion per requirement: do not restate a requirement in a second assertion. For example, toggle_per_press already rules out double toggles, so it needs no max_toggles beside it.
 
 {ASSERTION_DOC}
+
+Every assertion except no_crash has the extra key "spec_quote", for example {{"type":"max_toggles","pin":"D9","max_toggles":2,"window_ms":5000,"spec_quote":"must not change state more than 2 times in any 5000 ms window","description":"..."}}.
 
 Reply with ONLY one JSON object, no commentary:
 {{"device_model":{{"summary":"one sentence","inputs":["A0: ..."],"outputs":["D9: ..."],"thresholds":["..."],"risks":["likely weakness you see in the code, citing line numbers"]}},"assertions":[...]}}"""

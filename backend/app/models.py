@@ -190,6 +190,8 @@ class Condition(BaseModel):
 class _AssertionBase(BaseModel):
     id: str = ""
     description: str = ""
+    # The sentence or clause of the spec this assertion enforces, copied from it. Checked against the spec text.
+    spec_quote: str = ""
 
 
 class OutputFollows(_AssertionBase):

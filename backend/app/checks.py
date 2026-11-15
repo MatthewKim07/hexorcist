@@ -31,11 +31,13 @@ async def read_checks(settings: Settings, firmware: str, spec: DeviceSpec) -> di
     llm = LLMClient(settings)
     start = time.monotonic()
     reply = await llm.json(prompts.UNDERSTAND_SYSTEM, prompts.understand_user(firmware, spec), prompts.UnderstandReply, "understand")
-    assertions, warnings = normalize_assertions(reply.assertions, spec)
+    drops: list[dict] = []
+    assertions, warnings = normalize_assertions(reply.assertions, spec, ground=True, drops=drops)
     return {
         "assertions": [a.model_dump(exclude_none=True) for a in assertions],
         "device_model": reply.device_model.model_dump(),
         "warnings": warnings,
+        "grounding": {"checked": len(reply.assertions), "dropped": drops},
         "model": settings.llm_model,
         "duration_ms": round((time.monotonic() - start) * 1000),
     }

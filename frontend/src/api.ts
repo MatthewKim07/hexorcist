@@ -193,6 +193,8 @@ export interface Report {
   spec_checked?: boolean;
   unexercised?: string[];
   cross_check?: CrossCheck;
+  /** Model-written checks whose spec citation was not found in the spec were dropped. */
+  grounding?: { checked: number; dropped: { type: string; description: string; quote: string; reason: string }[] };
 }
 
 export interface RunSummary {

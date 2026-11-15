@@ -12,6 +12,7 @@ from app.models import DeviceSpec, PinSpec
 from app.sandbox import CompileResult, ContainmentRecord, RunResult
 from tests.test_api import settings
 
+SPEC_TEXT = "D9 must not chatter. Heartbeat every 250 ms."
 ORIGINAL = "void setup() {}\nvoid loop() { read(); } // CHATTER SILENT\n"
 
 DWELL = """const unsigned long MIN_DWELL_MS = 3000;
@@ -46,8 +47,8 @@ DWELL_AGAIN = PERSIST.replace("void setup() {}", "const unsigned long MIN_DWELL_
 
 UNDERSTAND = {
     "assertions": [
-        {"type": "max_toggles", "pin": "D9", "max_toggles": 2, "window_ms": 1000, "description": "No chatter"},
-        {"type": "serial_period", "pattern": "^hb$", "period_ms": 250, "tolerance_ms": 50, "description": "Heartbeat"},
+        {"type": "max_toggles", "pin": "D9", "max_toggles": 2, "window_ms": 1000, "description": "No chatter", "spec_quote": "D9 must not chatter"},
+        {"type": "serial_period", "pattern": "^hb$", "period_ms": 250, "tolerance_ms": 50, "description": "Heartbeat", "spec_quote": "Heartbeat every 250 ms"},
     ]
 }
 
@@ -99,7 +100,7 @@ class NullBus:
 
 
 def run(patches):
-    spec = DeviceSpec(pins=[PinSpec(pin="D9", type="digital_output")], behaviour="x")
+    spec = DeviceSpec(pins=[PinSpec(pin="D9", type="digital_output")], behaviour=SPEC_TEXT)
     runner = FakeRunner()
     pipeline = Pipeline("r", settings(max_parallel=2), runner, NullStore(), NullBus())
     pipeline.llm = FakeLLM(patches)

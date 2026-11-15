@@ -39,6 +39,16 @@ def identify(text: str) -> str:
     return "thermostat"
 
 
+def _spec_sentence(user: str) -> str:
+    """Any sentence of the spec text, so scripted assertions pass the spec-grounding check. Meaning does not matter here."""
+    body = re.search(r"<spec>\n(.*?)\n</spec>", user, re.DOTALL)
+    text = body.group(1) if body else user
+    for line in re.split(r"(?<=[.!?])\s+|\n", text):
+        if len(line.split()) >= 4:
+            return line.strip()
+    return text[:80]
+
+
 def reply(content: str) -> dict:
     return {
         "id": "mock",
@@ -87,7 +97,8 @@ async def completions(request: Request) -> dict:
         if model == "mock-badjson" and preset not in bad_json_served:
             bad_json_served.add(preset)
             return reply('{"device_model": {"summary": "oops", "assertions": [')
-        assertions = ASSERTIONS[preset] + [{"type": "max_toggles", "pin": "D99", "max_toggles": 1, "window_ms": 1}]
+        quote = _spec_sentence(user)
+        assertions = [{**a, "spec_quote": quote} for a in ASSERTIONS[preset]] + [{"type": "max_toggles", "pin": "D99", "max_toggles": 1, "window_ms": 1, "spec_quote": quote}]
         return reply(json.dumps({"device_model": {"summary": f"Mock model of {preset}", "inputs": [], "outputs": [], "thresholds": [], "risks": ["Scripted test reply"]}, "assertions": assertions}))
 
     if "adversarial firmware tester" in system:
