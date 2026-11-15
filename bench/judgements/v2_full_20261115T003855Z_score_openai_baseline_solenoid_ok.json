@@ -1,0 +1,67 @@
+{
+  "case_id": "solenoid_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect Trigger Debounce Timing",
+      "description": "The debounce logic does not account for the time it takes to stabilize after a trigger press, potentially allowing multiple triggers within the debounce period.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Pulse Timing Issue",
+      "description": "The pulse timing is not accurately managed due to the lack of a non-blocking delay mechanism, which could lead to missed heartbeat prints if the pulse duration overlaps with the heartbeat interval.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "solenoid_ok",
+    "spec": "- Trigger on D2 with INPUT_PULLUP (active LOW); glue solenoid on D8; armed LED on D11.\n- A settled press as short as 30 ms starts a 2500 ms HIGH pulse on D8 within 120 ms.\n- Retriggers during an active pulse are ignored.\n- Debounce the trigger with 25 ms of stability.\n- Keep D11 HIGH when idle and LOW while the solenoid pulse is active.\n- Print `glue dots=<n> busy=<0|1>` every 500 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect Trigger Debounce Timing",
+        "description": "The debounce logic does not account for the time it takes to stabilize after a trigger press, potentially allowing multiple triggers within the debounce period.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Pulse Timing Issue",
+        "description": "The pulse timing is not accurately managed due to the lack of a non-blocking delay mechanism, which could lead to missed heartbeat prints if the pulse duration overlaps with the heartbeat interval.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 685,
+    "completion_tokens": 92,
+    "cost_usd": 0.00015795,
+    "cached": true
+  }
+}

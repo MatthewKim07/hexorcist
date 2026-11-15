@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/glue_solenoid_short",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "glue_solenoid_short",
+      "run_id": "d3aa64503d8a",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Solenoid pulse is 1000 ms instead of 2500 ms",
+          "description": "PULSE_MS is defined as 1000 on line 7, but the spec requires a 2500 ms HIGH pulse. The pulse-end check on line 79 uses this constant, so every pulse ends after 1000 ms; measured evidence shows pulses lasting 1000 ms (e.g. 524 ms to 1524 ms) against an expected 2500 \u00b1 150 ms. 8 of 8 pulse(s) had the wrong length: pulse from 524 ms lasted 1000 ms, expected 2500 \u00b1 150 ms.",
+          "assertion_type": "timed_pulse",
+          "verified": true,
+          "evidence": "8 of 8 pulse(s) had the wrong length: pulse from 524 ms lasted 1000 ms, expected 2500 \u00b1 150 ms.",
+          "root_cause": "PULSE_MS is defined as 1000 on line 7, but the spec requires a 2500 ms HIGH pulse. The pulse-end check on line 79 uses this constant, so every pulse ends after 1000 ms; measured evidence shows pulses lasting 1000 ms (e.g. 524 ms to 1524 ms) against an expected 2500 \u00b1 150 ms."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Armed LED stays LOW for the whole (wrong-length) pulse window",
+          "description": "The LED is driven LOW at pulse start (line 75) and restored HIGH only when the pulse ends (line 83), so its state is tied to the pulse duration. Because PULSE_MS on line 7 is 1000 ms rather than 2500 ms, the LED is LOW for 1000 ms while D8 is HIGH, and the checker reports D11 was not HIGH for 1000 ms while required (e.g. 524 ms to 1524 ms). D11 was in the wrong state for 8000 ms across 8 interval(s), first at 524 ms: D11 was not HIGH for 1000 ms while required (grace 50 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D11 was in the wrong state for 8000 ms across 8 interval(s), first at 524 ms: D11 was not HIGH for 1000 ms while required (grace 50 ms).",
+          "root_cause": "The LED is driven LOW at pulse start (line 75) and restored HIGH only when the pulse ends (line 83), so its state is tied to the pulse duration. Because PULSE_MS on line 7 is 1000 ms rather than 2500 ms, the LED is LOW for 1000 ms while D8 is HIGH, and the checker reports D11 was not HIGH for 1000 ms while required (e.g. 524 ms to 1524 ms)."
+        }
+      ],
+      "patched_sketch": "// Packaging glue-dot solenoid driver.\n// Trigger on D2 (pull-up), solenoid on D8, armed LED on D11.\n\nconst int TRIG_PIN = 2;\nconst int SOL_PIN = 8;\nconst int ARMED_PIN = 11;\nconst unsigned long PULSE_MS = 2500;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 500;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastTrig = HIGH;\nunsigned long trigEdge = 0;\nunsigned long lastHb = 0;\nunsigned long dots = 0;\n\nvoid solHigh()\n{\n    digitalWrite(SOL_PIN, HIGH);\n}\n\nvoid solLow()\n{\n    digitalWrite(SOL_PIN, LOW);\n}\n\nvoid setArmedLed(bool on)\n{\n    digitalWrite(ARMED_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"glue dots=\");\n    Serial.print(dots);\n    Serial.print(\" busy=\");\n    Serial.println(pulsing ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(SOL_PIN, OUTPUT);\n    pinMode(ARMED_PIN, OUTPUT);\n    solLow();\n    setArmedLed(true);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastTrig = stableTrig;\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (raw != lastTrig)\n    {\n        trigEdge = now;\n        lastTrig = raw;\n    }\n\n    if ((now - trigEdge) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            dots++;\n            solHigh();\n            setArmedLed(false);\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        solLow();\n        setArmedLed(true);\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 62.01,
+      "llm_calls": 8,
+      "prompt_tokens": 22125,
+      "completion_tokens": 5175,
+      "cost_usd": 0.0083685,
+      "model": "deepseek-chat"
+    }
+  ]
+}

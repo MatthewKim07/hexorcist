@@ -1,0 +1,108 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect averaging logic",
+      "description": "The averaging logic does not account for the last sample when the window is reset, potentially causing the printed percentage to be inaccurate. The average should be calculated after the window is filled, not before.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b2",
+      "title": "Timing issue with sample button",
+      "description": "The delay(30) after reading the sample button blocks the loop, which can cause missed timing for the 1000 ms print interval, especially if the button is held down.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect averaging logic",
+        "description": "The averaging logic does not account for the last sample when the window is reset, potentially causing the printed percentage to be inaccurate. The average should be calculated after the window is filled, not before.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b2",
+        "title": "Timing issue with sample button",
+        "description": "The delay(30) after reading the sample button blocks the loop, which can cause missed timing for the 1000 ms print interval, especially if the button is held down.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no matching symptom or root cause\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs do not match any true bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no matching symptom or root cause"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs do not match any true bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 843,
+    "completion_tokens": 89,
+    "cost_usd": 0.00017985,
+    "cached": true
+  }
+}

@@ -1,0 +1,147 @@
+{
+  "case_id": "kiln_door_block",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Blocking delay starves heartbeat",
+      "description": "runSirenBurst() uses delay(2000), so the loop cannot print the 250 ms 'hb' heartbeat during the siren pulse, violating the requirement to print every 250 ms and never go silent >700 ms.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b2",
+      "title": "No debounce/hysteresis on door switch",
+      "description": "doorOpen() reads the raw pin with no debounce or settle time, so contact bounce or noise can trigger spurious siren pulses instead of requiring a settled 40 ms press.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b3",
+      "title": "Siren pulse not non-retriggerable",
+      "description": "The sirenArmed flag is set and cleared around a blocking call and never actually gates new presses; because the loop is blocked during the pulse, presses are effectively ignored only by accident, and the design does not implement the required 'ignore presses while pulse running' state machine.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b4",
+      "title": "No 150 ms response latency guarantee",
+      "description": "Because the sketch blocks in delay() and has no timed debounce, there is no bounded path ensuring a settled 40 ms press starts the pulse within 150 ms; the timing is uncontrolled.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_hb",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^hb$' every 250 ms (Heartbeat every 250 ms)"
+        },
+        {
+          "check_id": "a_resp",
+          "type": "responsive",
+          "behaviour": " responds to stimulus within None ms (Must stay responsive)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "kiln_door_block",
+    "spec": "- Kiln door switch on D2 to ground with internal pull-up (active LOW); siren driver on D8.\n- A settled door-open press as short as 40 ms starts a 2000 ms HIGH pulse on D8 within 150 ms.\n- While a siren pulse is already running, additional presses are ignored (do not restart the pulse).\n- Print the exact line `hb` every 250 ms at all times, including during the siren pulse.\n- Firmware must never go silent (no serial and no pin change) for more than 700 ms.\n- Idle door contact reads HIGH.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "blocking_delay",
+        "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+        "check_ids": [
+          "a_hb",
+          "a_resp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_hb",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^hb$' every 250 ms (Heartbeat every 250 ms)"
+          },
+          {
+            "check_id": "a_resp",
+            "type": "responsive",
+            "behaviour": " responds to stimulus within None ms (Must stay responsive)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Blocking delay starves heartbeat",
+        "description": "runSirenBurst() uses delay(2000), so the loop cannot print the 250 ms 'hb' heartbeat during the siren pulse, violating the requirement to print every 250 ms and never go silent >700 ms.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b2",
+        "title": "No debounce/hysteresis on door switch",
+        "description": "doorOpen() reads the raw pin with no debounce or settle time, so contact bounce or noise can trigger spurious siren pulses instead of requiring a settled 40 ms press.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b3",
+        "title": "Siren pulse not non-retriggerable",
+        "description": "The sirenArmed flag is set and cleared around a blocking call and never actually gates new presses; because the loop is blocked during the pulse, presses are effectively ignored only by accident, and the design does not implement the required 'ignore presses while pulse running' state machine.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b4",
+        "title": "No 150 ms response latency guarantee",
+        "description": "Because the sketch blocks in delay() and has no timed debounce, there is no bounded path ensuring a settled 40 ms press starts the pulse within 150 ms; the timing is uncontrolled.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same blocking delay issue affecting heartbeat.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2, 3],\n  \"unique_false_alarm_indices\": [1, 2, 3],\n  \"notes\": \"All unmatched reports describe different issues unrelated to the truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same blocking delay issue affecting heartbeat."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2,
+      3
+    ],
+    "notes": "All unmatched reports describe different issues unrelated to the truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1053,
+    "completion_tokens": 102,
+    "cost_usd": 0.00021915,
+    "cached": true
+  }
+}

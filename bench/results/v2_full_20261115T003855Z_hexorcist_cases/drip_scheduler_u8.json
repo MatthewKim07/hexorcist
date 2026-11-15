@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/drip_scheduler_u8",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "drip_scheduler_u8",
+      "run_id": "88d6a4f45201",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Drip pulses fire far too fast instead of every 800 ms",
+          "description": "The scheduler stores the next due time in a uint8_t (line 10) and compares truncated 8-bit millis values (lines 63, 71, 73). The condition `(uint8_t)(now8 - nextDue) < 128 && now8 >= nextDue` (line 71) re-triggers almost immediately after each pulse ends, so measured intervals were 49-50 ms rather than 800 ms (\"gap of 50 ms\", \"gap of 49 ms\"). The 8-bit wrap and the `now8 >= nextDue` test make the period logic unreliable, giving 127 of 128 intervals out of tolerance. Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+          "assertion_type": "serial_period",
+          "verified": false,
+          "evidence": "Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+          "root_cause": "The scheduler stores the next due time in a uint8_t (line 10) and compares truncated 8-bit millis values (lines 63, 71, 73). The condition `(uint8_t)(now8 - nextDue) < 128 && now8 >= nextDue` (line 71) re-triggers almost immediately after each pulse ends, so measured intervals were 49-50 ms rather than 800 ms (\"gap of 50 ms\", \"gap of 49 ms\"). The 8-bit wrap and the `now8 >= nextDue` test make the period logic unreliable, giving 127 of 128 intervals out of tolerance."
+        },
+        {
+          "id": "bug-a4",
+          "title": "D8 not held LOW while pause is asserted",
+          "description": "Pause is only checked at the top of loop (line 64) and used to gate new pulses (line 71), but an in-progress pulse is never aborted when pause goes LOW; endPulse only runs on the pulseUntil timeout (lines 66-69). Measured evidence shows D8 was not HIGH for 292 ms and 900 ms while required, i.e. the output stayed HIGH during pause. There is also no debounce, so bounce (lines 64, 77-80) causes spurious pause state changes. D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+          "root_cause": "Pause is only checked at the top of loop (line 64) and used to gate new pulses (line 71), but an in-progress pulse is never aborted when pause goes LOW; endPulse only runs on the pulseUntil timeout (lines 66-69). Measured evidence shows D8 was not HIGH for 292 ms and 900 ms while required, i.e. the output stayed HIGH during pause. There is also no debounce, so bounce (lines 64, 77-80) causes spurious pause state changes."
+        }
+      ],
+      "patched_sketch": "// Greenhouse nutrient drip pulse scheduler.\n// Pulse driver on D8, pause button on D4 (pull-up).\n\nconst int DRIP_PIN = 8;\nconst int PAUSE_PIN = 4;\nconst unsigned long PERIOD_MS = 800;\nconst unsigned long PULSE_MS = 50;\nconst unsigned long LOG_MS = 1600;\nconst unsigned long PAUSE_DEBOUNCE_MS = 20;\n\nunsigned long nextDue = 0;\nunsigned long pulseUntil = 0;\nunsigned long lastLog = 0;\nunsigned long dripCount = 0;\nbool pulsing = false;\nbool paused = false;\nbool pauseRaw = false;\nbool pauseCandidate = false;\nunsigned long pauseChangedAt = 0;\n\nvoid dripHigh()\n{\n    digitalWrite(DRIP_PIN, HIGH);\n}\n\nvoid dripLow()\n{\n    digitalWrite(DRIP_PIN, LOW);\n}\n\nvoid startPulse(unsigned long now)\n{\n    pulsing = true;\n    pulseUntil = now + PULSE_MS;\n    dripHigh();\n    dripCount++;\n    Serial.println(\"drip\");\n}\n\nvoid endPulse()\n{\n    pulsing = false;\n    dripLow();\n}\n\nvoid printLog()\n{\n    Serial.print(\"drip n=\");\n    Serial.print(dripCount);\n    Serial.print(\" pause=\");\n    Serial.println(paused ? 1 : 0);\n}\n\nvoid updatePause(unsigned long now)\n{\n    bool raw = (digitalRead(PAUSE_PIN) == LOW);\n\n    if (raw != pauseCandidate)\n    {\n        pauseCandidate = raw;\n        pauseChangedAt = now;\n    }\n    else if (raw != pauseRaw && (now - pauseChangedAt) >= PAUSE_DEBOUNCE_MS)\n    {\n        pauseRaw = raw;\n    }\n}\n\nvoid setup()\n{\n    pinMode(DRIP_PIN, OUTPUT);\n    pinMode(PAUSE_PIN, INPUT_PULLUP);\n    dripLow();\n    Serial.begin(9600);\n    nextDue = millis() + PERIOD_MS;\n    lastLog = millis();\n    pauseRaw = (digitalRead(PAUSE_PIN) == LOW);\n    pauseCandidate = pauseRaw;\n    pauseChangedAt = millis();\n    paused = pauseRaw;\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    updatePause(now);\n    paused = pauseRaw;\n\n    if (pulsing && (long)(now - pulseUntil) >= 0)\n    {\n        endPulse();\n    }\n\n    if (paused)\n    {\n        if (pulsing)\n        {\n            endPulse();\n        }\n        nextDue = now + PERIOD_MS;\n    }\n    else if (!pulsing && (long)(now - nextDue) >= 0)\n    {\n        nextDue = now + PERIOD_MS;\n        startPulse(now);\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        printLog();\n    }\n}\n",
+      "wall_s": 102.71,
+      "llm_calls": 7,
+      "prompt_tokens": 24617,
+      "completion_tokens": 4729,
+      "cost_usd": 0.00887894,
+      "model": "deepseek-chat"
+    }
+  ]
+}

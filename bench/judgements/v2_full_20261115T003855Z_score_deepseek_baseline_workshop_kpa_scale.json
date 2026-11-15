@@ -1,0 +1,107 @@
+{
+  "case_id": "workshop_kpa_scale",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing 500 mV zero offset in kPa conversion",
+      "description": "millivoltsToKpa divides raw millivolts by 10 without subtracting the 500 mV zero offset, so every printed pressure is 50 kPa too high and the D12 lamp lights at the wrong physical pressure.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "ADC span uses 1023 instead of 1024",
+      "description": "The 5.000 V span is divided by 1023 rather than 1024, biasing the millivolt reading slightly high; combined with the offset error this pushes the printed value outside the \u00b12.0 kPa tolerance.",
+      "category": "wrong_unit_scaling"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "workshop_kpa_scale",
+    "spec": "- Pressure transducer on A2 scaled at 10 mV/kPa with a 500 mV zero offset; high-pressure gauge lamp on D12.\n- Physical pressure in kPa equals (millivolts \u2212 500) / 10 using a 5.000 V / 1023 ADC span.\n- Emit `kPa: <value>` once every 1000 ms with one decimal place.\n- Printed pressure must match the injected value within \u00b12.0 kPa.\n- Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW.\n- Continue logging at the same rate while the gauge lamp is lit.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Omits 500 mV zero offset so kPa reads 50 high",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing 500 mV zero offset in kPa conversion",
+        "description": "millivoltsToKpa divides raw millivolts by 10 without subtracting the 500 mV zero offset, so every printed pressure is 50 kPa too high and the D12 lamp lights at the wrong physical pressure.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "ADC span uses 1023 instead of 1024",
+        "description": "The 5.000 V span is divided by 1023 rather than 1024, biasing the millivolt reading slightly high; combined with the offset error this pushes the printed value outside the \u00b12.0 kPa tolerance.",
+        "category": "wrong_unit_scaling"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same root cause of omitting the 500 mV zero offset.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The second reported bug (b2) does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same root cause of omitting the 500 mV zero offset."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The second reported bug (b2) does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 903,
+    "completion_tokens": 113,
+    "cost_usd": 0.00020325,
+    "cached": true
+  }
+}

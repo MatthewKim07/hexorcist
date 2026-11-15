@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/foyer_lamp_debounce",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "foyer_lamp_debounce",
+      "run_id": "9b3007fae680",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No debounce: bounce and noise toggle lamp multiple times per press",
+          "description": "The loop reads the raw pin and calls flipLamp() on every HIGH-to-LOW transition (lines 50-56) with no settle window, so each bounce edge is treated as a new press. Measured evidence shows a single press toggling D11 6 times (press at 200 ms), 4 times under bounce (press at 1.00 s), and 3 times for rapid presses, plus 20 spurious toggles with no press at all starting at 402 ms. The spec requires a 40 ms settle window before accepting a press edge, which is entirely absent. 4 of 4 press(es) did not toggle D11 exactly once; toggle counts per press were [6, 6, 6, 6]. D11 also toggled 20 time(s) with no press to explain it, first at 402 ms.",
+          "assertion_type": "toggle_per_press",
+          "verified": true,
+          "evidence": "4 of 4 press(es) did not toggle D11 exactly once; toggle counts per press were [6, 6, 6, 6]. D11 also toggled 20 time(s) with no press to explain it, first at 402 ms.",
+          "root_cause": "The loop reads the raw pin and calls flipLamp() on every HIGH-to-LOW transition (lines 50-56) with no settle window, so each bounce edge is treated as a new press. Measured evidence shows a single press toggling D11 6 times (press at 200 ms), 4 times under bounce (press at 1.00 s), and 3 times for rapid presses, plus 20 spurious toggles with no press at all starting at 402 ms. The spec requires a 40 ms settle window before accepting a press edge, which is entirely absent."
+        }
+      ],
+      "patched_sketch": "// Foyer wall switch: one pushbutton toggles a lamp channel.\n// Button D5 to ground (pull-up), lamp driver D11, status over serial.\n\nconst int SWITCH_PIN = 5;\nconst int LAMP_PIN = 11;\nconst unsigned long STATUS_EVERY_MS = 1500;\nconst unsigned long SETTLE_MS = 40;\n\nbool lampLit = false;\nint previousRaw = HIGH;\nint settledRaw = HIGH;\nunsigned long rawChangedAt = 0;\nunsigned long lastStatusAt = 0;\nunsigned long pressEvents = 0;\nunsigned long bootMs = 0;\n\nvoid driveLamp(bool on)\n{\n    lampLit = on;\n    digitalWrite(LAMP_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLamp()\n{\n    driveLamp(!lampLit);\n    pressEvents++;\n}\n\nbool isPressedEdge(int previous, int current)\n{\n    return previous == HIGH && current == LOW;\n}\n\nvoid reportLamp()\n{\n    Serial.print(\"foyer lamp=\");\n    Serial.println(lampLit ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(SWITCH_PIN, INPUT_PULLUP);\n    pinMode(LAMP_PIN, OUTPUT);\n    driveLamp(false);\n    Serial.begin(9600);\n    previousRaw = digitalRead(SWITCH_PIN);\n    settledRaw = previousRaw;\n    rawChangedAt = millis();\n    lastStatusAt = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    int raw = digitalRead(SWITCH_PIN);\n    unsigned long now = millis();\n\n    if (raw != previousRaw)\n    {\n        previousRaw = raw;\n        rawChangedAt = now;\n    }\n\n    if (raw != settledRaw && (now - rawChangedAt) >= SETTLE_MS)\n    {\n        int oldSettled = settledRaw;\n        settledRaw = raw;\n        if (isPressedEdge(oldSettled, settledRaw))\n        {\n            flipLamp();\n        }\n    }\n\n    if (now - lastStatusAt >= STATUS_EVERY_MS)\n    {\n        lastStatusAt = now;\n        reportLamp();\n    }\n}\n",
+      "wall_s": 60.4,
+      "llm_calls": 4,
+      "prompt_tokens": 7586,
+      "completion_tokens": 2870,
+      "cost_usd": 0.00332948,
+      "model": "deepseek-chat"
+    }
+  ]
+}

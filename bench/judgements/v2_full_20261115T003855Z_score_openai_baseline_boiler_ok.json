@@ -1,0 +1,67 @@
+{
+  "case_id": "boiler_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature scaling",
+      "description": "The temperature reading from the analog pin is incorrectly scaled. The conversion from raw ADC value to millivolts should use the correct reference voltage, which is typically 5V, but the sketch uses 5000.0f directly, which is misleading.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Timing issue with valve control",
+      "description": "The valve state change does not account for the 500 ms delay requirement when crossing the temperature thresholds. The current implementation may not reach the commanded state within the required time.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "boiler_ok",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature scaling",
+        "description": "The temperature reading from the analog pin is incorrectly scaled. The conversion from raw ADC value to millivolts should use the correct reference voltage, which is typically 5V, but the sketch uses 5000.0f directly, which is misleading.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Timing issue with valve control",
+        "description": "The valve state change does not account for the 500 ms delay requirement when crossing the temperature thresholds. The current implementation may not reach the commanded state within the required time.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 780,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001722,
+    "cached": true
+  }
+}

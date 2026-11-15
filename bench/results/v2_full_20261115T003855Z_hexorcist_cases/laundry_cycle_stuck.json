@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/laundry_cycle_stuck",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "laundry_cycle_stuck",
+      "run_id": "c67052fcd3a9",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Motor never turns off when level falls below 20 cm",
+          "description": "The state machine in loop() only has transitions IDLE->FILL (line 73) and FILL->RUN (line 77); there is no branch that leaves ST_RUN when levelCm drops below RUN_MIN_CM, so once in RUN the motor stays HIGH indefinitely. Measured evidence confirms this: in the nominal ramp D10 was not HIGH for 3550 ms while required (t=2.53 s to 6.08 s), and in the drain scenario D10 was not LOW for 660 ms starting at 11.34 s, exceeding the 600 ms grace. The RUN_MIN_CM constant (line 11) is declared but never used. D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+          "root_cause": "The state machine in loop() only has transitions IDLE->FILL (line 73) and FILL->RUN (line 77); there is no branch that leaves ST_RUN when levelCm drops below RUN_MIN_CM, so once in RUN the motor stays HIGH indefinitely. Measured evidence confirms this: in the nominal ramp D10 was not HIGH for 3550 ms while required (t=2.53 s to 6.08 s), and in the drain scenario D10 was not LOW for 660 ms starting at 11.34 s, exceeding the 600 ms grace. The RUN_MIN_CM constant (line 11) is declared but never used."
+        }
+      ],
+      "patched_sketch": "// Compact laundry fill/run cycle controller.\n// Level probe on A0 (10 mV/cm), fill valve on D9, drum motor on D10.\n// Reset button on D4 (pull-up) returns to IDLE.\n\nconst int LEVEL_PIN = A0;\nconst int VALVE_PIN = 9;\nconst int MOTOR_PIN = 10;\nconst int RESET_PIN = 4;\nconst float EMPTY_CM = 10.0f;\nconst float FULL_CM = 25.0f;\nconst float RUN_MIN_CM = 20.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 200;\n\nenum CycleState\n{\n    ST_IDLE = 0,\n    ST_FILL = 1,\n    ST_RUN = 2\n};\n\nCycleState state = ST_IDLE;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat levelCm = 0.0f;\nbool runPending = false;\nunsigned long runSince = 0;\nbool idlePending = false;\nunsigned long idleSince = 0;\n\nfloat readLevelCm()\n{\n    int raw = analogRead(LEVEL_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid driveOutputs()\n{\n    digitalWrite(VALVE_PIN, state == ST_FILL ? HIGH : LOW);\n    digitalWrite(MOTOR_PIN, state == ST_RUN ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"laundry st=\");\n    Serial.print((int)state);\n    Serial.print(\" cm=\");\n    Serial.println(levelCm, 1);\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(MOTOR_PIN, OUTPUT);\n    pinMode(RESET_PIN, INPUT_PULLUP);\n    driveOutputs();\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        levelCm = readLevelCm();\n\n        if (digitalRead(RESET_PIN) == LOW)\n        {\n            state = ST_IDLE;\n            runPending = false;\n            idlePending = false;\n        }\n        else\n        {\n            if (state == ST_IDLE && levelCm < EMPTY_CM)\n            {\n                state = ST_FILL;\n            }\n            else if (state == ST_FILL && levelCm >= FULL_CM)\n            {\n                state = ST_RUN;\n            }\n\n            if (state == ST_IDLE && levelCm >= FULL_CM)\n            {\n                if (!runPending)\n                {\n                    runPending = true;\n                    runSince = now;\n                }\n                else if (now - runSince >= CONFIRM_MS)\n                {\n                    state = ST_RUN;\n                    runPending = false;\n                }\n            }\n            else\n            {\n                runPending = false;\n            }\n\n            if (state == ST_RUN && levelCm < RUN_MIN_CM)\n            {\n                if (!idlePending)\n                {\n                    idlePending = true;\n                    idleSince = now;\n                }\n                else if (now - idleSince >= CONFIRM_MS)\n                {\n                    state = ST_IDLE;\n                    idlePending = false;\n                }\n            }\n            else\n            {\n                idlePending = false;\n            }\n        }\n\n        driveOutputs();\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 102.68,
+      "llm_calls": 4,
+      "prompt_tokens": 9142,
+      "completion_tokens": 3615,
+      "cost_usd": 0.00407806,
+      "model": "deepseek-chat"
+    }
+  ]
+}

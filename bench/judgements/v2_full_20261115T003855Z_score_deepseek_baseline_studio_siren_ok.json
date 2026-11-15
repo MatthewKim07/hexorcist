@@ -1,0 +1,60 @@
+{
+  "case_id": "studio_siren_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Debounce timer reset on every loop while bouncing",
+      "description": "btnChanged is reset to now on every loop iteration where btn differs from lastBtn, so a noisy/bouncing input that toggles each read keeps pushing the settle deadline forward; a 40 ms press can be missed if the last bounce occurs late, and the press may not be recognized within the 150 ms window.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Heartbeat can be delayed past 700 ms silence",
+      "description": "The heartbeat uses 'now - lastHb >= HB_MS' with lastHb set to now, which is fine, but the siren pulse and debounce logic are non-blocking so this is actually OK; however the real issue is that lastHb is only updated when the condition fires, and if loop is delayed the heartbeat drifts \u2014 minor. The genuine bug is the debounce reset above.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "studio_siren_ok",
+    "spec": "- Panic button on D4 to ground with internal pull-up (active LOW); siren on D7.\n- A settled press as short as 40 ms starts a 2500 ms HIGH pulse on D7 within 150 ms.\n- Presses while the siren is already sounding are ignored (do not restart the pulse).\n- Print the exact line `hb` every 400 ms at all times, including during the siren.\n- Never remain silent (no serial and no output change) for more than 700 ms.\n- Idle button reads HIGH.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Debounce timer reset on every loop while bouncing",
+        "description": "btnChanged is reset to now on every loop iteration where btn differs from lastBtn, so a noisy/bouncing input that toggles each read keeps pushing the settle deadline forward; a 40 ms press can be missed if the last bounce occurs late, and the press may not be recognized within the 150 ms window.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Heartbeat can be delayed past 700 ms silence",
+        "description": "The heartbeat uses 'now - lastHb >= HB_MS' with lastHb set to now, which is fine, but the siren pulse and debounce logic are non-blocking so this is actually OK; however the real issue is that lastHb is only updated when the condition fires, and if loop is delayed the heartbeat drifts \u2014 minor. The genuine bug is the debounce reset above.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present; all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present; all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 784,
+    "completion_tokens": 57,
+    "cost_usd": 0.0001518,
+    "cached": true
+  }
+}

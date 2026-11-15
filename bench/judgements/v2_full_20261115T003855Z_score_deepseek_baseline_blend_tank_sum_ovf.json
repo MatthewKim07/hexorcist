@@ -1,0 +1,164 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "pct stream timing driven by sample count, not 1000 ms",
+      "description": "pct: is printed whenever 50 samples accumulate (50 \u00d7 ~20 ms loop \u2248 1000 ms plus ADC time), so the interval drifts and is not tied to millis; it can exceed the 1000 ms \u00b1150 ms requirement and is not synchronized with the blend batches line.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b2",
+      "title": "Force button emits note every loop while held",
+      "description": "Holding D5 LOW calls forceSampleNote() every iteration (with only a 30 ms delay), flooding serial with blend force lines instead of a single note per press, and the 30 ms delay also perturbs the pct timing.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b3",
+      "title": "No debounce/edge detection on force button",
+      "description": "The button is read as a level with no edge detection or debounce, so a single press produces many notes and contact bounce produces extra notes.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b4",
+      "title": "ADC reference scaling assumes 5 V but uses default reference",
+      "description": "rawToPct uses 5000 mV full-scale with the default (Vcc) reference; if Vcc differs from 5.0 V the percent reading is off, and the 10 mV/% scale is applied correctly only when the reference is exactly 5 V. Should use a stable reference or measure Vcc.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b5",
+      "title": "sum is int and can overflow",
+      "description": "sum is a 16-bit int accumulating up to 50 ADC readings (max ~51150) which overflows signed int, corrupting the average and thus the printed percent.",
+      "category": "integer_overflow"
+    },
+    {
+      "id": "b6",
+      "title": "lastStatus not volatile-safe / millis rollover handled but batches line not periodic with pct",
+      "description": "The blend batches line is printed on its own 1000 ms timer independent of the pct timer, so the two streams drift apart and the batches count does not correspond to the pct prints at the same instant.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "pct stream timing driven by sample count, not 1000 ms",
+        "description": "pct: is printed whenever 50 samples accumulate (50 \u00d7 ~20 ms loop \u2248 1000 ms plus ADC time), so the interval drifts and is not tied to millis; it can exceed the 1000 ms \u00b1150 ms requirement and is not synchronized with the blend batches line.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b2",
+        "title": "Force button emits note every loop while held",
+        "description": "Holding D5 LOW calls forceSampleNote() every iteration (with only a 30 ms delay), flooding serial with blend force lines instead of a single note per press, and the 30 ms delay also perturbs the pct timing.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b3",
+        "title": "No debounce/edge detection on force button",
+        "description": "The button is read as a level with no edge detection or debounce, so a single press produces many notes and contact bounce produces extra notes.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b4",
+        "title": "ADC reference scaling assumes 5 V but uses default reference",
+        "description": "rawToPct uses 5000 mV full-scale with the default (Vcc) reference; if Vcc differs from 5.0 V the percent reading is off, and the 10 mV/% scale is applied correctly only when the reference is exactly 5 V. Should use a stable reference or measure Vcc.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b5",
+        "title": "sum is int and can overflow",
+        "description": "sum is a 16-bit int accumulating up to 50 ADC readings (max ~51150) which overflows signed int, corrupting the average and thus the printed percent.",
+        "category": "integer_overflow"
+      },
+      {
+        "id": "b6",
+        "title": "lastStatus not volatile-safe / millis rollover handled but batches line not periodic with pct",
+        "description": "The blend batches line is printed on its own 1000 ms timer independent of the pct timer, so the two streams drift apart and the batches count does not correspond to the pct prints at the same instant.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 5, \"matched\": true, \"reason\": \"reported bug describes integer overflow in ADC sample accumulation\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2, 3, 4, 6],\n  \"unique_false_alarm_indices\": [0, 1, 2, 3, 4, 6],\n  \"notes\": \"All reported bugs are false alarms as they do not match any true bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 5,
+        "matched": true,
+        "reason": "reported bug describes integer overflow in ADC sample accumulation"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6
+    ],
+    "notes": "All reported bugs are false alarms as they do not match any true bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1241,
+    "completion_tokens": 121,
+    "cost_usd": 0.00025875,
+    "cached": true
+  }
+}

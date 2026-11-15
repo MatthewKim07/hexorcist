@@ -1,0 +1,57 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/process_dual_block_scale",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "process_dual_block_scale",
+      "run_id": "832889fa299c",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Log period is 2000 ms instead of 500 ms",
+          "description": "loop() ends with delay(2000) on line 75, so emitLog() on line 74 runs only every ~2 s. The measured gaps were 2000-2003 ms against the required 500 \u00b1 100 ms, e.g. 'gap of 2003 ms' from 11.693 to 2014.242 s. Expected /^flow: / every 500 \u00b1 100 ms; 6 of 6 intervals were out of tolerance, worst gap 2003 ms.",
+          "assertion_type": "serial_period",
+          "verified": true,
+          "evidence": "Expected /^flow: / every 500 \u00b1 100 ms; 6 of 6 intervals were out of tolerance, worst gap 2003 ms.",
+          "root_cause": "loop() ends with delay(2000) on line 75, so emitLog() on line 74 runs only every ~2 s. The measured gaps were 2000-2003 ms against the required 500 \u00b1 100 ms, e.g. 'gap of 2003 ms' from 11.693 to 2014.242 s."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Flow value printed as raw ADC counts, not L/h",
+          "description": "readFlowLph() on line 18 returns the raw analogRead() count without converting to millivolts (5.000 V/1023) or dividing by 2 mV/Lph. The measured output 'printed 511 Lph at 10.02 s while the injected input was 1209.6 to 1252.5 Lph' shows the printed number is just the ADC count, off by hundreds of L/h. Firmware printed 511 Lph at 10.02 s while the injected input was 1209.6 to 1252.5 Lph: off by 698.6 Lph (tolerance \u00b110). 5 of 6 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "verified": true,
+          "evidence": "Firmware printed 511 Lph at 10.02 s while the injected input was 1209.6 to 1252.5 Lph: off by 698.6 Lph (tolerance \u00b110). 5 of 6 values were wrong.",
+          "root_cause": "readFlowLph() on line 18 returns the raw analogRead() count without converting to millivolts (5.000 V/1023) or dividing by 2 mV/Lph. The measured output 'printed 511 Lph at 10.02 s while the injected input was 1209.6 to 1252.5 Lph' shows the printed number is just the ADC count, off by hundreds of L/h."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Alarm threshold compared against ADC counts, not L/h",
+          "description": "flowLooksLow() on line 29 compares the raw ADC count to LOW_FLOW_LPH=100, so D8 switches at ADC 100 (~488 mV = 244 L/h) rather than 100 L/h. Measured 'D8 was not LOW for 2451 ms while required' on the nominal ramp confirms the alarm stays HIGH well above the spec threshold. D8 was in the wrong state for 3410 ms across 2 interval(s), first at 1.55 s: D8 was not LOW for 2451 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D8 was in the wrong state for 3410 ms across 2 interval(s), first at 1.55 s: D8 was not LOW for 2451 ms while required (grace 500 ms).",
+          "root_cause": "flowLooksLow() on line 29 compares the raw ADC count to LOW_FLOW_LPH=100, so D8 switches at ADC 100 (~488 mV = 244 L/h) rather than 100 L/h. Measured 'D8 was not LOW for 2451 ms while required' on the nominal ramp confirms the alarm stays HIGH well above the spec threshold."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Firmware silent for ~2 s per loop",
+          "description": "The blocking delay(2000) on line 75 leaves no serial output or pin activity between iterations, exceeding the 900 ms limit. Measured 'no activity for 2000 ms' repeatedly, e.g. 2014.242 to 4014.605 s. Firmware went silent for 2000 ms with no serial output or pin activity (limit 900 ms); 6 such gap(s).",
+          "assertion_type": "responsive",
+          "verified": true,
+          "evidence": "Firmware went silent for 2000 ms with no serial output or pin activity (limit 900 ms); 6 such gap(s).",
+          "root_cause": "The blocking delay(2000) on line 75 leaves no serial output or pin activity between iterations, exceeding the 900 ms limit. Measured 'no activity for 2000 ms' repeatedly, e.g. 2014.242 to 4014.605 s."
+        }
+      ],
+      "patched_sketch": "// Process-skid flow monitor with low-flow alarm lamp.\n// Flow transducer on A0 (2 mV per L/h), alarm lamp on D8.\n\nconst int FLOW_PIN = A0;\nconst int ALARM_PIN = 8;\nconst float LOW_FLOW_LPH = 100.0f;\nconst float HIGH_FLOW_LPH = 800.0f;\nconst unsigned long LOG_MS = 500;\nconst unsigned long CONFIRM_MS = 200;\n\nbool alarmLit = false;\nunsigned long lastLog = 0;\nunsigned long sampleCount = 0;\nfloat flowLph = 0.0f;\nfloat peakLph = 0.0f;\n\nbool pendingValid = false;\nbool pendingState = false;\nunsigned long pendingSince = 0;\n\nfloat readFlowLph()\n{\n    int raw = analogRead(FLOW_PIN);\n    float mv = (float)raw * 5000.0f / 1023.0f;\n    return mv / 2.0f;\n}\n\nvoid setAlarm(bool on)\n{\n    alarmLit = on;\n    digitalWrite(ALARM_PIN, on ? HIGH : LOW);\n}\n\nbool flowLooksLow(float flow)\n{\n    return flow < LOW_FLOW_LPH;\n}\n\nvoid notePeak(float flow)\n{\n    if (flow > peakLph)\n    {\n        peakLph = flow;\n    }\n}\n\nvoid emitLog()\n{\n    Serial.print(\"flow: \");\n    Serial.println(flowLph, 1);\n}\n\nvoid setup()\n{\n    pinMode(ALARM_PIN, OUTPUT);\n    digitalWrite(ALARM_PIN, LOW);\n    Serial.begin(9600);\n    lastLog = millis();\n    peakLph = 0.0f;\n}\n\nvoid loop()\n{\n    flowLph = readFlowLph();\n    sampleCount++;\n    notePeak(flowLph);\n\n    bool want = flowLooksLow(flowLph);\n    unsigned long now = millis();\n\n    if (want != alarmLit)\n    {\n        if (!pendingValid || pendingState != want)\n        {\n            pendingValid = true;\n            pendingState = want;\n            pendingSince = now;\n        }\n        else if (now - pendingSince >= CONFIRM_MS)\n        {\n            setAlarm(want);\n            pendingValid = false;\n        }\n    }\n    else\n    {\n        pendingValid = false;\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        emitLog();\n    }\n}\n",
+      "wall_s": 80.1,
+      "llm_calls": 4,
+      "prompt_tokens": 12883,
+      "completion_tokens": 3114,
+      "cost_usd": 0.00491512,
+      "model": "deepseek-chat"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/laundry_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "laundry_ok",
+      "run_id": "d24c0437561e",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Motor never starts when level begins at or above 25 cm",
+          "description": "The only path into ST_RUN is the FILL branch at lines 77-80, and FILL is only entered from IDLE when levelCm < EMPTY_CM (10 cm) at lines 73-76. If the probe already reads at or above 25 cm while in IDLE, no branch fires, so state stays ST_IDLE and driveOutputs() at line 38 keeps D10 LOW; the engine measured D10 not HIGH for 4400 ms starting at 600 ms in the out-of-range high-level scenario and for 3400 ms starting at 600 ms in the max/min range scenario. D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+          "root_cause": "The only path into ST_RUN is the FILL branch at lines 77-80, and FILL is only entered from IDLE when levelCm < EMPTY_CM (10 cm) at lines 73-76. If the probe already reads at or above 25 cm while in IDLE, no branch fires, so state stays ST_IDLE and driveOutputs() at line 38 keeps D10 LOW; the engine measured D10 not HIGH for 4400 ms starting at 600 ms in the out-of-range high-level scenario and for 3400 ms starting at 600 ms in the max/min range scenario."
+        }
+      ],
+      "patched_sketch": "// Compact laundry fill/run cycle controller (known-good build).\n// Level probe on A0 (10 mV/cm), fill valve on D9, drum motor on D10.\n// Reset button on D4 (pull-up) returns to IDLE.\n\nconst int LEVEL_PIN = A0;\nconst int VALVE_PIN = 9;\nconst int MOTOR_PIN = 10;\nconst int RESET_PIN = 4;\nconst float EMPTY_CM = 10.0f;\nconst float FULL_CM = 25.0f;\nconst float RUN_MIN_CM = 20.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\n\nenum CycleState\n{\n    ST_IDLE = 0,\n    ST_FILL = 1,\n    ST_RUN = 2\n};\n\nCycleState state = ST_IDLE;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat levelCm = 0.0f;\n\nfloat readLevelCm()\n{\n    int raw = analogRead(LEVEL_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid driveOutputs()\n{\n    digitalWrite(VALVE_PIN, state == ST_FILL ? HIGH : LOW);\n    digitalWrite(MOTOR_PIN, state == ST_RUN ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"laundry st=\");\n    Serial.print((int)state);\n    Serial.print(\" cm=\");\n    Serial.println(levelCm, 1);\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(MOTOR_PIN, OUTPUT);\n    pinMode(RESET_PIN, INPUT_PULLUP);\n    driveOutputs();\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        levelCm = readLevelCm();\n\n        if (digitalRead(RESET_PIN) == LOW)\n        {\n            state = ST_IDLE;\n        }\n        else if (state == ST_IDLE && levelCm >= FULL_CM)\n        {\n            state = ST_RUN;\n        }\n        else if (state == ST_IDLE && levelCm < EMPTY_CM)\n        {\n            state = ST_FILL;\n        }\n        else if (state == ST_FILL && levelCm >= FULL_CM)\n        {\n            state = ST_RUN;\n        }\n        else if (state == ST_RUN && levelCm < RUN_MIN_CM)\n        {\n            state = ST_IDLE;\n        }\n\n        driveOutputs();\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 98.2,
+      "llm_calls": 4,
+      "prompt_tokens": 9518,
+      "completion_tokens": 3908,
+      "cost_usd": 0.0043064,
+      "model": "deepseek-chat"
+    }
+  ]
+}

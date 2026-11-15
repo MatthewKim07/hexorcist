@@ -1,0 +1,48 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/attic_vent_hyst",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "attic_vent_hyst",
+      "run_id": "8f2947726676",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No 38 \u00b0C release threshold; fan drops out below 42 \u00b0C",
+          "description": "Line 66 uses a single trip point at FAN_ON_C (42.0) and line 72 turns the fan off for any reading below it, so there is no 38.0 \u00b0C release threshold. The measured evidence shows D8 not LOW for 619 ms while required at 1.00 s in the override-release scenario, and wrong-state intervals of ~200 ms in the override chatter scenario, because the fan follows the single 42 \u00b0C comparison instead of holding until 38 \u00b0C. D8 was in the wrong state for 999 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 200 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 999 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 200 ms while required (grace 500 ms).",
+          "root_cause": "Line 66 uses a single trip point at FAN_ON_C (42.0) and line 72 turns the fan off for any reading below it, so there is no 38.0 \u00b0C release threshold. The measured evidence shows D8 not LOW for 619 ms while required at 1.00 s in the override-release scenario, and wrong-state intervals of ~200 ms in the override chatter scenario, because the fan follows the single 42 \u00b0C comparison instead of holding until 38 \u00b0C."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Override release and temperature control chatter the relay",
+          "description": "The override branch at lines 58-62 forces the fan ON while D3 is LOW, but on release the code falls straight into the single-threshold comparison at line 66 with no hysteresis or debounce, so the relay flips as the reading crosses 42.0. Measured evidence shows D8 in the wrong state for 5348 ms across 60 intervals (first at 801 ms) and 5206 ms across 57 intervals (first at 1.70 s), with 50-150 ms wrong-state spans matching the 50 ms sample period. D8 was in the wrong state for 5348 ms across 60 interval(s), first at 801 ms: D8 was not LOW for 99 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 5348 ms across 60 interval(s), first at 801 ms: D8 was not LOW for 99 ms while required (grace 500 ms).",
+          "root_cause": "The override branch at lines 58-62 forces the fan ON while D3 is LOW, but on release the code falls straight into the single-threshold comparison at line 66 with no hysteresis or debounce, so the relay flips as the reading crosses 42.0. Measured evidence shows D8 in the wrong state for 5348 ms across 60 intervals (first at 801 ms) and 5206 ms across 57 intervals (first at 1.70 s), with 50-150 ms wrong-state spans matching the 50 ms sample period."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Relay toggles far beyond 2 per 5000 ms due to no hysteresis or filtering",
+          "description": "Every 50 ms sample re-evaluates a bare `lastTempC >= FAN_ON_C` comparison at line 66 and calls applyFan unconditionally at lines 68/72, with no hysteresis band and no input filtering or minimum dwell time. Measured evidence: 57 toggles in a 5000 ms window starting at 900 ms (limit 2), 34 toggles starting at 551 ms, and 8 toggles starting at 1.00 s for a glitch spike, so sensor noise and threshold hover directly chatter the relay. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": false,
+          "evidence": "D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+          "root_cause": "Every 50 ms sample re-evaluates a bare `lastTempC >= FAN_ON_C` comparison at line 66 and calls applyFan unconditionally at lines 68/72, with no hysteresis band and no input filtering or minimum dwell time. Measured evidence: 57 toggles in a 5000 ms window starting at 900 ms (limit 2), 34 toggles starting at 551 ms, and 8 toggles starting at 1.00 s for a glitch spike, so sensor noise and threshold hover directly chatter the relay."
+        }
+      ],
+      "patched_sketch": "// Attic ridge-vent controller for an Uno.\n// LM35 on A0, relay driver on D8, momentary override on D3 (pull-up).\n\nconst int TEMP_PIN = A0;\nconst int FAN_PIN = 8;\nconst int OVERRIDE_PIN = 3;\n\nconst float FAN_ON_C = 42.0f;\nconst float FAN_OFF_C = 38.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long TEMP_CONFIRM_MS = 300;\n\nbool fanRunning = false;\nunsigned long lastSampleMs = 0;\nunsigned long lastStatusMs = 0;\nfloat lastTempC = 0.0f;\n\n// Temperature confirmation: a new trip state must hold continuously.\nbool tempOnRaw = false;\nbool tempOnStable = false;\nunsigned long tempChangeMs = 0;\n\nfloat readAtticTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float millivolts = raw * (5000.0f / 1023.0f);\n    return millivolts / MV_PER_C;\n}\n\nvoid applyFan(bool wantOn)\n{\n    fanRunning = wantOn;\n    digitalWrite(FAN_PIN, wantOn ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"attic: \");\n    Serial.print(lastTempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanRunning ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(OVERRIDE_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSampleMs = millis();\n    lastStatusMs = millis();\n    tempOnRaw = false;\n    tempOnStable = false;\n    tempChangeMs = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSampleMs >= SAMPLE_MS)\n    {\n        lastSampleMs = now;\n        lastTempC = readAtticTempC();\n\n        // Hysteresis: ON at 42.0 C, OFF at 38.0 C.\n        bool wantOn = tempOnStable;\n        if (lastTempC >= FAN_ON_C)\n        {\n            wantOn = true;\n        }\n        else if (lastTempC <= FAN_OFF_C)\n        {\n            wantOn = false;\n        }\n\n        // Require the new trip state to hold continuously before accepting it.\n        if (wantOn != tempOnRaw)\n        {\n            tempOnRaw = wantOn;\n            tempChangeMs = now;\n        }\n        if (tempOnRaw != tempOnStable && (now - tempChangeMs) >= TEMP_CONFIRM_MS)\n        {\n            tempOnStable = tempOnRaw;\n        }\n\n        // Override forces the fan ON immediately (fail-safe, no delay).\n        bool overrideHeld = (digitalRead(OVERRIDE_PIN) == LOW);\n        if (overrideHeld)\n        {\n            applyFan(true);\n        }\n        else\n        {\n            applyFan(tempOnStable);\n        }\n    }\n\n    if (now - lastStatusMs >= STATUS_MS)\n    {\n        lastStatusMs = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 140.47,
+      "llm_calls": 7,
+      "prompt_tokens": 25111,
+      "completion_tokens": 6824,
+      "cost_usd": 0.00989716,
+      "model": "deepseek-chat"
+    }
+  ]
+}

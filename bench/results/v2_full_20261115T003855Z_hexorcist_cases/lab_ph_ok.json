@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/lab_ph_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "lab_ph_ok",
+      "run_id": "a17212b58703",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a3",
+          "title": "Range lamp chatters at the 8.50 threshold with no hysteresis",
+          "description": "updateRangeLamp() at lines 42-43 recomputes inBand from the instantaneous pH every loop iteration and drives D10 directly, with no hysteresis or debounce. Near the 8.50 boundary ADC noise flips the comparison each pass, so the lamp toggles; measured evidence shows D10 in the wrong state for 3555 ms across 1292 intervals in the threshold-hover scenario and 3750 ms across 26 intervals in the rapid-oscillation scenario. D10 was in the wrong state for 3495 ms across 1330 interval(s), first at 500 ms: D10 was not LOW for 3 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D10 was in the wrong state for 3495 ms across 1330 interval(s), first at 500 ms: D10 was not LOW for 3 ms while required (grace 500 ms).",
+          "root_cause": "updateRangeLamp() at lines 42-43 recomputes inBand from the instantaneous pH every loop iteration and drives D10 directly, with no hysteresis or debounce. Near the 8.50 boundary ADC noise flips the comparison each pass, so the lamp toggles; measured evidence shows D10 in the wrong state for 3555 ms across 1292 intervals in the threshold-hover scenario and 3750 ms across 26 intervals in the rapid-oscillation scenario."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Range lamp chatters at the 6.50 threshold with no hysteresis",
+          "description": "The same unconditional per-loop comparison in updateRangeLamp() (lines 42-43) means the 6.50 lower boundary is also evaluated on every raw sample with no filtering or hysteresis. Noise and ramps crossing the threshold toggle D10 repeatedly; measured evidence shows D10 wrong for 2712 ms across 1067 intervals near 8.50 and 1963 ms across 15 intervals during the slow drift across both thresholds. D10 was in the wrong state for 2712 ms across 1067 interval(s), first at 500 ms: D10 was not LOW for 2 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D10 was in the wrong state for 2712 ms across 1067 interval(s), first at 500 ms: D10 was not LOW for 2 ms while required (grace 500 ms).",
+          "root_cause": "The same unconditional per-loop comparison in updateRangeLamp() (lines 42-43) means the 6.50 lower boundary is also evaluated on every raw sample with no filtering or hysteresis. Noise and ramps crossing the threshold toggle D10 repeatedly; measured evidence shows D10 wrong for 2712 ms across 1067 intervals near 8.50 and 1963 ms across 15 intervals during the slow drift across both thresholds."
+        }
+      ],
+      "patched_sketch": "// Bench chemistry pH logger for the teaching lab.\n// Linearized probe on A1 (500 mV/pH), range LED on D10.\n\nconst int PH_PIN = A1;\nconst int RANGE_PIN = 10;\nconst float MV_PER_PH = 500.0f;\nconst float LOW_PH = 6.50f;\nconst float HIGH_PH = 8.50f;\nconst unsigned long PERIOD_MS = 1000;\nconst unsigned long CONFIRM_MS = 200;\n\nunsigned long lastPrint = 0;\nunsigned long sampleCount = 0;\nfloat phValue = 0.0f;\nfloat phMin = 14.0f;\nfloat phMax = 0.0f;\nbool inBand = true;\nbool pendingInBand = true;\nunsigned long pendingSince = 0;\n\nfloat adcMillivolts(int raw)\n{\n    return raw * (5000.0f / 1023.0f);\n}\n\nfloat millivoltsToPh(float mv)\n{\n    return mv / MV_PER_PH;\n}\n\nvoid trackPh(float ph)\n{\n    if (ph < phMin)\n    {\n        phMin = ph;\n    }\n    if (ph > phMax)\n    {\n        phMax = ph;\n    }\n}\n\nvoid updateRangeLamp(float ph)\n{\n    bool wantInBand = (ph >= LOW_PH) && (ph <= HIGH_PH);\n    unsigned long now = millis();\n\n    if (wantInBand != pendingInBand)\n    {\n        pendingInBand = wantInBand;\n        pendingSince = now;\n    }\n\n    if (pendingInBand != inBand)\n    {\n        if (now - pendingSince >= CONFIRM_MS)\n        {\n            inBand = pendingInBand;\n        }\n    }\n\n    digitalWrite(RANGE_PIN, inBand ? LOW : HIGH);\n}\n\nvoid printPh()\n{\n    Serial.print(\"pH: \");\n    Serial.println(phValue, 2);\n}\n\nvoid setup()\n{\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n    pendingSince = lastPrint;\n}\n\nvoid loop()\n{\n    int raw = analogRead(PH_PIN);\n    float mv = adcMillivolts(raw);\n    phValue = millivoltsToPh(mv);\n    sampleCount++;\n    trackPh(phValue);\n    updateRangeLamp(phValue);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printPh();\n    }\n}\n",
+      "wall_s": 157.16,
+      "llm_calls": 6,
+      "prompt_tokens": 17927,
+      "completion_tokens": 5638,
+      "cost_usd": 0.00738752,
+      "model": "deepseek-chat"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "case_id": "lobby_lamp_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No debounce window; bounce toggles multiple times",
+      "description": "The settle logic only requires the raw level to be unchanged for 45 ms, but a bouncing contact re-arms edgeMs on every transition, so a 20 ms bounce burst can still produce multiple accepted LOW transitions and multiple toggles. A proper debounce must require the raw input to be stable for the full settle window before accepting a new state, and must not re-trigger on release.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Release can toggle lamp",
+      "description": "Because stable is updated to any raw level after 45 ms and the toggle fires whenever stable==LOW, a slow or noisy release that dips LOW again after settling can produce an extra toggle; the state machine does not latch that a press was already consumed until a clean HIGH is seen.",
+      "category": "stuck_state_machine"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lobby_lamp_ok",
+    "spec": "- Lobby switch on D3 to ground with internal pull-up (active LOW); accent lamp on D12.\n- Each settled press toggles the lamp exactly once within 150 ms; release must not toggle.\n- Bounce up to 20 ms must not create extra toggles.\n- Settle window is 45 ms before accepting a press.\n- Print `lobby lamp=ON n=<count>` or `lobby lamp=OFF n=<count>` every 1400 ms.\n- Idle switch level is HIGH.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No debounce window; bounce toggles multiple times",
+        "description": "The settle logic only requires the raw level to be unchanged for 45 ms, but a bouncing contact re-arms edgeMs on every transition, so a 20 ms bounce burst can still produce multiple accepted LOW transitions and multiple toggles. A proper debounce must require the raw input to be stable for the full settle window before accepting a new state, and must not re-trigger on release.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Release can toggle lamp",
+        "description": "Because stable is updated to any raw level after 45 ms and the toggle fires whenever stable==LOW, a slow or noisy release that dips LOW again after settling can produce an extra toggle; the state machine does not latch that a press was already consumed until a clean HIGH is seen.",
+        "category": "stuck_state_machine"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 760,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001692,
+    "cached": true
+  }
+}

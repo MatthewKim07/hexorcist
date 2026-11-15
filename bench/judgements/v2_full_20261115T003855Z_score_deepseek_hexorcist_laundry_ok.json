@@ -1,0 +1,46 @@
+{
+  "case_id": "laundry_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Motor never starts when level begins at or above 25 cm",
+      "description": "The only path into ST_RUN is the FILL branch at lines 77-80, and FILL is only entered from IDLE when levelCm < EMPTY_CM (10 cm) at lines 73-76. If the probe already reads at or above 25 cm while in IDLE, no branch fires, so state stays ST_IDLE and driveOutputs() at line 38 keeps D10 LOW; the engine measured D10 not HIGH for 4400 ms starting at 600 ms in the out-of-range high-level scenario and for 3400 ms starting at 600 ms in the max/min range scenario. D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "laundry_ok",
+    "spec": "- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).\n- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.\n- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.\n- Enter FILL from IDLE when level is below 10.0 cm.\n- Holding D4 LOW forces IDLE immediately.\n- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Motor never starts when level begins at or above 25 cm",
+        "description": "The only path into ST_RUN is the FILL branch at lines 77-80, and FILL is only entered from IDLE when levelCm < EMPTY_CM (10 cm) at lines 73-76. If the probe already reads at or above 25 cm while in IDLE, no branch fires, so state stays ST_IDLE and driveOutputs() at line 38 keeps D10 LOW; the engine measured D10 not HIGH for 4400 ms starting at 600 ms in the out-of-range high-level scenario and for 3400 ms starting at 600 ms in the max/min range scenario. D10 was in the wrong state for 3550 ms across 1 interval(s), first at 2.53 s: D10 was not HIGH for 3550 ms while required (grace 600 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 815,
+    "completion_tokens": 51,
+    "cost_usd": 0.00015285,
+    "cached": true
+  }
+}

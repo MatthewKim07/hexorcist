@@ -1,0 +1,192 @@
+{
+  "case_id": "process_dual_block_scale",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Flow not scaled to L/h",
+      "description": "readFlowLph returns raw ADC counts instead of converting to millivolts (counts * 5000/1023) and dividing by 2 mV/Lph, so printed flow and alarm threshold are wrong by a large factor.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Logging every 2 s instead of 500 ms",
+      "description": "loop uses delay(2000) and logs unconditionally, so serial output occurs every ~2 s, violating the 500 ms logging requirement and the 900 ms silence limit.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b3",
+      "title": "Alarm threshold uses raw counts",
+      "description": "flowLooksLow compares raw ADC counts against 100 L/h, so the alarm state does not correspond to the actual flow in L/h.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b4",
+      "title": "No hysteresis on alarm",
+      "description": "The alarm turns off immediately when flow rises above 100 L/h (and the HIGH_FLOW_LPH branch is redundant), causing chatter around the threshold; a hysteresis band is needed.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Treats raw ADC counts as L/h",
+      "check_ids": [
+        "a_val"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "blocking_delay",
+      "description": "delay(2000) stalls log cadence and responsiveness",
+      "check_ids": [
+        "a_resp",
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Treats raw ADC counts as L/h",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'flow: (-?[0-9.]+)' match the stimulus (tolerance 10) (Printed flow matches sensor)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "blocking_delay",
+      "description": "delay(2000) stalls log cadence and responsiveness",
+      "check_ids": [
+        "a_resp",
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_resp",
+          "type": "responsive",
+          "behaviour": " responds to stimulus within None ms (Stay responsive)"
+        },
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^flow: ' every 500 ms (2 Hz flow log)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "process_dual_block_scale",
+    "spec": "- Flow transducer on A0 scaled at 2 mV/Lph; low-flow alarm lamp on D8.\n- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 2 to obtain L/h.\n- Print `flow: <value>` every 500 ms with one decimal place.\n- Printed flow must match the injected value within \u00b110 L/h.\n- Drive D8 HIGH when flow is below 100 L/h; otherwise LOW.\n- Firmware must never go silent (no serial and no output change) for more than 900 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Treats raw ADC counts as L/h",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'flow: (-?[0-9.]+)' match the stimulus (tolerance 10) (Printed flow matches sensor)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "blocking_delay",
+        "description": "delay(2000) stalls log cadence and responsiveness",
+        "check_ids": [
+          "a_resp",
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_resp",
+            "type": "responsive",
+            "behaviour": " responds to stimulus within None ms (Stay responsive)"
+          },
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^flow: ' every 500 ms (2 Hz flow log)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Flow not scaled to L/h",
+        "description": "readFlowLph returns raw ADC counts instead of converting to millivolts (counts * 5000/1023) and dividing by 2 mV/Lph, so printed flow and alarm threshold are wrong by a large factor.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Logging every 2 s instead of 500 ms",
+        "description": "loop uses delay(2000) and logs unconditionally, so serial output occurs every ~2 s, violating the 500 ms logging requirement and the 900 ms silence limit.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b3",
+        "title": "Alarm threshold uses raw counts",
+        "description": "flowLooksLow compares raw ADC counts against 100 L/h, so the alarm state does not correspond to the actual flow in L/h.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b4",
+        "title": "No hysteresis on alarm",
+        "description": "The alarm turns off immediately when flow rises above 100 L/h (and the HIGH_FLOW_LPH branch is redundant), causing chatter around the threshold; a hysteresis band is needed.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Flow not scaled to L/h matches wrong unit scaling bug.\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Logging every 2 s instead of 500 ms matches blocking delay bug.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 2}\n  ],\n  \"unmatched_reported\": [3],\n  \"unique_false_alarm_indices\": [3],\n  \"notes\": \"Reported bug about hysteresis does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Flow not scaled to L/h matches wrong unit scaling bug."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Logging every 2 s instead of 500 ms matches blocking delay bug."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 2
+      }
+    ],
+    "unmatched_reported": [
+      3
+    ],
+    "unique_false_alarm_indices": [
+      3
+    ],
+    "notes": "Reported bug about hysteresis does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1134,
+    "completion_tokens": 150,
+    "cost_usd": 0.0002601,
+    "cached": true
+  }
+}

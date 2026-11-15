@@ -1,0 +1,60 @@
+{
+  "case_id": "boiler_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Valve reopens too slowly after lockout release",
+      "description": "The valve state is only recomputed inside the 40 ms tick block (lines 55-74), and the lockout branch at lines 62-65 forces the valve closed while D3 is LOW. After release, reopening depends on the next tick where tempC is still below FIRE_ON_C, but the measured evidence shows D6 was not HIGH for 319 ms and 860 ms respectively, exceeding the 500 ms grace in the second case. The firmware does not latch or immediately re-evaluate on lockout release, so the reopen is delayed beyond the required 500 ms window. D6 was in the wrong state for 319 ms across 1 interval(s), first at 2.00 s: D6 was not HIGH for 319 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Lockout key not debounced and polled only every 40 ms",
+      "description": "D3 is read directly with digitalRead at line 59 with no debounce, and only once per 40 ms tick (line 55). Short 60 ms presses and contact bounce are therefore sampled inconsistently, and the measured evidence shows D6 not HIGH for 500-940 ms across multiple intervals in the short-press and bounce scenarios. The lockout state is also not held or filtered, so brief LOW glitches and missed presses cause the valve to stay closed longer than the 500 ms allowance. D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "boiler_ok",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Valve reopens too slowly after lockout release",
+        "description": "The valve state is only recomputed inside the 40 ms tick block (lines 55-74), and the lockout branch at lines 62-65 forces the valve closed while D3 is LOW. After release, reopening depends on the next tick where tempC is still below FIRE_ON_C, but the measured evidence shows D6 was not HIGH for 319 ms and 860 ms respectively, exceeding the 500 ms grace in the second case. The firmware does not latch or immediately re-evaluate on lockout release, so the reopen is delayed beyond the required 500 ms window. D6 was in the wrong state for 319 ms across 1 interval(s), first at 2.00 s: D6 was not HIGH for 319 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Lockout key not debounced and polled only every 40 ms",
+        "description": "D3 is read directly with digitalRead at line 59 with no debounce, and only once per 40 ms tick (line 55). Short 60 ms presses and contact bounce are therefore sampled inconsistently, and the measured evidence shows D6 not HIGH for 500-940 ms across multiple intervals in the short-press and bounce scenarios. The lockout state is also not held or filtered, so brief LOW glitches and missed presses cause the valve to stay closed longer than the 500 ms allowance. D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1020,
+    "completion_tokens": 57,
+    "cost_usd": 0.0001872,
+    "cached": true
+  }
+}

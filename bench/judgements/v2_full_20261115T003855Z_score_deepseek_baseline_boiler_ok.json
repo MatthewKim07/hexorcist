@@ -1,0 +1,95 @@
+{
+  "case_id": "boiler_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No hysteresis in fault recovery / fault band uses same thresholds as fire band",
+      "description": "The fault thresholds (5/120 \u00b0C) are checked every tick and force the valve closed, but there is no separate recovery band; more importantly the fire band (70/75) and fault band are evaluated with the same instantaneous reading, so a noisy probe near 70 or 75 \u00b0C can chatter the valve. The behaviour requires a sustained in-range band crossing, which is not implemented.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b2",
+      "title": "No debounce on lockout key",
+      "description": "D3 is read directly each 40 ms tick with no debounce, so a bouncing key can momentarily release lockout and open the valve.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b3",
+      "title": "ADC reference scaling assumes 5 V but uses 1023 divisor",
+      "description": "mv = raw * (5000/1023) is a minor scaling choice, but combined with 10 mV/\u00b0C the reported temperature is slightly off; more critically the code never sets the analog reference, so if AREF differs the 10 mV/\u00b0C scale is wrong. The behaviour expects 10 mV/\u00b0C on the default 5 V reference.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b4",
+      "title": "Status print uses stale tempC and firing flag ordering",
+      "description": "printStatus prints tempC and firing which are updated in the tick block; if the status interval fires before a tick update the printed value can lag, but the format itself matches. Minor.",
+      "category": "serial_format"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "boiler_ok",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No hysteresis in fault recovery / fault band uses same thresholds as fire band",
+        "description": "The fault thresholds (5/120 \u00b0C) are checked every tick and force the valve closed, but there is no separate recovery band; more importantly the fire band (70/75) and fault band are evaluated with the same instantaneous reading, so a noisy probe near 70 or 75 \u00b0C can chatter the valve. The behaviour requires a sustained in-range band crossing, which is not implemented.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b2",
+        "title": "No debounce on lockout key",
+        "description": "D3 is read directly each 40 ms tick with no debounce, so a bouncing key can momentarily release lockout and open the valve.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b3",
+        "title": "ADC reference scaling assumes 5 V but uses 1023 divisor",
+        "description": "mv = raw * (5000/1023) is a minor scaling choice, but combined with 10 mV/\u00b0C the reported temperature is slightly off; more critically the code never sets the analog reference, so if AREF differs the 10 mV/\u00b0C scale is wrong. The behaviour expects 10 mV/\u00b0C on the default 5 V reference.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b4",
+        "title": "Status print uses stale tempC and firing flag ordering",
+        "description": "printStatus prints tempC and firing which are updated in the tick block; if the status interval fires before a tick update the printed value can lag, but the format itself matches. Minor.",
+        "category": "serial_format"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2, 3],\n  \"unique_false_alarm_indices\": [0, 1, 2, 3],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1039,
+    "completion_tokens": 104,
+    "cost_usd": 0.00021825,
+    "cached": true
+  }
+}

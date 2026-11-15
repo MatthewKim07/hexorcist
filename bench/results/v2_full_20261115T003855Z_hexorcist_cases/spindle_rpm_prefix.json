@@ -1,0 +1,57 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/spindle_rpm_prefix",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "spindle_rpm_prefix",
+      "run_id": "f8a2d871499a",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "RPM line format wrong (lowercase, space after colon)",
+          "description": "printRpm at lines 45-46 emits \"rpm: \" followed by the value, but the spec requires `RPM:<n>` with no space after the colon. The measured evidence shows no serial line matched /^RPM:[0-9]+$/ in 8.00 s across 21 scenarios, so the required line is never produced. No serial line matched /^RPM:[0-9]+$/ in 8.00 s; expected one every 1000 ms.",
+          "assertion_type": "serial_period",
+          "verified": true,
+          "evidence": "No serial line matched /^RPM:[0-9]+$/ in 8.00 s; expected one every 1000 ms.",
+          "root_cause": "printRpm at lines 45-46 emits \"rpm: \" followed by the value, but the spec requires `RPM:<n>` with no space after the colon. The measured evidence shows no serial line matched /^RPM:[0-9]+$/ in 8.00 s across 21 scenarios, so the required line is never produced."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Printed rpm never parsable so value cannot be verified",
+          "description": "Because printRpm (lines 45-46) prints \"rpm: \" instead of \"RPM:\", the value pattern /RPM:(-?[0-9.]+)/ never matches; measured evidence reports no parsable serial value in 8.00 s. The scaling at line 21 (raw * 5000/1023) is also suspect for 1 mV/rpm, but the format failure alone prevents any comparison. No serial line matched /RPM:(-?[0-9.]+)/ so the printed value could not be compared with A5.",
+          "assertion_type": "serial_value_matches",
+          "verified": true,
+          "evidence": "No serial line matched /RPM:(-?[0-9.]+)/ so the printed value could not be compared with A5.",
+          "root_cause": "Because printRpm (lines 45-46) prints \"rpm: \" instead of \"RPM:\", the value pattern /RPM:(-?[0-9.]+)/ never matches; measured evidence reports no parsable serial value in 8.00 s. The scaling at line 21 (raw * 5000/1023) is also suspect for 1 mV/rpm, but the format failure alone prevents any comparison."
+        },
+        {
+          "id": "bug-a3",
+          "title": "D9 fails to light at over-speed due to mute handling and sampling",
+          "description": "updateWarn (lines 38-40) only runs every 50 ms inside the sample branch and reads mute directly, so a released mute at 2100 rpm left D9 not HIGH for 2002 ms (measured). The lamp state also depends on the raw noisy reading with no hysteresis, causing wrong-state intervals up to 4048 ms. D9 was in the wrong state for 2101 ms across 2 interval(s), first at 500 ms: D9 was not HIGH for 2002 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 was in the wrong state for 2101 ms across 2 interval(s), first at 500 ms: D9 was not HIGH for 2002 ms while required (grace 500 ms).",
+          "root_cause": "updateWarn (lines 38-40) only runs every 50 ms inside the sample branch and reads mute directly, so a released mute at 2100 rpm left D9 not HIGH for 2002 ms (measured). The lamp state also depends on the raw noisy reading with no hysteresis, causing wrong-state intervals up to 4048 ms."
+        },
+        {
+          "id": "bug-a4",
+          "title": "D9 chatters on noisy threshold readings",
+          "description": "updateWarn uses a bare `v >= WARN_RPM` comparison (line 39) on an unfiltered analogRead (line 20), so noise around 2000 mV toggles D9 every sample. Measured evidence shows D9 not LOW for 50-150 ms intervals across 14 scenarios, e.g. 3353 ms wrong across 37 intervals. D9 was in the wrong state for 3353 ms across 37 interval(s), first at 900 ms: D9 was not LOW for 50 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 was in the wrong state for 3353 ms across 37 interval(s), first at 900 ms: D9 was not LOW for 50 ms while required (grace 500 ms).",
+          "root_cause": "updateWarn uses a bare `v >= WARN_RPM` comparison (line 39) on an unfiltered analogRead (line 20), so noise around 2000 mV toggles D9 every sample. Measured evidence shows D9 not LOW for 50-150 ms intervals across 14 scenarios, e.g. 3353 ms wrong across 37 intervals."
+        }
+      ],
+      "patched_sketch": "// CNC spindle tach display.\n// Tach voltage on A5 (1 mV/rpm), warn lamp on D9, mute on D3.\n\nconst int TACH_PIN = A5;\nconst int WARN_PIN = 9;\nconst int MUTE_PIN = 3;\nconst float WARN_RPM = 2000.0f;\nconst float WARN_HYST_RPM = 50.0f;\nconst unsigned long PERIOD_MS = 1000;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long CONFIRM_MS = 200;\n\nunsigned long lastPrint = 0;\nunsigned long lastSample = 0;\nfloat rpm = 0.0f;\nfloat rpmMin = 99999.0f;\nfloat rpmMax = 0.0f;\nbool warnLit = false;\nbool warnCand = false;\nunsigned long warnCandSince = 0;\nbool muteCand = false;\nunsigned long muteCandSince = 0;\n\nfloat readRpm()\n{\n    int raw = analogRead(TACH_PIN);\n    return raw * (5000.0f / 1023.0f);\n}\n\nvoid trackExtremes(float v)\n{\n    if (v < rpmMin)\n    {\n        rpmMin = v;\n    }\n    if (v > rpmMax)\n    {\n        rpmMax = v;\n    }\n}\n\nvoid updateWarn(float v)\n{\n    unsigned long now = millis();\n\n    bool mutedRaw = (digitalRead(MUTE_PIN) == LOW);\n    if (mutedRaw != muteCand)\n    {\n        muteCand = mutedRaw;\n        muteCandSince = now;\n    }\n    bool muted = muteCand;\n\n    bool want;\n    if (warnLit)\n    {\n        want = (v >= (WARN_RPM - WARN_HYST_RPM));\n    }\n    else\n    {\n        want = (v >= WARN_RPM);\n    }\n    want = want && (!muted);\n\n    if (want != warnCand)\n    {\n        warnCand = want;\n        warnCandSince = now;\n    }\n    if (warnCand != warnLit && (now - warnCandSince) >= CONFIRM_MS)\n    {\n        warnLit = warnCand;\n    }\n\n    digitalWrite(WARN_PIN, warnLit ? HIGH : LOW);\n}\n\nvoid printRpm(float v)\n{\n    Serial.print(\"RPM:\");\n    Serial.println(v, 0);\n}\n\nvoid setup()\n{\n    pinMode(WARN_PIN, OUTPUT);\n    pinMode(MUTE_PIN, INPUT_PULLUP);\n    digitalWrite(WARN_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n    lastSample = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        rpm = readRpm();\n        trackExtremes(rpm);\n        updateWarn(rpm);\n    }\n\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printRpm(rpm);\n        Serial.print(\"spindle min=\");\n        Serial.print(rpmMin, 0);\n        Serial.print(\" max=\");\n        Serial.println(rpmMax, 0);\n    }\n}\n",
+      "wall_s": 122.3,
+      "llm_calls": 6,
+      "prompt_tokens": 19766,
+      "completion_tokens": 4949,
+      "cost_usd": 0.00761306,
+      "model": "deepseek-chat"
+    }
+  ]
+}

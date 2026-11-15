@@ -1,0 +1,106 @@
+{
+  "case_id": "boiler_valve_failsafe",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No failsafe for out-of-range temperature",
+      "description": "The behaviour requires the valve to be forced CLOSED when tempC > 120 \u00b0C or < 5 \u00b0C, but the sketch has no such check; a very low reading (e.g. open probe) would actually open the valve via the tempC < 70 branch, and a very high reading would only close it if it also exceeds 75 \u00b0C, never enforcing the 120 \u00b0C cutoff.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "Missing hysteresis state machine",
+      "description": "The code uses independent if/else-if thresholds without a latched firing state, so between 70 and 75 \u00b0C the valve state depends on which branch was last taken rather than holding the previous state; the intended 70/75 band hysteresis is not actually implemented as a state machine.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "boiler_valve_failsafe",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "Valve stays open on sensor overrange",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No failsafe for out-of-range temperature",
+        "description": "The behaviour requires the valve to be forced CLOSED when tempC > 120 \u00b0C or < 5 \u00b0C, but the sketch has no such check; a very low reading (e.g. open probe) would actually open the valve via the tempC < 70 branch, and a very high reading would only close it if it also exceeds 75 \u00b0C, never enforcing the 120 \u00b0C cutoff.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b2",
+        "title": "Missing hysteresis state machine",
+        "description": "The code uses independent if/else-if thresholds without a latched firing state, so between 70 and 75 \u00b0C the valve state depends on which branch was last taken rather than holding the previous state; the intended 70/75 band hysteresis is not actually implemented as a state machine.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same failsafe issue with out-of-range temperature.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report about hysteresis does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same failsafe issue with out-of-range temperature."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report about hysteresis does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 992,
+    "completion_tokens": 93,
+    "cost_usd": 0.0002046,
+    "cached": true
+  }
+}

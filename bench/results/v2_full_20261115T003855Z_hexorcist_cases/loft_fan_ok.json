@@ -1,0 +1,48 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/loft_fan_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "loft_fan_ok",
+      "run_id": "7cc75832a0e0",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Fan stays ON after boost release at low temperature",
+          "description": "When boost is released at 0 C, the code only turns the fan OFF after offHold reaches HOLD (4 samples) at lines 78-94, but the measured evidence shows D5 was not LOW for 2833 ms starting at 3.32 s. The hysteresis logic at lines 87-94 never forces an immediate OFF on release, so the fan remains ON well beyond the 500 ms grace period. D5 was in the wrong state for 2833 ms across 1 interval(s), first at 3.32 s: D5 was not LOW for 2833 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D5 was in the wrong state for 2833 ms across 1 interval(s), first at 3.32 s: D5 was not LOW for 2833 ms while required (grace 500 ms).",
+          "root_cause": "When boost is released at 0 C, the code only turns the fan OFF after offHold reaches HOLD (4 samples) at lines 78-94, but the measured evidence shows D5 was not LOW for 2833 ms starting at 3.32 s. The hysteresis logic at lines 87-94 never forces an immediate OFF on release, so the fan remains ON well beyond the 500 ms grace period."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Boost override not applied while button held",
+          "description": "The boost check at line 62 only runs inside the 50 ms sample block (line 57), and driveFan(true) at line 66 is only reached when a sample occurs; the measured evidence shows D5 was not LOW for 3602 ms starting at 500 ms while D4 was held. Because the fan state is only updated on sample ticks and the boost branch resets holds but the fan can be driven OFF by the offHold path in other samples, the forced-ON requirement is not sustained. D5 was in the wrong state for 8100 ms across 3 interval(s), first at 500 ms: D5 was not LOW for 3602 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D5 was in the wrong state for 8100 ms across 3 interval(s), first at 500 ms: D5 was not LOW for 3602 ms while required (grace 500 ms).",
+          "root_cause": "The boost check at line 62 only runs inside the 50 ms sample block (line 57), and driveFan(true) at line 66 is only reached when a sample occurs; the measured evidence shows D5 was not LOW for 3602 ms starting at 500 ms while D4 was held. Because the fan state is only updated on sample ticks and the boost branch resets holds but the fan can be driven OFF by the offHold path in other samples, the forced-ON requirement is not sustained."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Fan toggles far exceed 2 per 5000 ms window",
+          "description": "Each boost press calls driveFan(true) at line 66 and each release lets offHold accumulate to driveFan(false) at line 93, with no rate limiting or minimum dwell time anywhere in the code. The measured evidence shows 8 toggles in a 5000 ms window starting at 1.00 s and 26 toggles in another window, far above the limit of 2. D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": false,
+          "evidence": "D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "root_cause": "Each boost press calls driveFan(true) at line 66 and each release lets offHold accumulate to driveFan(false) at line 93, with no rate limiting or minimum dwell time anywhere in the code. The measured evidence shows 8 toggles in a 5000 ms window starting at 1.00 s and 26 toggles in another window, far above the limit of 2."
+        }
+      ],
+      "patched_sketch": "// Loft cooling fan with hysteresis and a boost button.\n// TMP-style linear probe on A3 (10 mV/\u00b0C), fan on D5, boost on D4.\n\nconst int TEMP_PIN = A3;\nconst int FAN_PIN = 5;\nconst int BOOST_PIN = 4;\n\nconst float ON_C = 36.0f;\nconst float OFF_C = 32.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long LOG_MS = 1000;\nconst unsigned long CONFIRM_MS = 200;\nconst unsigned long BOOST_CONFIRM_MS = 40;\n\nbool fanOn = false;\nbool boostLatched = false;\nbool boostRaw = false;\nunsigned long boostSince = 0;\nbool onActive = false;\nunsigned long onSince = 0;\nbool offActive = false;\nunsigned long offSince = 0;\nunsigned long lastSample = 0;\nunsigned long lastLog = 0;\nfloat tempC = 0.0f;\n\nfloat sampleTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid driveFan(bool on)\n{\n    if (on == fanOn)\n    {\n        return;\n    }\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid logLine()\n{\n    Serial.print(\"loft: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(BOOST_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        tempC = sampleTempC();\n\n        bool boostActive = (digitalRead(BOOST_PIN) == LOW);\n\n        // Confirm a boost press; a confirmed press latches the fan ON.\n        if (boostActive)\n        {\n            if (!boostRaw)\n            {\n                boostRaw = true;\n                boostSince = now;\n            }\n            else if (now - boostSince >= BOOST_CONFIRM_MS)\n            {\n                boostLatched = true;\n            }\n        }\n        else\n        {\n            boostRaw = false;\n        }\n\n        if (tempC >= ON_C)\n        {\n            if (!onActive)\n            {\n                onActive = true;\n                onSince = now;\n            }\n        }\n        else\n        {\n            onActive = false;\n        }\n        if (tempC <= OFF_C)\n        {\n            if (!offActive)\n            {\n                offActive = true;\n                offSince = now;\n            }\n        }\n        else\n        {\n            offActive = false;\n        }\n\n        bool wantOn = fanOn;\n        if (boostLatched)\n        {\n            wantOn = true;\n        }\n        else if (onActive && now - onSince >= CONFIRM_MS)\n        {\n            wantOn = true;\n        }\n        else if (offActive && now - offSince >= CONFIRM_MS)\n        {\n            wantOn = false;\n        }\n\n        if (wantOn != fanOn)\n        {\n            driveFan(wantOn);\n        }\n\n        // Release the boost latch once the temperature has fallen to OFF.\n        if (boostLatched && tempC <= OFF_C)\n        {\n            boostLatched = false;\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        logLine();\n    }\n}\n",
+      "wall_s": 193.21,
+      "llm_calls": 6,
+      "prompt_tokens": 19663,
+      "completion_tokens": 5380,
+      "cost_usd": 0.00776524,
+      "model": "deepseek-chat"
+    }
+  ]
+}

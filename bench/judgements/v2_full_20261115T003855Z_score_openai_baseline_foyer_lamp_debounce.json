@@ -1,0 +1,107 @@
+{
+  "case_id": "foyer_lamp_debounce",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce logic",
+      "description": "The sketch does not implement debounce logic, which can lead to multiple toggles due to contact bounce when the switch is pressed or released.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Missing settle window",
+      "description": "The sketch does not wait for a settle window of 40 ms before accepting a press edge, which may cause false toggles during that time.",
+      "category": "missing_debounce"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Raw edge sampling multi-toggles through bounce",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Raw edge sampling multi-toggles through bounce",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D11 toggles exactly once per settled press on None (One lamp toggle per settled press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "foyer_lamp_debounce",
+    "spec": "- Momentary wall switch on D5 to ground with internal pull-up (active LOW); foyer lamp driver on D11.\n- Each settled press toggles the lamp exactly once within 150 ms; releasing the switch must not toggle.\n- Contact bounce up to 20 ms on press and release must not produce extra toggles.\n- Debounce / settle window of 40 ms before accepting a press edge.\n- Every 1500 ms print `foyer lamp=ON` or `foyer lamp=OFF`.\n- Idle (unpressed) switch reads HIGH; a physical press is a HIGH-to-LOW transition after settle.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "Raw edge sampling multi-toggles through bounce",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D11 toggles exactly once per settled press on None (One lamp toggle per settled press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce logic",
+        "description": "The sketch does not implement debounce logic, which can lead to multiple toggles due to contact bounce when the switch is pressed or released.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Missing settle window",
+        "description": "The sketch does not wait for a settle window of 40 ms before accepting a press edge, which may cause false toggles during that time.",
+        "category": "missing_debounce"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes missing debounce logic which leads to multi-toggles due to bounce.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs relate to the same underlying issue of missing debounce logic.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes missing debounce logic which leads to multi-toggles due to bounce."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs relate to the same underlying issue of missing debounce logic."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 806,
+    "completion_tokens": 111,
+    "cost_usd": 0.0001875,
+    "cached": true
+  }
+}

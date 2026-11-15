@@ -196,8 +196,10 @@ def match_bugs_with_judge(
             credited.add(idx)
 
     # Prefer judge's unique_false_alarm_indices (deduped); else unmatched after removing credited.
+    # The judge sometimes returns an index equal to len(reported); drop indices that name no report.
     uniq = judgement.get("unique_false_alarm_indices")
     if isinstance(uniq, list) and all(isinstance(i, int) for i in uniq):
+        uniq = [i for i in uniq if 0 <= i < len(reported)]
         false_alarms = sorted(set(uniq))
     else:
         unmatched = judgement.get("unmatched_reported")

@@ -1,0 +1,88 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No rate limit on fan toggles",
+      "description": "The sketch never enforces the 'max 2 state changes per 5000 ms' rule; rapid threshold crossings or boost release can toggle the fan more often than allowed.",
+      "category": "other"
+    },
+    {
+      "id": "b2",
+      "title": "Boost release leaves fan stuck ON",
+      "description": "When boost is released, the hold counters are stale/zero and the fan stays ON until a fresh 4-sample OFF hold completes, but more importantly the forced-ON state isn't re-evaluated against temperature, so fan can remain ON below OFF_C for up to 200 ms and the boost override isn't cleanly cleared.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b3",
+      "title": "ADC reference scaling assumes 5 V",
+      "description": "sampleTempC uses 5000 mV full-scale with 1023 divisor; on a 5 V Uno this is approximately correct but the divisor should be 1024 for proper LSB scaling, causing a small systematic temperature error near thresholds.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b4",
+      "title": "Boost not debounced",
+      "description": "D4 is read directly each 50 ms sample with no debounce; a noisy or bouncing button can momentarily force the fan ON and count as a state change, violating the toggle-rate limit.",
+      "category": "missing_debounce"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No rate limit on fan toggles",
+        "description": "The sketch never enforces the 'max 2 state changes per 5000 ms' rule; rapid threshold crossings or boost release can toggle the fan more often than allowed.",
+        "category": "other"
+      },
+      {
+        "id": "b2",
+        "title": "Boost release leaves fan stuck ON",
+        "description": "When boost is released, the hold counters are stale/zero and the fan stays ON until a fresh 4-sample OFF hold completes, but more importantly the forced-ON state isn't re-evaluated against temperature, so fan can remain ON below OFF_C for up to 200 ms and the boost override isn't cleanly cleared.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b3",
+        "title": "ADC reference scaling assumes 5 V",
+        "description": "sampleTempC uses 5000 mV full-scale with 1023 divisor; on a 5 V Uno this is approximately correct but the divisor should be 1024 for proper LSB scaling, causing a small systematic temperature error near thresholds.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b4",
+        "title": "Boost not debounced",
+        "description": "D4 is read directly each 50 ms sample with no debounce; a noisy or bouncing button can momentarily force the fan ON and count as a state change, violating the toggle-rate limit.",
+        "category": "missing_debounce"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2, 3],\n  \"unique_false_alarm_indices\": [0, 1, 2, 3],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 941,
+    "completion_tokens": 70,
+    "cost_usd": 0.00018315,
+    "cached": true
+  }
+}

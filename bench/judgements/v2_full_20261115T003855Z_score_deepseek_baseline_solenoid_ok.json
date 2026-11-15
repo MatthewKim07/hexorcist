@@ -1,0 +1,81 @@
+{
+  "case_id": "solenoid_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Debounce timer reset on every raw change prevents settling",
+      "description": "trigEdge is reset whenever raw differs from lastTrig, so a bouncing contact keeps restarting the 25 ms window; the stable state only updates after 25 ms of no raw changes, which is correct in intent but the edge tracking uses lastTrig rather than the stable value, so a brief glitch that returns to the stable level still resets the timer and can delay or miss a valid 30 ms press.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Pulse start latency can exceed 120 ms",
+      "description": "The press is only accepted after DEBOUNCE_MS of stability plus loop latency, and because trigEdge is set on the first raw change, a 30 ms press that bounces can push detection past the 120 ms requirement; the debounce should latch on the stable LOW and start the pulse immediately when stable.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b3",
+      "title": "millis rollover breaks debounce and heartbeat comparisons",
+      "description": "All timing uses unsigned subtraction which is rollover-safe, so this is not a bug; however trigEdge is initialized to 0 and if a press occurs before 25 ms after boot the subtraction is fine. No rollover bug present.",
+      "category": "millis_rollover"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "solenoid_ok",
+    "spec": "- Trigger on D2 with INPUT_PULLUP (active LOW); glue solenoid on D8; armed LED on D11.\n- A settled press as short as 30 ms starts a 2500 ms HIGH pulse on D8 within 120 ms.\n- Retriggers during an active pulse are ignored.\n- Debounce the trigger with 25 ms of stability.\n- Keep D11 HIGH when idle and LOW while the solenoid pulse is active.\n- Print `glue dots=<n> busy=<0|1>` every 500 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Debounce timer reset on every raw change prevents settling",
+        "description": "trigEdge is reset whenever raw differs from lastTrig, so a bouncing contact keeps restarting the 25 ms window; the stable state only updates after 25 ms of no raw changes, which is correct in intent but the edge tracking uses lastTrig rather than the stable value, so a brief glitch that returns to the stable level still resets the timer and can delay or miss a valid 30 ms press.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Pulse start latency can exceed 120 ms",
+        "description": "The press is only accepted after DEBOUNCE_MS of stability plus loop latency, and because trigEdge is set on the first raw change, a 30 ms press that bounces can push detection past the 120 ms requirement; the debounce should latch on the stable LOW and start the pulse immediately when stable.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b3",
+        "title": "millis rollover breaks debounce and heartbeat comparisons",
+        "description": "All timing uses unsigned subtraction which is rollover-safe, so this is not a bug; however trigEdge is initialized to 0 and if a press occurs before 25 ms after boot the subtraction is fine. No rollover bug present.",
+        "category": "millis_rollover"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 867,
+    "completion_tokens": 98,
+    "cost_usd": 0.00018885,
+    "cached": true
+  }
+}

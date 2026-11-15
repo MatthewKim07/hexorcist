@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/hold_to_arm_late",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "hold_to_arm_late",
+      "run_id": "bf6e452e4f88",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Armed LED never lights during the first 600 ms of a hold",
+          "description": "ARM_MS is set to 600 on line 8, but the spec requires the LED to be HIGH within 550 ms of press start. Worse, lines 62-65 actively drive D8 LOW (setArmed(false)) on every loop pass while the hold is still shorter than ARM_MS, so the LED is forced off for the entire qualifying window instead of only being gated. Measured evidence: \"D8 was not HIGH for 48 ms while required (grace 100 ms)\" and \"D8 was not HIGH for 292 ms while required\" across many intervals. D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+          "root_cause": "ARM_MS is set to 600 on line 8, but the spec requires the LED to be HIGH within 550 ms of press start. Worse, lines 62-65 actively drive D8 LOW (setArmed(false)) on every loop pass while the hold is still shorter than ARM_MS, so the LED is forced off for the entire qualifying window instead of only being gated. Measured evidence: \"D8 was not HIGH for 48 ms while required (grace 100 ms)\" and \"D8 was not HIGH for 292 ms while required\" across many intervals."
+        }
+      ],
+      "patched_sketch": "// Tool-arm interlock: hold-to-arm then release to clear.\n// Hold button on D3 (pull-up), armed lamp on D8.\n// Aux confirm on D5 (pull-up) is logged only.\n\nconst int HOLD_PIN = 3;\nconst int ARMED_PIN = 8;\nconst int CONFIRM_PIN = 5;\nconst unsigned long ARM_MS = 500;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long DEBOUNCE_MS = 20;\n\nbool held = false;\nbool rawDown = false;\nunsigned long rawSince = 0;\nunsigned long downSince = 0;\nbool armed = false;\nbool confirmLogged = false;\nunsigned long lastStatus = 0;\nunsigned long armEvents = 0;\n\nvoid setArmed(bool on)\n{\n    if (on && !armed)\n    {\n        armEvents++;\n    }\n    armed = on;\n    digitalWrite(ARMED_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"arm lit=\");\n    Serial.print(armed ? 1 : 0);\n    Serial.print(\" events=\");\n    Serial.println(armEvents);\n}\n\nvoid setup()\n{\n    pinMode(HOLD_PIN, INPUT_PULLUP);\n    pinMode(CONFIRM_PIN, INPUT_PULLUP);\n    pinMode(ARMED_PIN, OUTPUT);\n    setArmed(false);\n    Serial.begin(9600);\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool down = (digitalRead(HOLD_PIN) == LOW);\n    bool confirm = (digitalRead(CONFIRM_PIN) == LOW);\n\n    if (down != rawDown)\n    {\n        rawDown = down;\n        rawSince = now;\n    }\n\n    if ((now - rawSince) >= DEBOUNCE_MS && down != held)\n    {\n        held = down;\n        if (held)\n        {\n            downSince = now;\n        }\n    }\n\n    if (held)\n    {\n        if ((now - downSince) >= ARM_MS)\n        {\n            setArmed(true);\n        }\n    }\n    else\n    {\n        setArmed(false);\n    }\n\n    if (confirm)\n    {\n        if (!confirmLogged)\n        {\n            confirmLogged = true;\n            Serial.println(\"arm confirm\");\n        }\n    }\n    else\n    {\n        confirmLogged = false;\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 113.28,
+      "llm_calls": 6,
+      "prompt_tokens": 14356,
+      "completion_tokens": 3569,
+      "cost_usd": 0.00551866,
+      "model": "deepseek-chat"
+    }
+  ]
+}

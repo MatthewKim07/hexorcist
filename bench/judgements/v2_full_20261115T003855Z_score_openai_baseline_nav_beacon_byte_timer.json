@@ -1,0 +1,138 @@
+{
+  "case_id": "nav_beacon_byte_timer",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect timing for beacon state changes",
+      "description": "The beacon state changes every 500 ms, but the timing logic uses a uint8_t for 'nowSlice', which can overflow and cause incorrect timing behavior after 255 ms. This can lead to the beacon changing state more frequently than intended.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b2",
+      "title": "Potential for missed ticks",
+      "description": "The use of 'millis()' for timing calculations can lead to missed ticks if the loop execution time exceeds the timing intervals, especially if the serial output takes too long.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b3",
+      "title": "Beacon state change limit not enforced",
+      "description": "The sketch does not enforce the limit of 5 state changes in any 2000 ms window, which could lead to excessive blinking if the timing logic allows more than 5 changes.",
+      "category": "missing_failsafe"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+        },
+        {
+          "check_id": "a_max",
+          "type": "max_toggles",
+          "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "nav_beacon_byte_timer",
+    "spec": "- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).\n- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.\n- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms \u00b1120 ms).\n- While D3 is held LOW, force the beacon OFF and pause the blink schedule.\n- Beacon must not change state more than 5 times in any 2000 ms window during free blink.\n- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+        "check_ids": [
+          "a_period",
+          "a_max"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+          },
+          {
+            "check_id": "a_max",
+            "type": "max_toggles",
+            "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect timing for beacon state changes",
+        "description": "The beacon state changes every 500 ms, but the timing logic uses a uint8_t for 'nowSlice', which can overflow and cause incorrect timing behavior after 255 ms. This can lead to the beacon changing state more frequently than intended.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b2",
+        "title": "Potential for missed ticks",
+        "description": "The use of 'millis()' for timing calculations can lead to missed ticks if the loop execution time exceeds the timing intervals, especially if the serial output takes too long.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b3",
+        "title": "Beacon state change limit not enforced",
+        "description": "The sketch does not enforce the limit of 5 state changes in any 2000 ms window, which could lead to excessive blinking if the timing logic allows more than 5 changes.",
+        "category": "missing_failsafe"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes incorrect timing due to overflow, matching the root cause of the truth bug.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 3}\n  ],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"Reported bugs 1 and 2 do not match any truth bugs, while reported bug 3 is a duplicate of bug 1.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes incorrect timing due to overflow, matching the root cause of the truth bug."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 3
+      }
+    ],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "Reported bugs 1 and 2 do not match any truth bugs, while reported bug 3 is a duplicate of bug 1."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 987,
+    "completion_tokens": 136,
+    "cost_usd": 0.00022965,
+    "cached": true
+  }
+}

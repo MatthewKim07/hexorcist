@@ -1,0 +1,162 @@
+{
+  "case_id": "panel_dual_debounce_edge",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Toggles on release instead of press",
+      "description": "risingEdge() fires on LOW-to-HIGH, which is the release edge of an active-LOW key, so the LED toggles on release rather than on press.",
+      "category": "inverted_pullup"
+    },
+    {
+      "id": "b2",
+      "title": "No debounce/settle window",
+      "description": "The sketch reads the key every loop with no 40 ms settle window, so contact bounce on press and release produces multiple toggles.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b3",
+      "title": "No hysteresis on key state",
+      "description": "There is no stable-state tracking, so a noisy or marginal key level can toggle the LED repeatedly instead of requiring a settled edge.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "No settle window, bounce creates extra toggles",
+      "check_ids": [
+        "a_tpp"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "inverted_pullup",
+      "description": "Acts on release edge instead of press",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "No settle window, bounce creates extra toggles",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "inverted_pullup",
+      "description": "Acts on release edge instead of press",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "panel_dual_debounce_edge",
+    "spec": "- Panel key on D2 to ground with internal pull-up (active LOW); status LED on D13.\n- Each settled press toggles D13 exactly once within 150 ms; release must not toggle.\n- Bounce up to 20 ms on press and release must not produce extra toggles.\n- Use a 40 ms settle window before accepting a press edge (HIGH-to-LOW after settle).\n- Print `panel led=<0|1> edges=<n>` every 1000 ms.\n- Idle (unpressed) key reads HIGH.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "No settle window, bounce creates extra toggles",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "inverted_pullup",
+        "description": "Acts on release edge instead of press",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Toggles on release instead of press",
+        "description": "risingEdge() fires on LOW-to-HIGH, which is the release edge of an active-LOW key, so the LED toggles on release rather than on press.",
+        "category": "inverted_pullup"
+      },
+      {
+        "id": "b2",
+        "title": "No debounce/settle window",
+        "description": "The sketch reads the key every loop with no 40 ms settle window, so contact bounce on press and release produces multiple toggles.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b3",
+        "title": "No hysteresis on key state",
+        "description": "There is no stable-state tracking, so a noisy or marginal key level can toggle the LED repeatedly instead of requiring a settled edge.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported bug describes the same symptom of toggling on release instead of press\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 1, \"matched\": true, \"reason\": \"reported bug describes the same symptom of no debounce/settle window\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [2],\n  \"unique_false_alarm_indices\": [2],\n  \"notes\": \"The third reported bug does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported bug describes the same symptom of toggling on release instead of press"
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "reported bug describes the same symptom of no debounce/settle window"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      2
+    ],
+    "unique_false_alarm_indices": [
+      2
+    ],
+    "notes": "The third reported bug does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 975,
+    "completion_tokens": 131,
+    "cost_usd": 0.00022485,
+    "cached": true
+  }
+}

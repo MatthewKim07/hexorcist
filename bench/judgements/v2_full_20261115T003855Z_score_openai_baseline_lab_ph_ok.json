@@ -1,0 +1,67 @@
+{
+  "case_id": "lab_ph_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect LED Logic",
+      "description": "The LED on D10 is turned LOW when the pH is in range (6.50\u20138.50), which is inverted from the intended behavior. It should be HIGH when out of range.",
+      "category": "other"
+    },
+    {
+      "id": "b2",
+      "title": "Missing Hysteresis for pH Range",
+      "description": "The pH range check does not include hysteresis, which could cause the LED to flicker around the threshold values of 6.50 and 8.50.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lab_ph_ok",
+    "spec": "- Linearized pH probe on A1 at 500 mV/pH; out-of-band indicator on D10.\n- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 500 for pH.\n- Print `pH: <value>` every 1000 ms with two decimal places.\n- Printed pH must stay within \u00b10.20 of the injected probe value.\n- Drive D10 HIGH when pH is outside 6.50\u20138.50 inclusive; otherwise LOW.\n- Keep the 1000 ms logging cadence while the indicator is lit.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect LED Logic",
+        "description": "The LED on D10 is turned LOW when the pH is in range (6.50\u20138.50), which is inverted from the intended behavior. It should be HIGH when out of range.",
+        "category": "other"
+      },
+      {
+        "id": "b2",
+        "title": "Missing Hysteresis for pH Range",
+        "description": "The pH range check does not include hysteresis, which could cause the LED to flicker around the threshold values of 6.50 and 8.50.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 722,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001635,
+    "cached": true
+  }
+}

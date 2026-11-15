@@ -1,0 +1,67 @@
+{
+  "case_id": "lobby_lamp_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce handling",
+      "description": "The sketch does not properly debounce the button press, allowing for potential multiple toggles due to switch bounce, which can last up to 20 ms.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Incorrect lamp toggle timing",
+      "description": "The toggleLamp function is called immediately upon detecting a state change, which may not respect the 150 ms requirement for toggling after a press.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lobby_lamp_ok",
+    "spec": "- Lobby switch on D3 to ground with internal pull-up (active LOW); accent lamp on D12.\n- Each settled press toggles the lamp exactly once within 150 ms; release must not toggle.\n- Bounce up to 20 ms must not create extra toggles.\n- Settle window is 45 ms before accepting a press.\n- Print `lobby lamp=ON n=<count>` or `lobby lamp=OFF n=<count>` every 1400 ms.\n- Idle switch level is HIGH.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce handling",
+        "description": "The sketch does not properly debounce the button press, allowing for potential multiple toggles due to switch bounce, which can last up to 20 ms.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Incorrect lamp toggle timing",
+        "description": "The toggleLamp function is called immediately upon detecting a state change, which may not respect the 150 ms requirement for toggling after a press.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 676,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001566,
+    "cached": true
+  }
+}

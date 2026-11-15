@@ -1,0 +1,106 @@
+{
+  "case_id": "mist_injector_long",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect pulse length",
+      "description": "The pulse length is set to 2000 ms instead of the intended 800 ms, causing the injector to activate for too long.",
+      "category": "timed_pulse_length"
+    },
+    {
+      "id": "b2",
+      "title": "Missing pulse timing check",
+      "description": "The pulse timing check does not account for the 120 ms delay before starting the pulse, which could lead to timing issues.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "timed_pulse_length",
+      "description": "Injector pulse 2 s instead of 800 ms",
+      "check_ids": [
+        "a_pulse"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "timed_pulse_length",
+      "description": "Injector pulse 2 s instead of 800 ms",
+      "check_ids": [
+        "a_pulse"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_pulse",
+          "type": "timed_pulse",
+          "behaviour": "D9 pulse length around None ms (tolerance 150 ms) (800 ms pulse)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "mist_injector_long",
+    "spec": "- Trigger on D4 with INPUT_PULLUP (active LOW); mist injector on D9; ready lamp on D12.\n- A settled press as short as 30 ms starts an 800 ms HIGH pulse on D9 within 120 ms.\n- Retriggers during an active pulse are ignored.\n- Debounce the trigger with 25 ms of stability.\n- Keep D12 HIGH when idle and LOW while the injector pulse is active.\n- Print `mist shots=<n> busy=<0|1>` every 450 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "timed_pulse_length",
+        "description": "Injector pulse 2 s instead of 800 ms",
+        "check_ids": [
+          "a_pulse"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_pulse",
+            "type": "timed_pulse",
+            "behaviour": "D9 pulse length around None ms (tolerance 150 ms) (800 ms pulse)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect pulse length",
+        "description": "The pulse length is set to 2000 ms instead of the intended 800 ms, causing the injector to activate for too long.",
+        "category": "timed_pulse_length"
+      },
+      {
+        "id": "b2",
+        "title": "Missing pulse timing check",
+        "description": "The pulse timing check does not account for the 120 ms delay before starting the pulse, which could lead to timing issues.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes the same observable behavior of pulse length\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes the same observable behavior of pulse length"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 786,
+    "completion_tokens": 86,
+    "cost_usd": 0.0001695,
+    "cached": true
+  }
+}

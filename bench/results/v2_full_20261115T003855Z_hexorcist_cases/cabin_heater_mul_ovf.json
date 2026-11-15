@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/cabin_heater_mul_ovf",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "cabin_heater_mul_ovf",
+      "run_id": "129b82f39403",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Heater stays ON above 22 \u00b0C because band hysteresis never turns it off",
+          "description": "The control logic in lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the measured violations show D9 was not LOW for 5030 ms starting at 1.79 s during a clean ramp, meaning the heater remained ON well past the 22 \u00b0C threshold. The OFF branch is reached only when the temperature exceeds 22.0 \u00b0C, yet the measured evidence shows the output never went LOW within the 600 ms grace, so the heater latched ON through the warm portion of the ramp. D9 was in the wrong state for 5030 ms across 1 interval(s), first at 1.79 s: D9 was not LOW for 5030 ms while required (grace 600 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 was in the wrong state for 5030 ms across 1 interval(s), first at 1.79 s: D9 was not LOW for 5030 ms while required (grace 600 ms).",
+          "root_cause": "The control logic in lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the measured violations show D9 was not LOW for 5030 ms starting at 1.79 s during a clean ramp, meaning the heater remained ON well past the 22 \u00b0C threshold. The OFF branch is reached only when the temperature exceeds 22.0 \u00b0C, yet the measured evidence shows the output never went LOW within the 600 ms grace, so the heater latched ON through the warm portion of the ramp."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Frost override not honored within 600 ms on short/bouncy presses",
+          "description": "The frost input is only sampled every 50 ms in the loop (lines 52-56) with no debounce or edge handling, and the measured evidence shows D9 was not LOW for 400-1400 ms while D2 was held LOW, exceeding the 600 ms grace. Because the frost check is polled rather than latched, short presses and bounce cause the heater to miss the forced-ON requirement entirely. D9 was in the wrong state for 3371 ms across 5 interval(s), first at 600 ms: D9 was not LOW for 400 ms while required (grace 600 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 was in the wrong state for 3371 ms across 5 interval(s), first at 600 ms: D9 was not LOW for 400 ms while required (grace 600 ms).",
+          "root_cause": "The frost input is only sampled every 50 ms in the loop (lines 52-56) with no debounce or edge handling, and the measured evidence shows D9 was not LOW for 400-1400 ms while D2 was held LOW, exceeding the 600 ms grace. Because the frost check is polled rather than latched, short presses and bounce cause the heater to miss the forced-ON requirement entirely."
+        }
+      ],
+      "patched_sketch": "// Cabin heater enable with comfort band.\n// LM35 on A0, heater relay on D9, frost override on D2 (pull-up).\n\nconst int TEMP_PIN = A0;\nconst int HEAT_PIN = 9;\nconst int FROST_PIN = 2;\nconst float HEAT_ON_C = 18.0f;\nconst float HEAT_OFF_C = 22.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long FROST_CONFIRM_MS = 100;\n\nbool heaterOn = false;\nunsigned long lastSample = 0;\nunsigned long lastStatus = 0;\nfloat lastC = 0.0f;\nbool frostStable = false;\nbool frostCandidate = false;\nunsigned long frostSince = 0;\n\nfloat readCabinC()\n{\n    int mv = analogRead(TEMP_PIN) * 5000 / 1023;\n    return mv / MV_PER_C;\n}\n\nvoid applyHeater(bool on)\n{\n    heaterOn = on;\n    digitalWrite(HEAT_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"cabin: \");\n    Serial.print(lastC, 1);\n    Serial.print(\" C heat=\");\n    Serial.println(heaterOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(HEAT_PIN, OUTPUT);\n    pinMode(FROST_PIN, INPUT_PULLUP);\n    applyHeater(false);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastStatus = millis();\n    frostStable = (digitalRead(FROST_PIN) == LOW);\n    frostCandidate = frostStable;\n    frostSince = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        lastC = readCabinC();\n\n        bool frostRaw = (digitalRead(FROST_PIN) == LOW);\n        if (frostRaw != frostCandidate)\n        {\n            frostCandidate = frostRaw;\n            frostSince = now;\n        }\n        if (frostCandidate != frostStable && (now - frostSince) >= FROST_CONFIRM_MS)\n        {\n            frostStable = frostCandidate;\n        }\n\n        if (frostStable)\n        {\n            applyHeater(true);\n        }\n        else if (lastC < HEAT_ON_C)\n        {\n            applyHeater(true);\n        }\n        else if (lastC > HEAT_OFF_C)\n        {\n            applyHeater(false);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 131.36,
+      "llm_calls": 7,
+      "prompt_tokens": 20905,
+      "completion_tokens": 5120,
+      "cost_usd": 0.0080038,
+      "model": "deepseek-chat"
+    }
+  ]
+}

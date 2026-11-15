@@ -1,0 +1,90 @@
+{
+  "case_id": "hold_to_arm_late",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Armed LED never lights during the first 600 ms of a hold",
+      "description": "ARM_MS is set to 600 on line 8, but the spec requires the LED to be HIGH within 550 ms of press start. Worse, lines 62-65 actively drive D8 LOW (setArmed(false)) on every loop pass while the hold is still shorter than ARM_MS, so the LED is forced off for the entire qualifying window instead of only being gated. Measured evidence: \"D8 was not HIGH for 48 ms while required (grace 100 ms)\" and \"D8 was not HIGH for 292 ms while required\" across many intervals. D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "off_by_one_timing",
+      "description": "Arm delay is 600 ms instead of 500 ms",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "off_by_one_timing",
+      "description": "Arm delay is 600 ms instead of 500 ms",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D8 must follow its stimulus; HIGH when D3 == 0; LOW when D3 == 1; within 550 ms (Armed after ~500 ms hold)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "hold_to_arm_late",
+    "spec": "- Hold button on D3 with INPUT_PULLUP (active LOW); armed LED on D8; confirm on D5 (pull-up).\n- Armed LED D8 turns HIGH only after D3 has been held LOW continuously for 500 ms.\n- Release of D3 turns the armed LED OFF immediately (within 100 ms).\n- After a qualifying hold, D8 must be HIGH within 550 ms of the press start.\n- Print `arm lit=<0|1> events=<n>` every 1000 ms.\n- Holding D5 LOW may emit `arm confirm` lines without changing the armed LED.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "off_by_one_timing",
+        "description": "Arm delay is 600 ms instead of 500 ms",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D8 must follow its stimulus; HIGH when D3 == 0; LOW when D3 == 1; within 550 ms (Armed after ~500 ms hold)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Armed LED never lights during the first 600 ms of a hold",
+        "description": "ARM_MS is set to 600 on line 8, but the spec requires the LED to be HIGH within 550 ms of press start. Worse, lines 62-65 actively drive D8 LOW (setArmed(false)) on every loop pass while the hold is still shorter than ARM_MS, so the LED is forced off for the entire qualifying window instead of only being gated. Measured evidence: \"D8 was not HIGH for 48 ms while required (grace 100 ms)\" and \"D8 was not HIGH for 292 ms while required\" across many intervals. D8 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D8 was not HIGH for 48 ms while required (grace 100 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same timing issue with D8 not following the expected behavior.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug directly matches the truth bug in terms of the timing issue with the armed LED.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same timing issue with D8 not following the expected behavior."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug directly matches the truth bug in terms of the timing issue with the armed LED."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 903,
+    "completion_tokens": 98,
+    "cost_usd": 0.00019425,
+    "cached": true
+  }
+}

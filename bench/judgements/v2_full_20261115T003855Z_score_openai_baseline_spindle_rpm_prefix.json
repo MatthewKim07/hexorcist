@@ -1,0 +1,119 @@
+{
+  "case_id": "spindle_rpm_prefix",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect RPM Scaling",
+      "description": "The RPM value is incorrectly scaled in the readRpm function. It should be scaled by 1 mV/rpm, but it currently scales by 5000.0f / 1023.0f, which does not correspond to the correct conversion.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Incorrect Serial Output Format",
+      "description": "The printed RPM output has a space after 'rpm:' instead of directly following the colon, which does not match the intended behavior.",
+      "category": "serial_format"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints rpm: with space instead of RPM:",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints rpm: with space instead of RPM:",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^RPM:' every 1000 ms (RPM: lines)"
+        },
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'RPM:(-?[0-9.]+)' match the stimulus (tolerance 50) (rpm value)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "spindle_rpm_prefix",
+    "spec": "- Tach input on A5 at 1 mV per rpm; over-speed lamp on D9; mute on D3 (pull-up).\n- Print `RPM:<n>` with no space after the colon once per second (1000 ms \u00b1120 ms).\n- Printed rpm must stay within \u00b150 of the injected tach value.\n- Light D9 when rpm is at or above 2000 while mute is released.\n- While D3 is held LOW, keep D9 OFF regardless of rpm.\n- Each second also print `spindle min=<n> max=<n>` after the RPM line.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "serial_format",
+        "description": "Prints rpm: with space instead of RPM:",
+        "check_ids": [
+          "a_period",
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^RPM:' every 1000 ms (RPM: lines)"
+          },
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'RPM:(-?[0-9.]+)' match the stimulus (tolerance 50) (rpm value)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect RPM Scaling",
+        "description": "The RPM value is incorrectly scaled in the readRpm function. It should be scaled by 1 mV/rpm, but it currently scales by 5000.0f / 1023.0f, which does not correspond to the correct conversion.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Incorrect Serial Output Format",
+        "description": "The printed RPM output has a space after 'rpm:' instead of directly following the colon, which does not match the intended behavior.",
+        "category": "serial_format"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"describes the incorrect serial output format\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"The first reported bug is a false alarm as it does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "describes the incorrect serial output format"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "The first reported bug is a false alarm as it does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 883,
+    "completion_tokens": 91,
+    "cost_usd": 0.00018705,
+    "cached": true
+  }
+}

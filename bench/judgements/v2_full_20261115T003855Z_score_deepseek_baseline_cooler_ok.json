@@ -1,0 +1,95 @@
+{
+  "case_id": "cooler_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Floating sensor not detected as fault",
+      "description": "A floating A3 input reads an arbitrary mid-range voltage that maps to a plausible temperature, so the fault check (temp<0 or >60) never triggers and the compressor keeps running on a bad probe. The behaviour requires forcing OFF when the sensor is floating.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "No hysteresis between ON/OFF thresholds in hold logic",
+      "description": "The onHold/offHold counters are independent, so between 4 and 8 \u00b0C neither counter reaches HOLD_N and the compressor simply latches its previous state \u2014 but the band logic is fragile: a temperature oscillating around 8 \u00b0C can toggle ON after 3 ticks then immediately begin counting offHold, and there is no explicit deadband state machine, so the commanded state can chatter at the band edges rather than holding until the opposite threshold is crossed.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b3",
+      "title": "ADC reference/scaling assumes 5 V but uses 1023 divisor",
+      "description": "mv = raw*(5000/1023) is fine for a 5 V reference, but the sketch never sets analogReference and the Uno default is 5 V \u2014 acceptable \u2014 however the real issue is the 10 mV/\u00b0C scale is applied to a 0\u20135 V range giving 0\u2013500 \u00b0C, so a floating pin near mid-rail (~2.5 V) reads ~250 \u00b0C which is >60 and would fault; but a pin floating near 0.3 V reads ~30 \u00b0C and passes as valid, so floating detection is unreliable (see b1).",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b4",
+      "title": "Status print uses stale tempC and may print before first read",
+      "description": "printStatus uses the last sampled tempC, which is fine, but on the very first loop iteration tempC is 0.0 before any read if STATUS_MS elapses first \u2014 minor; more importantly the printed value is the pre-fault sample, not necessarily reflecting the forced-OFF state timing.",
+      "category": "serial_format"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "cooler_ok",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Floating sensor not detected as fault",
+        "description": "A floating A3 input reads an arbitrary mid-range voltage that maps to a plausible temperature, so the fault check (temp<0 or >60) never triggers and the compressor keeps running on a bad probe. The behaviour requires forcing OFF when the sensor is floating.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b2",
+        "title": "No hysteresis between ON/OFF thresholds in hold logic",
+        "description": "The onHold/offHold counters are independent, so between 4 and 8 \u00b0C neither counter reaches HOLD_N and the compressor simply latches its previous state \u2014 but the band logic is fragile: a temperature oscillating around 8 \u00b0C can toggle ON after 3 ticks then immediately begin counting offHold, and there is no explicit deadband state machine, so the commanded state can chatter at the band edges rather than holding until the opposite threshold is crossed.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b3",
+        "title": "ADC reference/scaling assumes 5 V but uses 1023 divisor",
+        "description": "mv = raw*(5000/1023) is fine for a 5 V reference, but the sketch never sets analogReference and the Uno default is 5 V \u2014 acceptable \u2014 however the real issue is the 10 mV/\u00b0C scale is applied to a 0\u20135 V range giving 0\u2013500 \u00b0C, so a floating pin near mid-rail (~2.5 V) reads ~250 \u00b0C which is >60 and would fault; but a pin floating near 0.3 V reads ~30 \u00b0C and passes as valid, so floating detection is unreliable (see b1).",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b4",
+        "title": "Status print uses stale tempC and may print before first read",
+        "description": "printStatus uses the last sampled tempC, which is fine, but on the very first loop iteration tempC is 0.0 before any read if STATUS_MS elapses first \u2014 minor; more importantly the printed value is the pre-fault sample, not necessarily reflecting the forced-OFF state timing.",
+        "category": "serial_format"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2, 3],\n  \"unique_false_alarm_indices\": [0, 1, 2, 3],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1170,
+    "completion_tokens": 104,
+    "cost_usd": 0.0002379,
+    "cached": true
+  }
+}

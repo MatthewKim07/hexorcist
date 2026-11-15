@@ -1,0 +1,106 @@
+{
+  "case_id": "cabin_heater_mul_ovf",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature reading calculation",
+      "description": "The temperature reading calculation in readCabinC() is incorrect. The analogRead value is multiplied by 5000 instead of 5000/1023, leading to an incorrect temperature conversion.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Heater state not updated within 600 ms",
+      "description": "The heater state may not be updated within 600 ms of a sustained band crossing due to the 50 ms sampling interval, which could lead to delays in applying the heater state.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cabin_heater_mul_ovf",
+    "spec": "- Cabin LM35 on A0 at 10 mV/\u00b0C; heater enable on D9; frost override on D2 (pull-up, active LOW).\n- Turn the heater ON when temperature is below 18.0 \u00b0C and OFF when temperature is above 22.0 \u00b0C.\n- While D2 is held LOW, force the heater ON regardless of temperature.\n- Reach the commanded heater state within 600 ms of a sustained band crossing.\n- Print `cabin: <temp> C heat=ON` or `cabin: <temp> C heat=OFF` every 1000 ms with one decimal place.\n- Temperature in the status line is informational; control decisions use the comfort band above.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "analogRead*5000 overflows 16-bit int before /1023",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature reading calculation",
+        "description": "The temperature reading calculation in readCabinC() is incorrect. The analogRead value is multiplied by 5000 instead of 5000/1023, leading to an incorrect temperature conversion.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Heater state not updated within 600 ms",
+        "description": "The heater state may not be updated within 600 ms of a sustained band crossing due to the 50 ms sampling interval, which could lead to delays in applying the heater state.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Incorrect temperature calculation due to integer overflow in analogRead.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Incorrect temperature calculation due to integer overflow in analogRead."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 888,
+    "completion_tokens": 89,
+    "cost_usd": 0.0001866,
+    "cached": true
+  }
+}

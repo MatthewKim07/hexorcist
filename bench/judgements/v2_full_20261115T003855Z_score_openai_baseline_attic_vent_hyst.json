@@ -1,0 +1,106 @@
+{
+  "case_id": "attic_vent_hyst",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Fan state change frequency violation",
+      "description": "The fan state can change more than twice in a 5000 ms window because there is no mechanism to limit the number of state changes. The current implementation allows the fan to turn ON and OFF based on temperature readings every 50 ms.",
+      "category": "timed_pulse_length"
+    },
+    {
+      "id": "b2",
+      "title": "Incorrect temperature reading scaling",
+      "description": "The temperature reading is incorrectly scaled because the conversion from raw analog value to millivolts does not account for the correct scaling factor of 5V. The formula should use 5000.0 / 1024.0 instead of 5000.0 / 1023.0.",
+      "category": "wrong_unit_scaling"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "attic_vent_hyst",
+    "spec": "- LM35 temperature probe on A0 scaled at 10 mV/\u00b0C; ridge-vent relay on D8; override pushbutton on D3 to ground with internal pull-up (active LOW).\n- Turn the vent fan ON when attic temperature reaches 42.0 \u00b0C or above, and turn it OFF when temperature falls to 38.0 \u00b0C or below.\n- While D3 is held LOW, force the fan ON regardless of temperature.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print one status line every 1000 ms in the form `attic: <temp> C fan=ON` or `attic: <temp> C fan=OFF` with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 42 C trip point chatters under sensor noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Fan state change frequency violation",
+        "description": "The fan state can change more than twice in a 5000 ms window because there is no mechanism to limit the number of state changes. The current implementation allows the fan to turn ON and OFF based on temperature readings every 50 ms.",
+        "category": "timed_pulse_length"
+      },
+      {
+        "id": "b2",
+        "title": "Incorrect temperature reading scaling",
+        "description": "The temperature reading is incorrectly scaled because the conversion from raw analog value to millivolts does not account for the correct scaling factor of 5V. The formula should use 5000.0 / 1024.0 instead of 5000.0 / 1023.0.",
+        "category": "wrong_unit_scaling"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes fan state change frequency violation which relates to the missing hysteresis due to chatter.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug about incorrect temperature reading scaling does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes fan state change frequency violation which relates to the missing hysteresis due to chatter."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug about incorrect temperature reading scaling does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 928,
+    "completion_tokens": 101,
+    "cost_usd": 0.0001998,
+    "cached": true
+  }
+}

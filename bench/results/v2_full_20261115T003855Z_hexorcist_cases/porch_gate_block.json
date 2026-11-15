@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/porch_gate_block",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "porch_gate_block",
+      "run_id": "7759fb1bc0f8",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Heartbeat stalls during blocking chime pulse",
+          "description": "pulseChimeBlocking() calls delay(CHIME_MS) at line 27, which blocks the loop for 1800 ms, so the heartbeat check at lines 57-62 cannot run during the pulse. Measured evidence shows gaps of 2000 ms and 1900 ms between 'gate-hb' lines, far outside the 300 \u00b1 100 ms requirement. Expected /^gate-hb$/ every 300 \u00b1 100 ms; 5 of 8 intervals were out of tolerance, worst gap 2000 ms.",
+          "assertion_type": "serial_period",
+          "verified": true,
+          "evidence": "Expected /^gate-hb$/ every 300 \u00b1 100 ms; 5 of 8 intervals were out of tolerance, worst gap 2000 ms.",
+          "root_cause": "pulseChimeBlocking() calls delay(CHIME_MS) at line 27, which blocks the loop for 1800 ms, so the heartbeat check at lines 57-62 cannot run during the pulse. Measured evidence shows gaps of 2000 ms and 1900 ms between 'gate-hb' lines, far outside the 300 \u00b1 100 ms requirement."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Firmware silent for 1800 ms during chime",
+          "description": "The blocking delay(CHIME_MS) at line 27 halts all serial output and pin activity for the full 1800 ms pulse, exceeding the 700 ms silence limit. Measured evidence reports 'no activity for 1800 ms' repeatedly across scenarios. Firmware went silent for 1800 ms with no serial output or pin activity (limit 700 ms); 5 such gap(s).",
+          "assertion_type": "responsive",
+          "verified": true,
+          "evidence": "Firmware went silent for 1800 ms with no serial output or pin activity (limit 700 ms); 5 such gap(s).",
+          "root_cause": "The blocking delay(CHIME_MS) at line 27 halts all serial output and pin activity for the full 1800 ms pulse, exceeding the 700 ms silence limit. Measured evidence reports 'no activity for 1800 ms' repeatedly across scenarios."
+        }
+      ],
+      "patched_sketch": "// Front porch gate chime.\n// Gate contact on D3 (pull-up, active LOW when open), chime coil on D10.\n// Keep a UART heartbeat alive for the monitoring hub.\n\nconst uint8_t GATE_PIN = 3;\nconst uint8_t CHIME_PIN = 10;\nconst unsigned long CHIME_MS = 1800;\nconst unsigned long HB_MS = 300;\nconst unsigned long DEBOUNCE_MS = 20;\n\nunsigned long lastHb = 0;\nunsigned long openCount = 0;\n\nbool chimeActive = false;\nunsigned long chimeStart = 0;\n\nbool rawOpen = false;\nbool stableOpen = false;\nunsigned long rawChangeAt = 0;\n\nvoid chimeHigh()\n{\n    digitalWrite(CHIME_PIN, HIGH);\n}\n\nvoid chimeLow()\n{\n    digitalWrite(CHIME_PIN, LOW);\n}\n\nvoid startChime(unsigned long now)\n{\n    openCount++;\n    chimeActive = true;\n    chimeStart = now;\n    chimeHigh();\n}\n\nvoid serviceChime(unsigned long now)\n{\n    if (chimeActive && (now - chimeStart >= CHIME_MS))\n    {\n        chimeActive = false;\n        chimeLow();\n    }\n}\n\nvoid sendHb()\n{\n    Serial.println(\"gate-hb\");\n}\n\nbool gateOpened()\n{\n    return digitalRead(GATE_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(GATE_PIN, INPUT_PULLUP);\n    pinMode(CHIME_PIN, OUTPUT);\n    chimeLow();\n    Serial.begin(9600);\n    lastHb = millis();\n    rawOpen = gateOpened();\n    stableOpen = rawOpen;\n    rawChangeAt = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    bool reading = gateOpened();\n    if (reading != rawOpen)\n    {\n        rawOpen = reading;\n        rawChangeAt = now;\n    }\n    if (rawOpen != stableOpen && (now - rawChangeAt >= DEBOUNCE_MS))\n    {\n        stableOpen = rawOpen;\n        if (stableOpen && !chimeActive)\n        {\n            startChime(now);\n        }\n    }\n\n    serviceChime(now);\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        sendHb();\n    }\n}\n",
+      "wall_s": 52.92,
+      "llm_calls": 4,
+      "prompt_tokens": 8587,
+      "completion_tokens": 2667,
+      "cost_usd": 0.0035245,
+      "model": "deepseek-chat"
+    }
+  ]
+}

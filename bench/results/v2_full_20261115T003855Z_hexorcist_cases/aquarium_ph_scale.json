@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/aquarium_ph_scale",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "aquarium_ph_scale",
+      "run_id": "41a08dd08f02",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "pH value never scaled from millivolts",
+          "description": "computePh() at line 23 simply returns the millivolt value unchanged, so the required division by 500 mV/pH is never performed. The measured output of 3553.27 pH for a 7.1 pH input confirms the raw millivolt figure is being printed directly instead of a pH value. Firmware printed 3553.27 pH at 9.01 s while the injected input was 7.09 to 7.12 pH: off by 3546.2 pH (tolerance \u00b10.2). 11 of 11 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "verified": true,
+          "evidence": "Firmware printed 3553.27 pH at 9.01 s while the injected input was 7.09 to 7.12 pH: off by 3546.2 pH (tolerance \u00b10.2). 11 of 11 values were wrong.",
+          "root_cause": "computePh() at line 23 simply returns the millivolt value unchanged, so the required division by 500 mV/pH is never performed. The measured output of 3553.27 pH for a 7.1 pH input confirms the raw millivolt figure is being printed directly instead of a pH value."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Alert LED driven from unscaled millivolt value",
+          "description": "The comparison at line 66 tests lastPh against ALERT_PH (7.20), but lastPh is actually a millivolt reading (hundreds to thousands) because of the missing scaling in computePh(). Since the millivolt value is always far above 7.20, D13 is driven LOW almost continuously, producing the measured wrong-state intervals such as 1270 ms not HIGH during the nominal ramp. D13 was in the wrong state for 4850 ms across 6 interval(s), first at 500 ms: D13 was not HIGH for 500 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D13 was in the wrong state for 4850 ms across 6 interval(s), first at 500 ms: D13 was not HIGH for 500 ms while required (grace 500 ms).",
+          "root_cause": "The comparison at line 66 tests lastPh against ALERT_PH (7.20), but lastPh is actually a millivolt reading (hundreds to thousands) because of the missing scaling in computePh(). Since the millivolt value is always far above 7.20, D13 is driven LOW almost continuously, producing the measured wrong-state intervals such as 1270 ms not HIGH during the nominal ramp."
+        }
+      ],
+      "patched_sketch": "// Reef tank pH logger.\n// Linearized probe on A0, optional low-pH LED on D13, UART log at 9600.\n\nconst int PROBE_PIN = A0;\nconst int ALERT_PIN = 13;\nconst float ALERT_PH = 7.20f;\nconst float ALERT_HYST = 0.05f;\nconst unsigned long LOG_PERIOD_MS = 1000;\n\nunsigned long lastLogMs = 0;\nunsigned long sampleCount = 0;\nfloat lastPh = 0.0f;\nfloat phMin = 14.0f;\nfloat phMax = 0.0f;\nbool alertOn = false;\n\nfloat adcToMillivolts(int raw)\n{\n    return raw * (5000.0f / 1023.0f);\n}\n\nfloat computePh(float millivolts)\n{\n    return millivolts / 500.0f;\n}\n\nvoid trackRange(float ph)\n{\n    if (ph < phMin)\n    {\n        phMin = ph;\n    }\n    if (ph > phMax)\n    {\n        phMax = ph;\n    }\n}\n\nvoid setAlert(bool on)\n{\n    alertOn = on;\n    digitalWrite(ALERT_PIN, on ? HIGH : LOW);\n}\n\nvoid writeLogLine()\n{\n    Serial.print(\"pH: \");\n    Serial.println(lastPh, 2);\n}\n\nvoid setup()\n{\n    pinMode(ALERT_PIN, OUTPUT);\n    digitalWrite(ALERT_PIN, LOW);\n    Serial.begin(9600);\n    lastLogMs = millis();\n}\n\nvoid loop()\n{\n    int raw = analogRead(PROBE_PIN);\n    float mv = adcToMillivolts(raw);\n    lastPh = computePh(mv);\n    sampleCount++;\n    trackRange(lastPh);\n\n    if (alertOn)\n    {\n        if (lastPh >= ALERT_PH + ALERT_HYST)\n        {\n            setAlert(false);\n        }\n    }\n    else\n    {\n        if (lastPh < ALERT_PH - ALERT_HYST)\n        {\n            setAlert(true);\n        }\n    }\n\n    unsigned long now = millis();\n    if (now - lastLogMs >= LOG_PERIOD_MS)\n    {\n        lastLogMs = now;\n        writeLogLine();\n    }\n}\n",
+      "wall_s": 113.4,
+      "llm_calls": 5,
+      "prompt_tokens": 12327,
+      "completion_tokens": 3561,
+      "cost_usd": 0.00494718,
+      "model": "deepseek-chat"
+    }
+  ]
+}

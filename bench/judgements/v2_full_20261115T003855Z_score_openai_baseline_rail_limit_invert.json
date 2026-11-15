@@ -1,0 +1,107 @@
+{
+  "case_id": "rail_limit_invert",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Motor state not correctly managed",
+      "description": "The motor is always set to HIGH when not hitting the limit or jogging, which can lead to unintended motor activation. The logic should ensure the motor is only enabled when the jog button is pressed and the limit is not active.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b2",
+      "title": "Incorrect motor enable logic",
+      "description": "The motor can be enabled even when the limit switch is active, which violates the intended behavior. The motor should only be enabled if the limit is not active.",
+      "category": "missing_failsafe"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "inverted_pullup",
+      "description": "Treats pull-up HIGH as active limit",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "inverted_pullup",
+      "description": "Treats pull-up HIGH as active limit",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D13 must follow its stimulus; HIGH when D2 == 1; LOW when D2 == 0; within 100 ms (Motor off while limit LOW)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "rail_limit_invert",
+    "spec": "- Limit switch on D2 with INPUT_PULLUP (pressed/active = LOW). Motor enable on D13. Jog on D4 (pull-up).\n- Motor enable on D13 must be LOW (disabled) while the limit is active (D2 LOW), and HIGH otherwise.\n- Reach the commanded motor state within 100 ms of a settled limit change.\n- Debounce the limit contact with at least 25 ms of stability before acting.\n- Print `rail motor=<0|1> hits=<n>` every 900 ms.\n- Jog may request motion only when the limit is clear; limit always wins.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "inverted_pullup",
+        "description": "Treats pull-up HIGH as active limit",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D13 must follow its stimulus; HIGH when D2 == 1; LOW when D2 == 0; within 100 ms (Motor off while limit LOW)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Motor state not correctly managed",
+        "description": "The motor is always set to HIGH when not hitting the limit or jogging, which can lead to unintended motor activation. The logic should ensure the motor is only enabled when the jog button is pressed and the limit is not active.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b2",
+        "title": "Incorrect motor enable logic",
+        "description": "The motor can be enabled even when the limit switch is active, which violates the intended behavior. The motor should only be enabled if the limit is not active.",
+        "category": "missing_failsafe"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"describes the observable behavior of the motor enable logic when limit is active\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs relate to the same underlying issue of motor enable logic with respect to the limit switch.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "describes the observable behavior of the motor enable logic when limit is active"
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs relate to the same underlying issue of motor enable logic with respect to the limit switch."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 840,
+    "completion_tokens": 115,
+    "cost_usd": 0.000195,
+    "cached": true
+  }
+}

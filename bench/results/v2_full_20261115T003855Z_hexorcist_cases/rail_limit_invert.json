@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/rail_limit_invert",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "rail_limit_invert",
+      "run_id": "372c98d767fc",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Limit polarity inverted: motor disabled when limit is clear",
+          "description": "Line 20 defines limitActiveRaw() as digitalRead(LIMIT_PIN) == HIGH, and line 69 sets hit = (stableLimit == HIGH), so the firmware treats a HIGH (released, pull-up) limit as active and a LOW (pressed) limit as clear. This inverts the required behavior: measured D13 was not HIGH for 700 ms while D2 was clear (first violation at 100 ms), and was not LOW for 48 ms while D2 was active. The motor is therefore enabled exactly when the limit switch is pressed, the opposite of the spec. D13 was in the wrong state for 4842 ms across 31 interval(s), first at 100 ms: D13 was not HIGH for 700 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D13 was in the wrong state for 4842 ms across 31 interval(s), first at 100 ms: D13 was not HIGH for 700 ms while required (grace 100 ms).",
+          "root_cause": "Line 20 defines limitActiveRaw() as digitalRead(LIMIT_PIN) == HIGH, and line 69 sets hit = (stableLimit == HIGH), so the firmware treats a HIGH (released, pull-up) limit as active and a LOW (pressed) limit as clear. This inverts the required behavior: measured D13 was not HIGH for 700 ms while D2 was clear (first violation at 100 ms), and was not LOW for 48 ms while D2 was active. The motor is therefore enabled exactly when the limit switch is pressed, the opposite of the spec."
+        }
+      ],
+      "patched_sketch": "// Linear rail carriage motor enable with end-stop.\n// Limit switch on D2 (pull-up to GND when hit), motor enable on D13.\n// Jog button on D4 (pull-up) requests motion when clear.\n\nconst int LIMIT_PIN = 2;\nconst int MOTOR_PIN = 13;\nconst int JOG_PIN = 4;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long STATUS_MS = 900;\n\nint stableLimit = HIGH;\nint lastLimit = HIGH;\nunsigned long limitEdge = 0;\nbool motorEnabled = false;\nunsigned long lastStatus = 0;\nunsigned long hitCount = 0;\n\nbool limitActiveRaw()\n{\n    return digitalRead(LIMIT_PIN) == LOW;\n}\n\nvoid setMotor(bool enabled)\n{\n    motorEnabled = enabled;\n    digitalWrite(MOTOR_PIN, enabled ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"rail motor=\");\n    Serial.print(motorEnabled ? 1 : 0);\n    Serial.print(\" hits=\");\n    Serial.println(hitCount);\n}\n\nvoid setup()\n{\n    pinMode(LIMIT_PIN, INPUT_PULLUP);\n    pinMode(JOG_PIN, INPUT_PULLUP);\n    pinMode(MOTOR_PIN, OUTPUT);\n    setMotor(true);\n    Serial.begin(9600);\n    stableLimit = digitalRead(LIMIT_PIN);\n    lastLimit = stableLimit;\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(LIMIT_PIN);\n\n    if (raw != lastLimit)\n    {\n        limitEdge = now;\n        lastLimit = raw;\n    }\n\n    if ((now - limitEdge) >= DEBOUNCE_MS && raw != stableLimit)\n    {\n        stableLimit = raw;\n        if (limitActiveRaw())\n        {\n            hitCount++;\n        }\n    }\n\n    bool hit = (stableLimit == LOW);\n    bool jog = (digitalRead(JOG_PIN) == LOW);\n\n    if (hit)\n    {\n        setMotor(false);\n    }\n    else if (jog)\n    {\n        setMotor(true);\n    }\n    else\n    {\n        setMotor(true);\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 60.48,
+      "llm_calls": 4,
+      "prompt_tokens": 8448,
+      "completion_tokens": 2653,
+      "cost_usd": 0.0034797,
+      "model": "deepseek-chat"
+    }
+  ]
+}

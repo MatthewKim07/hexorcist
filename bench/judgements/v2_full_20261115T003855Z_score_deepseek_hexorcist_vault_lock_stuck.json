@@ -1,0 +1,90 @@
+{
+  "case_id": "vault_lock_stuck",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Lock never engages on request press",
+      "description": "The debounce logic in loop() only updates stableReq when raw != stableReq after the 35 ms window (lines 59-61), but the engage condition at line 62 requires stableReq == LOW. Because the button is active LOW with a pull-up, a press drives D2 LOW, yet the code never latches an engage on the falling edge in a way that survives; measured evidence shows D9 missed 15 of 15 triggers in the rapid-press scenario and 4 of 4 in both the short-press and bounce scenarios, with D9 never going HIGH within 200 ms of any trigger. The lock output is therefore never asserted despite valid presses while the door is closed. D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_unlock",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "vault_lock_stuck",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "stuck_state_machine",
+        "description": "Lock latches forever after first engage",
+        "check_ids": [
+          "a_unlock"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_unlock",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Lock never engages on request press",
+        "description": "The debounce logic in loop() only updates stableReq when raw != stableReq after the 35 ms window (lines 59-61), but the engage condition at line 62 requires stableReq == LOW. Because the button is active LOW with a pull-up, a press drives D2 LOW, yet the code never latches an engage on the falling edge in a way that survives; measured evidence shows D9 missed 15 of 15 triggers in the rapid-press scenario and 4 of 4 in both the short-press and bounce scenarios, with D9 never going HIGH within 200 ms of any trigger. The lock output is therefore never asserted despite valid presses while the door is closed. D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the failure of D9 to engage, which aligns with the lock latching forever after first engage.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the failure of D9 to engage, which aligns with the lock latching forever after first engage."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": ""
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 895,
+    "completion_tokens": 86,
+    "cost_usd": 0.00018585,
+    "cached": true
+  }
+}

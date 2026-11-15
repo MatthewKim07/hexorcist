@@ -1,0 +1,119 @@
+{
+  "case_id": "kiln_door_block",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Blocking delay in siren burst",
+      "description": "The use of delay() in runSirenBurst() blocks the loop, preventing the heartbeat from being emitted and potentially causing the firmware to go silent for more than 700 ms.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b2",
+      "title": "Siren pulse restart on door press",
+      "description": "The siren pulse can be restarted if the door switch is pressed again during the delay, which violates the requirement to ignore additional presses while the siren is running.",
+      "category": "stuck_state_machine"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_hb",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^hb$' every 250 ms (Heartbeat every 250 ms)"
+        },
+        {
+          "check_id": "a_resp",
+          "type": "responsive",
+          "behaviour": " responds to stimulus within None ms (Must stay responsive)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "kiln_door_block",
+    "spec": "- Kiln door switch on D2 to ground with internal pull-up (active LOW); siren driver on D8.\n- A settled door-open press as short as 40 ms starts a 2000 ms HIGH pulse on D8 within 150 ms.\n- While a siren pulse is already running, additional presses are ignored (do not restart the pulse).\n- Print the exact line `hb` every 250 ms at all times, including during the siren pulse.\n- Firmware must never go silent (no serial and no pin change) for more than 700 ms.\n- Idle door contact reads HIGH.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "blocking_delay",
+        "description": "delay(2000) freezes heartbeat and misses follow-up presses",
+        "check_ids": [
+          "a_hb",
+          "a_resp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_hb",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^hb$' every 250 ms (Heartbeat every 250 ms)"
+          },
+          {
+            "check_id": "a_resp",
+            "type": "responsive",
+            "behaviour": " responds to stimulus within None ms (Must stay responsive)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Blocking delay in siren burst",
+        "description": "The use of delay() in runSirenBurst() blocks the loop, preventing the heartbeat from being emitted and potentially causing the firmware to go silent for more than 700 ms.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b2",
+        "title": "Siren pulse restart on door press",
+        "description": "The siren pulse can be restarted if the door switch is pressed again during the delay, which violates the requirement to ignore additional presses while the siren is running.",
+        "category": "stuck_state_machine"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes blocking delay due to delay() preventing heartbeat\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes blocking delay due to delay() preventing heartbeat"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 864,
+    "completion_tokens": 88,
+    "cost_usd": 0.0001824,
+    "cached": true
+  }
+}

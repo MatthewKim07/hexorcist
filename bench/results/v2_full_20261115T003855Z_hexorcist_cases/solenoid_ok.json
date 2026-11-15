@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/solenoid_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "solenoid_ok",
+      "run_id": "9f582b806091",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Armed LED stays LOW after solenoid pulse ends",
+          "description": "The pulse-end branch at lines 79-84 does call setArmedLed(true), but the measured evidence shows D11 remained not-HIGH for the full 2501 ms pulse window plus the 120 ms grace, i.e. the LED was LOW while D8 was already LOW. The idle-state LED is only restored inside that same branch (line 83), so any path where pulsing is cleared without re-driving the LED leaves D11 stuck LOW; the heartbeat at lines 34-40 and loop never re-assert the armed state, so the LED does not follow D8 back to idle. D11 was in the wrong state for 6573 ms across 3 interval(s), first at 825 ms: D11 was not HIGH for 2501 ms while required (grace 120 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D11 was in the wrong state for 6573 ms across 3 interval(s), first at 825 ms: D11 was not HIGH for 2501 ms while required (grace 120 ms).",
+          "root_cause": "The pulse-end branch at lines 79-84 does call setArmedLed(true), but the measured evidence shows D11 remained not-HIGH for the full 2501 ms pulse window plus the 120 ms grace, i.e. the LED was LOW while D8 was already LOW. The idle-state LED is only restored inside that same branch (line 83), so any path where pulsing is cleared without re-driving the LED leaves D11 stuck LOW; the heartbeat at lines 34-40 and loop never re-assert the armed state, so the LED does not follow D8 back to idle."
+        }
+      ],
+      "patched_sketch": "// Packaging glue-dot solenoid driver (known-good build).\n// Trigger on D2 (pull-up), solenoid on D8, armed LED on D11.\n\nconst int TRIG_PIN = 2;\nconst int SOL_PIN = 8;\nconst int ARMED_PIN = 11;\nconst unsigned long PULSE_MS = 2500;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 500;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastTrig = HIGH;\nunsigned long trigEdge = 0;\nunsigned long lastHb = 0;\nunsigned long dots = 0;\n\nvoid solHigh()\n{\n    digitalWrite(SOL_PIN, HIGH);\n}\n\nvoid solLow()\n{\n    digitalWrite(SOL_PIN, LOW);\n}\n\nvoid setArmedLed(bool on)\n{\n    digitalWrite(ARMED_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"glue dots=\");\n    Serial.print(dots);\n    Serial.print(\" busy=\");\n    Serial.println(pulsing ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(SOL_PIN, OUTPUT);\n    pinMode(ARMED_PIN, OUTPUT);\n    solLow();\n    setArmedLed(true);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastTrig = stableTrig;\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        solLow();\n        setArmedLed(true);\n    }\n\n    if (raw != lastTrig)\n    {\n        trigEdge = now;\n        lastTrig = raw;\n    }\n\n    if ((now - trigEdge) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            dots++;\n            solHigh();\n            setArmedLed(false);\n        }\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 78.55,
+      "llm_calls": 7,
+      "prompt_tokens": 16782,
+      "completion_tokens": 4603,
+      "cost_usd": 0.00663222,
+      "model": "deepseek-chat"
+    }
+  ]
+}

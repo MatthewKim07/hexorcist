@@ -1,0 +1,74 @@
+{
+  "case_id": "laundry_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No hysteresis on FILL entry threshold",
+      "description": "FILL is entered whenever level < 10.0 cm, but the probe reading near the threshold will oscillate the state between IDLE and FILL on noise, toggling the valve rapidly; a small hysteresis band (e.g. enter FILL below 9.5 cm, exit only above 10.5 cm) is needed.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b2",
+      "title": "Reset not applied immediately",
+      "description": "The reset button is only sampled inside the 40 ms tick block, so holding D4 LOW does not force IDLE 'immediately' and outputs can stay energized up to ~40 ms plus loop jitter; reset should be checked every loop iteration and drive outputs right away.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b3",
+      "title": "Motor cutoff latency not guaranteed",
+      "description": "The 600 ms motor-off requirement is met only because the tick is 40 ms, but the level is sampled and the state machine evaluated only once per tick; combined with the reset check being inside the same block, a slow analogRead or serial blocking can push the motor-off past 600 ms. Sampling and output update should be decoupled from the status print and reset handled first.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "laundry_ok",
+    "spec": "- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).\n- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.\n- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.\n- Enter FILL from IDLE when level is below 10.0 cm.\n- Holding D4 LOW forces IDLE immediately.\n- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No hysteresis on FILL entry threshold",
+        "description": "FILL is entered whenever level < 10.0 cm, but the probe reading near the threshold will oscillate the state between IDLE and FILL on noise, toggling the valve rapidly; a small hysteresis band (e.g. enter FILL below 9.5 cm, exit only above 10.5 cm) is needed.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b2",
+        "title": "Reset not applied immediately",
+        "description": "The reset button is only sampled inside the 40 ms tick block, so holding D4 LOW does not force IDLE 'immediately' and outputs can stay energized up to ~40 ms plus loop jitter; reset should be checked every loop iteration and drive outputs right away.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b3",
+        "title": "Motor cutoff latency not guaranteed",
+        "description": "The 600 ms motor-off requirement is met only because the tick is 40 ms, but the level is sampled and the state machine evaluated only once per tick; combined with the reset check being inside the same block, a slow analogRead or serial blocking can push the motor-off past 600 ms. Sampling and output update should be decoupled from the status print and reset handled first.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 919,
+    "completion_tokens": 64,
+    "cost_usd": 0.00017625,
+    "cached": true
+  }
+}

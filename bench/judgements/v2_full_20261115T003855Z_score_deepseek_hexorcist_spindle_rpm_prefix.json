@@ -1,0 +1,152 @@
+{
+  "case_id": "spindle_rpm_prefix",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "RPM line format wrong (lowercase, space after colon)",
+      "description": "printRpm at lines 45-46 emits \"rpm: \" followed by the value, but the spec requires `RPM:<n>` with no space after the colon. The measured evidence shows no serial line matched /^RPM:[0-9]+$/ in 8.00 s across 21 scenarios, so the required line is never produced. No serial line matched /^RPM:[0-9]+$/ in 8.00 s; expected one every 1000 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Printed rpm never parsable so value cannot be verified",
+      "description": "Because printRpm (lines 45-46) prints \"rpm: \" instead of \"RPM:\", the value pattern /RPM:(-?[0-9.]+)/ never matches; measured evidence reports no parsable serial value in 8.00 s. The scaling at line 21 (raw * 5000/1023) is also suspect for 1 mV/rpm, but the format failure alone prevents any comparison. No serial line matched /RPM:(-?[0-9.]+)/ so the printed value could not be compared with A5.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "D9 fails to light at over-speed due to mute handling and sampling",
+      "description": "updateWarn (lines 38-40) only runs every 50 ms inside the sample branch and reads mute directly, so a released mute at 2100 rpm left D9 not HIGH for 2002 ms (measured). The lamp state also depends on the raw noisy reading with no hysteresis, causing wrong-state intervals up to 4048 ms. D9 was in the wrong state for 2101 ms across 2 interval(s), first at 500 ms: D9 was not HIGH for 2002 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a4",
+      "title": "D9 chatters on noisy threshold readings",
+      "description": "updateWarn uses a bare `v >= WARN_RPM` comparison (line 39) on an unfiltered analogRead (line 20), so noise around 2000 mV toggles D9 every sample. Measured evidence shows D9 not LOW for 50-150 ms intervals across 14 scenarios, e.g. 3353 ms wrong across 37 intervals. D9 was in the wrong state for 3353 ms across 37 interval(s), first at 900 ms: D9 was not LOW for 50 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints rpm: with space instead of RPM:",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints rpm: with space instead of RPM:",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^RPM:' every 1000 ms (RPM: lines)"
+        },
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'RPM:(-?[0-9.]+)' match the stimulus (tolerance 50) (rpm value)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "spindle_rpm_prefix",
+    "spec": "- Tach input on A5 at 1 mV per rpm; over-speed lamp on D9; mute on D3 (pull-up).\n- Print `RPM:<n>` with no space after the colon once per second (1000 ms \u00b1120 ms).\n- Printed rpm must stay within \u00b150 of the injected tach value.\n- Light D9 when rpm is at or above 2000 while mute is released.\n- While D3 is held LOW, keep D9 OFF regardless of rpm.\n- Each second also print `spindle min=<n> max=<n>` after the RPM line.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "serial_format",
+        "description": "Prints rpm: with space instead of RPM:",
+        "check_ids": [
+          "a_period",
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^RPM:' every 1000 ms (RPM: lines)"
+          },
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'RPM:(-?[0-9.]+)' match the stimulus (tolerance 50) (rpm value)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "RPM line format wrong (lowercase, space after colon)",
+        "description": "printRpm at lines 45-46 emits \"rpm: \" followed by the value, but the spec requires `RPM:<n>` with no space after the colon. The measured evidence shows no serial line matched /^RPM:[0-9]+$/ in 8.00 s across 21 scenarios, so the required line is never produced. No serial line matched /^RPM:[0-9]+$/ in 8.00 s; expected one every 1000 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Printed rpm never parsable so value cannot be verified",
+        "description": "Because printRpm (lines 45-46) prints \"rpm: \" instead of \"RPM:\", the value pattern /RPM:(-?[0-9.]+)/ never matches; measured evidence reports no parsable serial value in 8.00 s. The scaling at line 21 (raw * 5000/1023) is also suspect for 1 mV/rpm, but the format failure alone prevents any comparison. No serial line matched /RPM:(-?[0-9.]+)/ so the printed value could not be compared with A5.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "D9 fails to light at over-speed due to mute handling and sampling",
+        "description": "updateWarn (lines 38-40) only runs every 50 ms inside the sample branch and reads mute directly, so a released mute at 2100 rpm left D9 not HIGH for 2002 ms (measured). The lamp state also depends on the raw noisy reading with no hysteresis, causing wrong-state intervals up to 4048 ms. D9 was in the wrong state for 2101 ms across 2 interval(s), first at 500 ms: D9 was not HIGH for 2002 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a4",
+        "title": "D9 chatters on noisy threshold readings",
+        "description": "updateWarn uses a bare `v >= WARN_RPM` comparison (line 39) on an unfiltered analogRead (line 20), so noise around 2000 mV toggles D9 every sample. Measured evidence shows D9 not LOW for 50-150 ms intervals across 14 scenarios, e.g. 3353 ms wrong across 37 intervals. D9 was in the wrong state for 3353 ms across 37 interval(s), first at 900 ms: D9 was not LOW for 50 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes incorrect format of RPM line with space after colon.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [2, 3, 4],\n  \"unique_false_alarm_indices\": [2, 3, 4],\n  \"notes\": \"Reports 2, 3, and 4 do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes incorrect format of RPM line with space after colon."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [
+      2,
+      3,
+      4
+    ],
+    "unique_false_alarm_indices": [
+      2,
+      3,
+      4
+    ],
+    "notes": "Reports 2, 3, and 4 do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1356,
+    "completion_tokens": 126,
+    "cost_usd": 0.000279,
+    "cached": true
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "case_id": "laundry_cycle_stuck",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing RUN exit condition",
+      "description": "The state machine never leaves ST_RUN when the level drops below RUN_MIN_CM (20.0 cm), so the motor stays HIGH indefinitely instead of returning to IDLE.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b2",
+      "title": "Missing hysteresis on FILL entry",
+      "description": "FILL is entered whenever level < 10.0 cm, but there is no separate lower threshold to prevent chatter; however the real issue is that the RUN exit threshold (20.0 cm) is not used, causing the motor to never stop.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "RUN state never exits when level drops",
+      "check_ids": [
+        "a_motor"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "RUN state never exits when level drops",
+      "check_ids": [
+        "a_motor"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_motor",
+          "type": "output_follows",
+          "behaviour": "D10 must follow its stimulus; LOW when A0 < 20; within 600 ms (Motor off below 20 cm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "laundry_cycle_stuck",
+    "spec": "- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).\n- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.\n- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.\n- Enter FILL from IDLE when level is below 10.0 cm.\n- Holding D4 LOW forces IDLE immediately.\n- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "stuck_state_machine",
+        "description": "RUN state never exits when level drops",
+        "check_ids": [
+          "a_motor"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_motor",
+            "type": "output_follows",
+            "behaviour": "D10 must follow its stimulus; LOW when A0 < 20; within 600 ms (Motor off below 20 cm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing RUN exit condition",
+        "description": "The state machine never leaves ST_RUN when the level drops below RUN_MIN_CM (20.0 cm), so the motor stays HIGH indefinitely instead of returning to IDLE.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b2",
+        "title": "Missing hysteresis on FILL entry",
+        "description": "FILL is entered whenever level < 10.0 cm, but there is no separate lower threshold to prevent chatter; however the real issue is that the RUN exit threshold (20.0 cm) is not used, causing the motor to never stop.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same issue of RUN state not exiting when level drops.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report discusses a related issue but does not match the true bug directly.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same issue of RUN state not exiting when level drops."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report discusses a related issue but does not match the true bug directly."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 877,
+    "completion_tokens": 97,
+    "cost_usd": 0.00018975,
+    "cached": true
+  }
+}

@@ -1,0 +1,1038 @@
+{
+  "run_id": "v2_full_20261115T003855Z_score_openai",
+  "created_at": "2026-11-15T04:35:14.797238+00:00",
+  "systems": [
+    {
+      "system": "baseline",
+      "cases": 40,
+      "detection_recall": 0.875,
+      "bugs_detected": 28,
+      "bugs_truth": 32,
+      "false_alarms": 53,
+      "compile_rate": 1.0,
+      "fix_rate": 0.6,
+      "per_category": {
+        "blocking_delay": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 2,
+          "compiles": 3
+        },
+        "correct": {
+          "cases": 11,
+          "truth_bugs": 0,
+          "false_alarms": 23,
+          "fixed": 10,
+          "compiles": 11
+        },
+        "integer_overflow": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "fixed": 0,
+          "compiles": 2,
+          "detected": 1
+        },
+        "inverted_pullup": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 2,
+          "fixed": 0,
+          "compiles": 3
+        },
+        "millis_rollover": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 1,
+          "compiles": 2
+        },
+        "missing_debounce": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 1,
+          "compiles": 3
+        },
+        "missing_failsafe": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 1,
+          "compiles": 3
+        },
+        "missing_hysteresis": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 0,
+          "compiles": 3
+        },
+        "off_by_one_timing": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 2,
+          "compiles": 2
+        },
+        "serial_format": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 2
+        },
+        "stuck_state_machine": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 2
+        },
+        "timed_pulse_length": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 2,
+          "compiles": 2
+        },
+        "wrong_pin": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 2,
+          "compiles": 2
+        },
+        "wrong_unit_scaling": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        }
+      },
+      "rows": [
+        {
+          "case_id": "aquarium_ph_scale",
+          "categories": [
+            "wrong_unit_scaling"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 11.93,
+          "llm_calls": 1,
+          "prompt_tokens": 911,
+          "completion_tokens": 671,
+          "cost_usd": 0.00053925,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "attic_vent_hyst",
+          "categories": [
+            "missing_hysteresis"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 11.96,
+          "llm_calls": 1,
+          "prompt_tokens": 1036,
+          "completion_tokens": 858,
+          "cost_usd": 0.0006702,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "bench_led_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 0.0,
+          "llm_calls": 0,
+          "prompt_tokens": 914,
+          "completion_tokens": 667,
+          "cost_usd": 0.0005373,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "blend_tank_sum_ovf",
+          "categories": [
+            "integer_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_val"
+          ],
+          "wall_s": 10.68,
+          "llm_calls": 1,
+          "prompt_tokens": 889,
+          "completion_tokens": 671,
+          "cost_usd": 0.00053595,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "boiler_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 11.44,
+          "llm_calls": 1,
+          "prompt_tokens": 1057,
+          "completion_tokens": 787,
+          "cost_usd": 0.00063075,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "boiler_valve_failsafe",
+          "categories": [
+            "missing_failsafe"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 3,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 12.59,
+          "llm_calls": 1,
+          "prompt_tokens": 1001,
+          "completion_tokens": 823,
+          "cost_usd": 0.00064395,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "cabin_heater_mul_ovf",
+          "categories": [
+            "integer_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 10.03,
+          "llm_calls": 1,
+          "prompt_tokens": 983,
+          "completion_tokens": 702,
+          "cost_usd": 0.00056865,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "cellar_pump_hyst",
+          "categories": [
+            "missing_hysteresis"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 3,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 14.46,
+          "llm_calls": 1,
+          "prompt_tokens": 1024,
+          "completion_tokens": 924,
+          "cost_usd": 0.000708,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "cooler_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 13.29,
+          "llm_calls": 1,
+          "prompt_tokens": 1157,
+          "completion_tokens": 870,
+          "cost_usd": 0.00069555,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "drip_scheduler_u8",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 12.18,
+          "llm_calls": 1,
+          "prompt_tokens": 936,
+          "completion_tokens": 689,
+          "cost_usd": 0.0005538,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "foyer_lamp_debounce",
+          "categories": [
+            "missing_debounce"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_tpp"
+          ],
+          "wall_s": 8.13,
+          "llm_calls": 1,
+          "prompt_tokens": 804,
+          "completion_tokens": 617,
+          "cost_usd": 0.0004908,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "glue_solenoid_short",
+          "categories": [
+            "timed_pulse_length"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.91,
+          "llm_calls": 1,
+          "prompt_tokens": 966,
+          "completion_tokens": 745,
+          "cost_usd": 0.0005919,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "greenhouse_dual",
+          "categories": [
+            "missing_hysteresis",
+            "missing_failsafe"
+          ],
+          "truth_bugs": 2,
+          "detected": 2,
+          "detection": {
+            "b1": true,
+            "b2": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 0.0,
+          "llm_calls": 0,
+          "prompt_tokens": 983,
+          "completion_tokens": 888,
+          "cost_usd": 0.00068025,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "greenhouse_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 3,
+          "false_alarms": 3,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 15.98,
+          "llm_calls": 1,
+          "prompt_tokens": 1195,
+          "completion_tokens": 1197,
+          "cost_usd": 0.00089745,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "hoist_estop_invert",
+          "categories": [
+            "inverted_pullup"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 9.78,
+          "llm_calls": 1,
+          "prompt_tokens": 1000,
+          "completion_tokens": 741,
+          "cost_usd": 0.0005946,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "hold_to_arm_late",
+          "categories": [
+            "off_by_one_timing"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.76,
+          "llm_calls": 1,
+          "prompt_tokens": 930,
+          "completion_tokens": 688,
+          "cost_usd": 0.0005523,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "inject_pulse_short",
+          "categories": [
+            "off_by_one_timing"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.9,
+          "llm_calls": 1,
+          "prompt_tokens": 871,
+          "completion_tokens": 719,
+          "cost_usd": 0.00056205,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "kiln_door_block",
+          "categories": [
+            "blocking_delay"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 7.45,
+          "llm_calls": 1,
+          "prompt_tokens": 786,
+          "completion_tokens": 586,
+          "cost_usd": 0.0004695,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "lab_ph_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.23,
+          "llm_calls": 1,
+          "prompt_tokens": 900,
+          "completion_tokens": 673,
+          "cost_usd": 0.0005388,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "laundry_cycle_stuck",
+          "categories": [
+            "stuck_state_machine"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.8,
+          "llm_calls": 1,
+          "prompt_tokens": 1093,
+          "completion_tokens": 918,
+          "cost_usd": 0.00071475,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "laundry_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 13.19,
+          "llm_calls": 1,
+          "prompt_tokens": 1124,
+          "completion_tokens": 932,
+          "cost_usd": 0.0007278,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "lobby_lamp_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.04,
+          "llm_calls": 1,
+          "prompt_tokens": 817,
+          "completion_tokens": 639,
+          "cost_usd": 0.00050595,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "lock_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 12.59,
+          "llm_calls": 1,
+          "prompt_tokens": 938,
+          "completion_tokens": 849,
+          "cost_usd": 0.0006501,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "loft_fan_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 0.0,
+          "llm_calls": 0,
+          "prompt_tokens": 1073,
+          "completion_tokens": 870,
+          "cost_usd": 0.00068295,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "mist_injector_long",
+          "categories": [
+            "timed_pulse_length"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.56,
+          "llm_calls": 1,
+          "prompt_tokens": 948,
+          "completion_tokens": 718,
+          "cost_usd": 0.000573,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "nav_beacon_byte_timer",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 3,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_period"
+          ],
+          "wall_s": 10.22,
+          "llm_calls": 1,
+          "prompt_tokens": 882,
+          "completion_tokens": 781,
+          "cost_usd": 0.0006009,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "panel_dual_debounce_edge",
+          "categories": [
+            "missing_debounce",
+            "inverted_pullup"
+          ],
+          "truth_bugs": 2,
+          "detected": 1,
+          "detection": {
+            "b1": true,
+            "b2": false
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_tpp"
+          ],
+          "wall_s": 9.24,
+          "llm_calls": 1,
+          "prompt_tokens": 781,
+          "completion_tokens": 612,
+          "cost_usd": 0.00048435,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "porch_gate_block",
+          "categories": [
+            "blocking_delay"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_hb",
+            "a_pulse",
+            "a_resp"
+          ],
+          "wall_s": 6.82,
+          "llm_calls": 1,
+          "prompt_tokens": 754,
+          "completion_tokens": 576,
+          "cost_usd": 0.0004587,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "process_dual_block_scale",
+          "categories": [
+            "wrong_unit_scaling",
+            "blocking_delay"
+          ],
+          "truth_bugs": 2,
+          "detected": 2,
+          "detection": {
+            "b1": true,
+            "b2": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.23,
+          "llm_calls": 1,
+          "prompt_tokens": 850,
+          "completion_tokens": 685,
+          "cost_usd": 0.0005385,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "rail_limit_invert",
+          "categories": [
+            "inverted_pullup"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 12.14,
+          "llm_calls": 1,
+          "prompt_tokens": 973,
+          "completion_tokens": 737,
+          "cost_usd": 0.00058815,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "shop_estop_debounce",
+          "categories": [
+            "missing_debounce"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 8.44,
+          "llm_calls": 1,
+          "prompt_tokens": 813,
+          "completion_tokens": 619,
+          "cost_usd": 0.00049335,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "solenoid_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 12.45,
+          "llm_calls": 1,
+          "prompt_tokens": 971,
+          "completion_tokens": 740,
+          "cost_usd": 0.00058965,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "spindle_rpm_prefix",
+          "categories": [
+            "serial_format"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_val"
+          ],
+          "wall_s": 10.1,
+          "llm_calls": 1,
+          "prompt_tokens": 969,
+          "completion_tokens": 732,
+          "cost_usd": 0.00058455,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "studio_siren_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.99,
+          "llm_calls": 1,
+          "prompt_tokens": 866,
+          "completion_tokens": 694,
+          "cost_usd": 0.0005463,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "vault_lock_stuck",
+          "categories": [
+            "stuck_state_machine"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_unlock"
+          ],
+          "wall_s": 10.93,
+          "llm_calls": 1,
+          "prompt_tokens": 918,
+          "completion_tokens": 834,
+          "cost_usd": 0.0006381,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "walk_in_cooler_failsafe",
+          "categories": [
+            "missing_failsafe"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 11.45,
+          "llm_calls": 1,
+          "prompt_tokens": 1101,
+          "completion_tokens": 870,
+          "cost_usd": 0.00068715,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "weather_line_prefix",
+          "categories": [
+            "serial_format"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_period",
+            "a_val"
+          ],
+          "wall_s": 11.27,
+          "llm_calls": 1,
+          "prompt_tokens": 975,
+          "completion_tokens": 679,
+          "cost_usd": 0.00055365,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "weather_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.18,
+          "llm_calls": 1,
+          "prompt_tokens": 963,
+          "completion_tokens": 668,
+          "cost_usd": 0.00054525,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "workshop_kpa_scale",
+          "categories": [
+            "wrong_unit_scaling"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.34,
+          "llm_calls": 1,
+          "prompt_tokens": 933,
+          "completion_tokens": 702,
+          "cost_usd": 0.00056115,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "yard_relay_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 3,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 11.3,
+          "llm_calls": 1,
+          "prompt_tokens": 929,
+          "completion_tokens": 757,
+          "cost_usd": 0.00059355,
+          "model": "gpt-4o-mini"
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.006981,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "calls": 38
+  }
+}

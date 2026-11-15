@@ -1,0 +1,60 @@
+{
+  "case_id": "lab_ph_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Range lamp chatters at the 8.50 threshold with no hysteresis",
+      "description": "updateRangeLamp() at lines 42-43 recomputes inBand from the instantaneous pH every loop iteration and drives D10 directly, with no hysteresis or debounce. Near the 8.50 boundary ADC noise flips the comparison each pass, so the lamp toggles; measured evidence shows D10 in the wrong state for 3555 ms across 1292 intervals in the threshold-hover scenario and 3750 ms across 26 intervals in the rapid-oscillation scenario. D10 was in the wrong state for 3495 ms across 1330 interval(s), first at 500 ms: D10 was not LOW for 3 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Range lamp chatters at the 6.50 threshold with no hysteresis",
+      "description": "The same unconditional per-loop comparison in updateRangeLamp() (lines 42-43) means the 6.50 lower boundary is also evaluated on every raw sample with no filtering or hysteresis. Noise and ramps crossing the threshold toggle D10 repeatedly; measured evidence shows D10 wrong for 2712 ms across 1067 intervals near 8.50 and 1963 ms across 15 intervals during the slow drift across both thresholds. D10 was in the wrong state for 2712 ms across 1067 interval(s), first at 500 ms: D10 was not LOW for 2 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lab_ph_ok",
+    "spec": "- Linearized pH probe on A1 at 500 mV/pH; out-of-band indicator on D10.\n- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 500 for pH.\n- Print `pH: <value>` every 1000 ms with two decimal places.\n- Printed pH must stay within \u00b10.20 of the injected probe value.\n- Drive D10 HIGH when pH is outside 6.50\u20138.50 inclusive; otherwise LOW.\n- Keep the 1000 ms logging cadence while the indicator is lit.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Range lamp chatters at the 8.50 threshold with no hysteresis",
+        "description": "updateRangeLamp() at lines 42-43 recomputes inBand from the instantaneous pH every loop iteration and drives D10 directly, with no hysteresis or debounce. Near the 8.50 boundary ADC noise flips the comparison each pass, so the lamp toggles; measured evidence shows D10 in the wrong state for 3555 ms across 1292 intervals in the threshold-hover scenario and 3750 ms across 26 intervals in the rapid-oscillation scenario. D10 was in the wrong state for 3495 ms across 1330 interval(s), first at 500 ms: D10 was not LOW for 3 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Range lamp chatters at the 6.50 threshold with no hysteresis",
+        "description": "The same unconditional per-loop comparison in updateRangeLamp() (lines 42-43) means the 6.50 lower boundary is also evaluated on every raw sample with no filtering or hysteresis. Noise and ramps crossing the threshold toggle D10 repeatedly; measured evidence shows D10 wrong for 2712 ms across 1067 intervals near 8.50 and 1963 ms across 15 intervals during the slow drift across both thresholds. D10 was in the wrong state for 2712 ms across 1067 interval(s), first at 500 ms: D10 was not LOW for 2 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present; all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present; all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 943,
+    "completion_tokens": 57,
+    "cost_usd": 0.00017565,
+    "cached": true
+  }
+}

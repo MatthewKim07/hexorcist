@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/shop_estop_debounce",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "shop_estop_debounce",
+      "run_id": "267c06c02a8a",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No debounce: every bounce edge toggles the armed lamp",
+          "description": "The loop reads D6 and calls toggleArmed() on every HIGH-to-LOW transition (lines 52-57) with no settle window, so each contact bounce edge is counted as a separate press. Measured evidence shows 4 toggles per press in the bounce scenario ([4, 4, 4, 4]) and 3 per press in the rapid and stress scenarios, far exceeding the required exactly one toggle per press. The spec's 50 ms settle window is never implemented, and the spurious toggles at 1.40 s with no press confirm bounce edges are being accepted as presses. 4 of 4 press(es) did not toggle D9 exactly once; toggle counts per press were [4, 4, 4, 4]. D9 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+          "assertion_type": "toggle_per_press",
+          "verified": true,
+          "evidence": "4 of 4 press(es) did not toggle D9 exactly once; toggle counts per press were [4, 4, 4, 4]. D9 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+          "root_cause": "The loop reads D6 and calls toggleArmed() on every HIGH-to-LOW transition (lines 52-57) with no settle window, so each contact bounce edge is counted as a separate press. Measured evidence shows 4 toggles per press in the bounce scenario ([4, 4, 4, 4]) and 3 per press in the rapid and stress scenarios, far exceeding the required exactly one toggle per press. The spec's 50 ms settle window is never implemented, and the spurious toggles at 1.40 s with no press confirm bounce edges are being accepted as presses."
+        }
+      ],
+      "patched_sketch": "// Shop bench run/stop: mushroom estop toggles the \"machine armed\" lamp.\n// Estop contact on D6 (NC to ground via switch, pull-up), armed lamp on D9.\n\nconst uint8_t ESTOP_PIN = 6;\nconst uint8_t ARMED_PIN = 9;\nconst unsigned long BEAT_MS = 1200;\nconst unsigned long SETTLE_MS = 50;\n\nbool armed = false;\nuint8_t priorSample = HIGH;\nuint8_t stableSample = HIGH;\nuint8_t candidateSample = HIGH;\nunsigned long candidateSince = 0;\nunsigned long lastBeat = 0;\nunsigned long pressCount = 0;\nunsigned long bootMs = 0;\n\nvoid writeArmed(bool level)\n{\n    armed = level;\n    digitalWrite(ARMED_PIN, level ? HIGH : LOW);\n}\n\nvoid toggleArmed()\n{\n    writeArmed(!armed);\n    pressCount++;\n}\n\nbool fallingEdge(uint8_t previous, uint8_t current)\n{\n    return previous == HIGH && current == LOW;\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"shop armed=\");\n    Serial.print(armed ? 1 : 0);\n    Serial.print(\" presses=\");\n    Serial.println(pressCount);\n}\n\nvoid setup()\n{\n    pinMode(ESTOP_PIN, INPUT_PULLUP);\n    pinMode(ARMED_PIN, OUTPUT);\n    writeArmed(false);\n    Serial.begin(9600);\n    priorSample = digitalRead(ESTOP_PIN);\n    stableSample = priorSample;\n    candidateSample = priorSample;\n    candidateSince = millis();\n    lastBeat = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    uint8_t sample = digitalRead(ESTOP_PIN);\n    unsigned long now = millis();\n\n    if (sample != candidateSample)\n    {\n        candidateSample = sample;\n        candidateSince = now;\n    }\n    else if (candidateSample != stableSample && now - candidateSince >= SETTLE_MS)\n    {\n        stableSample = candidateSample;\n        if (fallingEdge(priorSample, stableSample))\n        {\n            toggleArmed();\n        }\n        priorSample = stableSample;\n    }\n\n    if (now - lastBeat >= BEAT_MS)\n    {\n        lastBeat = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 68.0,
+      "llm_calls": 4,
+      "prompt_tokens": 7562,
+      "completion_tokens": 2509,
+      "cost_usd": 0.00317114,
+      "model": "deepseek-chat"
+    }
+  ]
+}

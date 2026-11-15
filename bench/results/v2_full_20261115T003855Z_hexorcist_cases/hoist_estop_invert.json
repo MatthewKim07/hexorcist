@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/hoist_estop_invert",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "hoist_estop_invert",
+      "run_id": "a049bb4f9e2b",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "E-stop polarity inverted: contactor runs while e-stop is pressed",
+          "description": "estopActive() at line 20 returns true when the pin reads HIGH, but the e-stop is active LOW (pressed = LOW), so the logic is inverted. With the e-stop held LOW, stableStop settles to LOW, stopped becomes false at line 69, and the else branches at lines 76-83 drive D5 HIGH; measured evidence shows 'D5 was not HIGH for 700 ms while required' and 'D5 was not LOW for 48 ms while required' in the rapid-press scenario. This makes the contactor energize during an emergency stop, the opposite of the required safe behavior. D5 was in the wrong state for 4842 ms across 31 interval(s), first at 100 ms: D5 was not HIGH for 700 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D5 was in the wrong state for 4842 ms across 31 interval(s), first at 100 ms: D5 was not HIGH for 700 ms while required (grace 100 ms).",
+          "root_cause": "estopActive() at line 20 returns true when the pin reads HIGH, but the e-stop is active LOW (pressed = LOW), so the logic is inverted. With the e-stop held LOW, stableStop settles to LOW, stopped becomes false at line 69, and the else branches at lines 76-83 drive D5 HIGH; measured evidence shows 'D5 was not HIGH for 700 ms while required' and 'D5 was not LOW for 48 ms while required' in the rapid-press scenario. This makes the contactor energize during an emergency stop, the opposite of the required safe behavior."
+        }
+      ],
+      "patched_sketch": "// Shop hoist contactor with mushroom e-stop.\n// E-stop on D3 (NC to ground via switch, pull-up), contactor on D5.\n// Run request on D6 (pull-up).\n\nconst int ESTOP_PIN = 3;\nconst int CONTACTOR_PIN = 5;\nconst int RUN_PIN = 6;\nconst unsigned long SETTLE_MS = 30;\nconst unsigned long BEAT_MS = 1100;\n\nint stableStop = HIGH;\nint lastStop = HIGH;\nunsigned long stopEdge = 0;\nbool contactorOn = false;\nunsigned long lastBeat = 0;\nunsigned long tripCount = 0;\n\nbool estopActive(int level)\n{\n    return level == LOW;\n}\n\nvoid setContactor(bool on)\n{\n    contactorOn = on;\n    digitalWrite(CONTACTOR_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"hoist run=\");\n    Serial.print(contactorOn ? 1 : 0);\n    Serial.print(\" trips=\");\n    Serial.println(tripCount);\n}\n\nvoid setup()\n{\n    pinMode(ESTOP_PIN, INPUT_PULLUP);\n    pinMode(RUN_PIN, INPUT_PULLUP);\n    pinMode(CONTACTOR_PIN, OUTPUT);\n    setContactor(false);\n    Serial.begin(9600);\n    stableStop = digitalRead(ESTOP_PIN);\n    lastStop = stableStop;\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(ESTOP_PIN);\n\n    if (raw != lastStop)\n    {\n        stopEdge = now;\n        lastStop = raw;\n    }\n\n    if ((now - stopEdge) >= SETTLE_MS && raw != stableStop)\n    {\n        if (estopActive(raw) && !estopActive(stableStop))\n        {\n            tripCount++;\n        }\n        stableStop = raw;\n    }\n\n    bool stopped = estopActive(stableStop);\n    bool runReq = (digitalRead(RUN_PIN) == LOW);\n\n    if (stopped)\n    {\n        setContactor(false);\n    }\n    else if (runReq)\n    {\n        setContactor(true);\n    }\n    else\n    {\n        setContactor(true);\n    }\n\n    if (now - lastBeat >= BEAT_MS)\n    {\n        lastBeat = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 58.93,
+      "llm_calls": 4,
+      "prompt_tokens": 8612,
+      "completion_tokens": 3305,
+      "cost_usd": 0.00379946,
+      "model": "deepseek-chat"
+    }
+  ]
+}

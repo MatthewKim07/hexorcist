@@ -1,0 +1,106 @@
+{
+  "case_id": "shop_estop_debounce",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce logic",
+      "description": "The sketch does not implement debounce logic, which can lead to multiple toggles due to switch bounce. The toggle should only occur after a stable press for at least 50 ms.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Immediate toggle on press",
+      "description": "The sketch toggles the armed state immediately on detecting a falling edge without waiting for the button to be released, which violates the requirement that release must not toggle.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "shop_estop_debounce",
+    "spec": "- Shop estop pushbutton on D6 to ground with internal pull-up (active LOW); machine-armed indicator on D9.\n- Each settled press toggles D9 exactly once within 150 ms; release must not toggle.\n- Bounce bursts up to 22 ms must not produce more than one toggle per physical press.\n- Use a 50 ms settle window before accepting a press.\n- Print `shop armed=<0|1> presses=<n>` every 1200 ms.\n- Unpressed idle level is HIGH on D6.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "Immediate edge detect counts bounce as presses",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce logic",
+        "description": "The sketch does not implement debounce logic, which can lead to multiple toggles due to switch bounce. The toggle should only occur after a stable press for at least 50 ms.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Immediate toggle on press",
+        "description": "The sketch toggles the armed state immediately on detecting a falling edge without waiting for the button to be released, which violates the requirement that release must not toggle.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes missing debounce logic which leads to multiple toggles due to switch bounce.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes missing debounce logic which leads to multiple toggles due to switch bounce."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 800,
+    "completion_tokens": 94,
+    "cost_usd": 0.0001764,
+    "cached": true
+  }
+}

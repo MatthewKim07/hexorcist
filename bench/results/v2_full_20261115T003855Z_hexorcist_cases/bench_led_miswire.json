@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/bench_led_miswire",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "bench_led_miswire",
+      "run_id": "382fef339d7f",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "LED wired to wrong pin (D12 instead of D13)",
+          "description": "Line 6 defines LED_PIN as 12, but the spec requires the user LED on D13, so every setLed() call on lines 19/35 drives the wrong pin and D13 never follows the button. The measured evidence shows D13 was not HIGH for 48 ms at 902 ms in the rapid-press scenario and for 292 ms at 1.11 s under bounce, consistent with D13 never being driven at all. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+          "root_cause": "Line 6 defines LED_PIN as 12, but the spec requires the user LED on D13, so every setLed() call on lines 19/35 drives the wrong pin and D13 never follows the button. The measured evidence shows D13 was not HIGH for 48 ms at 902 ms in the rapid-press scenario and for 292 ms at 1.11 s under bounce, consistent with D13 never being driven at all."
+        }
+      ],
+      "patched_sketch": "// Electronics-bench user LED mirror.\n// Momentary probe button on D2 (pull-up), user LED on D13.\n// Mode switch on D4 (pull-up) selects steady vs blink-while-held.\n\nconst int BTN_PIN = 2;\nconst int LED_PIN = 13;\nconst int MODE_PIN = 4;\nconst unsigned long BLINK_MS = 120;\nconst unsigned long STATUS_MS = 1000;\n\nbool lit = false;\nunsigned long lastBlink = 0;\nunsigned long lastStatus = 0;\nunsigned long pressMs = 0;\n\nvoid setLed(bool on)\n{\n    lit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"bench led=\");\n    Serial.print(lit ? 1 : 0);\n    Serial.print(\" held_ms=\");\n    Serial.println(pressMs);\n}\n\nvoid setup()\n{\n    pinMode(BTN_PIN, INPUT_PULLUP);\n    pinMode(MODE_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    setLed(false);\n    Serial.begin(9600);\n    lastBlink = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool pressed = (digitalRead(BTN_PIN) == LOW);\n    bool blinkMode = (digitalRead(MODE_PIN) == LOW);\n\n    if (!pressed)\n    {\n        pressMs = 0;\n        setLed(false);\n    }\n    else if (!blinkMode)\n    {\n        if (pressMs == 0)\n        {\n            pressMs = now;\n        }\n        setLed(true);\n    }\n    else\n    {\n        if (pressMs == 0)\n        {\n            pressMs = now;\n            lastBlink = now;\n            setLed(true);\n        }\n        if (now - lastBlink >= BLINK_MS)\n        {\n            lastBlink = now;\n            setLed(!lit);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 78.65,
+      "llm_calls": 8,
+      "prompt_tokens": 19839,
+      "completion_tokens": 4744,
+      "cost_usd": 0.0075474,
+      "model": "deepseek-chat"
+    }
+  ]
+}

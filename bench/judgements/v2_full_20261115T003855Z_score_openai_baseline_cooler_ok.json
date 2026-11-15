@@ -1,0 +1,67 @@
+{
+  "case_id": "cooler_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature scaling",
+      "description": "The temperature reading is incorrectly scaled; the analog value should be multiplied by 5 instead of 5000 to convert to millivolts, leading to incorrect temperature calculations.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Compressor state timing issue",
+      "description": "The compressor state change does not account for the 500 ms delay requirement when crossing the temperature thresholds, which may lead to delayed responses.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "cooler_ok",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature scaling",
+        "description": "The temperature reading is incorrectly scaled; the analog value should be multiplied by 5 instead of 5000 to convert to millivolts, leading to incorrect temperature calculations.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Compressor state timing issue",
+        "description": "The compressor state change does not account for the 500 ms delay requirement when crossing the temperature thresholds, which may lead to delayed responses.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 759,
+    "completion_tokens": 92,
+    "cost_usd": 0.00016905,
+    "cached": true
+  }
+}

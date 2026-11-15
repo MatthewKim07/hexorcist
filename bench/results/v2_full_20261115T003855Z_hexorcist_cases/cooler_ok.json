@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/cooler_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "cooler_ok",
+      "run_id": "25b2c05df6cf",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a4",
+          "title": "Compressor not driven ON promptly after service switch release",
+          "description": "The control loop only re-evaluates the compressor every TICK_MS (50 ms) and additionally requires the temperature to satisfy the band condition for HOLD_N (3) consecutive ticks before acting (lines 73-98), so after D4 is released the compressor stays OFF until the hold counter fills. The measured evidence shows D7 not HIGH for 500 ms while required at t=500-1000 ms in the bounce and short-press scenarios, and 80-86 ms gaps in the nominal ramp (lines 570-650, 7854-7940 ms), confirming the delayed response. There is no debounce or immediate service-release handling, so the output does not follow D4 within the required 500 ms. D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+          "root_cause": "The control loop only re-evaluates the compressor every TICK_MS (50 ms) and additionally requires the temperature to satisfy the band condition for HOLD_N (3) consecutive ticks before acting (lines 73-98), so after D4 is released the compressor stays OFF until the hold counter fills. The measured evidence shows D7 not HIGH for 500 ms while required at t=500-1000 ms in the bounce and short-press scenarios, and 80-86 ms gaps in the nominal ramp (lines 570-650, 7854-7940 ms), confirming the delayed response. There is no debounce or immediate service-release handling, so the output does not follow D4 within the required 500 ms."
+        }
+      ],
+      "patched_sketch": "// Walk-in cooler compressor controller (known-good build).\n// Cabinet probe on A3 (10 mV/\u00b0C), compressor on D7, service switch on D4.\n\nconst int TEMP_PIN = A3;\nconst int COMP_PIN = 7;\nconst int SERVICE_PIN = 4;\nconst float COOL_ON_C = 8.0f;\nconst float COOL_OFF_C = 4.0f;\nconst float FAULT_LOW_C = 0.0f;\nconst float FAULT_HIGH_C = 60.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 100;\n\nbool cooling = false;\nbool onPending = false;\nbool offPending = false;\nbool servicePending = false;\nunsigned long onSince = 0;\nunsigned long offSince = 0;\nunsigned long serviceSince = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid setCompressor(bool on)\n{\n    cooling = on;\n    digitalWrite(COMP_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"cooler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C comp=\");\n    Serial.println(cooling ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(COMP_PIN, OUTPUT);\n    pinMode(SERVICE_PIN, INPUT_PULLUP);\n    setCompressor(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        bool service = (digitalRead(SERVICE_PIN) == LOW);\n        bool fault = (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n\n        if (service)\n        {\n            if (!servicePending)\n            {\n                servicePending = true;\n                serviceSince = now;\n            }\n        }\n        else\n        {\n            servicePending = false;\n        }\n\n        bool serviceActive = servicePending && (now - serviceSince >= CONFIRM_MS);\n\n        if (serviceActive || fault)\n        {\n            onPending = false;\n            offPending = false;\n            setCompressor(false);\n        }\n        else\n        {\n            if (tempC >= COOL_ON_C)\n            {\n                if (!onPending)\n                {\n                    onPending = true;\n                    onSince = now;\n                }\n            }\n            else\n            {\n                onPending = false;\n            }\n\n            if (tempC <= COOL_OFF_C)\n            {\n                if (!offPending)\n                {\n                    offPending = true;\n                    offSince = now;\n                }\n            }\n            else\n            {\n                offPending = false;\n            }\n\n            if (onPending && (now - onSince >= CONFIRM_MS))\n            {\n                setCompressor(true);\n            }\n            else if (offPending && (now - offSince >= CONFIRM_MS))\n            {\n                setCompressor(false);\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 197.85,
+      "llm_calls": 7,
+      "prompt_tokens": 19882,
+      "completion_tokens": 6215,
+      "cost_usd": 0.00817726,
+      "model": "deepseek-chat"
+    }
+  ]
+}

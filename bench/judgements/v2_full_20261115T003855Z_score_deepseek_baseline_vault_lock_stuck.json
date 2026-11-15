@@ -1,0 +1,106 @@
+{
+  "case_id": "vault_lock_stuck",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No unlock on door open",
+      "description": "The sketch never drives D9 LOW when the door opens (D3 HIGH); once locked it stays locked forever, violating the unlock-within-200ms requirement.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "Debounce edge timer not initialized",
+      "description": "reqEdge starts at 0, so on the first loop the debounce window is measured from millis()=0 rather than the actual edge; combined with the missing unlock this can cause a spurious immediate engage or missed engage at startup.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_unlock",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "vault_lock_stuck",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "stuck_state_machine",
+        "description": "Lock latches forever after first engage",
+        "check_ids": [
+          "a_unlock"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_unlock",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No unlock on door open",
+        "description": "The sketch never drives D9 LOW when the door opens (D3 HIGH); once locked it stays locked forever, violating the unlock-within-200ms requirement.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b2",
+        "title": "Debounce edge timer not initialized",
+        "description": "reqEdge starts at 0, so on the first loop the debounce window is measured from millis()=0 rather than the actual edge; combined with the missing unlock this can cause a spurious immediate engage or missed engage at startup.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same observable behavior of D9 not unlocking when D3 is HIGH.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same observable behavior of D9 not unlocking when D3 is HIGH."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 844,
+    "completion_tokens": 95,
+    "cost_usd": 0.0001836,
+    "cached": true
+  }
+}

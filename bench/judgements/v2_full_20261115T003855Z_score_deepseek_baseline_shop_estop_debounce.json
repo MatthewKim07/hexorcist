@@ -1,0 +1,120 @@
+{
+  "case_id": "shop_estop_debounce",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No debounce/settle window",
+      "description": "The sketch toggles on every raw falling edge with no 50 ms settle window, so a 22 ms bounce burst produces multiple toggles per physical press.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "No hysteresis on release",
+      "description": "priorSample is updated every loop with the raw sample, so bounce on release (HIGH/LOW chatter) can create spurious falling edges and extra toggles.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b3",
+      "title": "Unused bootMs variable",
+      "description": "bootMs is assigned but never used; harmless but indicates the intended settle timing was never implemented.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "shop_estop_debounce",
+    "spec": "- Shop estop pushbutton on D6 to ground with internal pull-up (active LOW); machine-armed indicator on D9.\n- Each settled press toggles D9 exactly once within 150 ms; release must not toggle.\n- Bounce bursts up to 22 ms must not produce more than one toggle per physical press.\n- Use a 50 ms settle window before accepting a press.\n- Print `shop armed=<0|1> presses=<n>` every 1200 ms.\n- Unpressed idle level is HIGH on D6.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "Immediate edge detect counts bounce as presses",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No debounce/settle window",
+        "description": "The sketch toggles on every raw falling edge with no 50 ms settle window, so a 22 ms bounce burst produces multiple toggles per physical press.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "No hysteresis on release",
+        "description": "priorSample is updated every loop with the raw sample, so bounce on release (HIGH/LOW chatter) can create spurious falling edges and extra toggles.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b3",
+        "title": "Unused bootMs variable",
+        "description": "bootMs is assigned but never used; harmless but indicates the intended settle timing was never implemented.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same issue of toggling on every raw falling edge without debounce.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"Reported bugs b2 and b3 do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same issue of toggling on every raw falling edge without debounce."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "Reported bugs b2 and b3 do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 853,
+    "completion_tokens": 103,
+    "cost_usd": 0.00018975,
+    "cached": true
+  }
+}

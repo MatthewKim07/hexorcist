@@ -1,0 +1,46 @@
+{
+  "case_id": "lock_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Lock does not engage on a held request after door closes",
+      "description": "Engagement is gated on a debounced level change at line 59 (`raw != stableReq`), so once stableReq has settled to LOW while the door was open, a later door close with the button still held produces no new edge and line 62 never fires. Measured: D9 was not HIGH for 2798 ms while required in the 'door opens just before debounce completes' scenario, and for 1298 ms in the 'press during door open then close' scenario. The lock should engage whenever the request is stably LOW and the door is closed and not already locked, not only on a fresh edge. D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lock_ok",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Lock does not engage on a held request after door closes",
+        "description": "Engagement is gated on a debounced level change at line 59 (`raw != stableReq`), so once stableReq has settled to LOW while the door was open, a later door close with the button still held produces no new edge and line 62 never fires. Measured: D9 was not HIGH for 2798 ms while required in the 'door opens just before debounce completes' scenario, and for 1298 ms in the 'press during door open then close' scenario. The lock should engage whenever the request is stably LOW and the door is closed and not already locked, not only on a fresh edge. D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present; all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present; all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 788,
+    "completion_tokens": 51,
+    "cost_usd": 0.0001488,
+    "cached": true
+  }
+}

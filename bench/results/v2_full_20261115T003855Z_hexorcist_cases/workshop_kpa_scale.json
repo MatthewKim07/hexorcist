@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/workshop_kpa_scale",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "workshop_kpa_scale",
+      "run_id": "8ee09c79837e",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Pressure conversion omits 500 mV zero offset",
+          "description": "millivoltsToKpa() at line 25 divides mv by MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is inflated by 50 kPa. Measured evidence shows printed 159.3 kPa against injected 106.5 to 114.2 kPa, and printed 63 kPa against injected 8.9 to 14.7 kPa, off by ~48 kPa. The conversion must be (mv - 500) / 10. Firmware printed 162.3 kPa at 5.01 s while the injected input was 105.88 to 114.46 kPa: off by 47.8 kPa (tolerance \u00b12). 10 of 10 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "verified": true,
+          "evidence": "Firmware printed 162.3 kPa at 5.01 s while the injected input was 105.88 to 114.46 kPa: off by 47.8 kPa (tolerance \u00b12). 10 of 10 values were wrong.",
+          "root_cause": "millivoltsToKpa() at line 25 divides mv by MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is inflated by 50 kPa. Measured evidence shows printed 159.3 kPa against injected 106.5 to 114.2 kPa, and printed 63 kPa against injected 8.9 to 14.7 kPa, off by ~48 kPa. The conversion must be (mv - 500) / 10."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Gauge lamp driven from offset-corrupted pressure",
+          "description": "updateGauge() at line 42 compares lastKpa against WARN_KPA, but lastKpa comes from the offset-less conversion at line 70, so the lamp lights at roughly 400 mV (~-10 kPa physical) instead of 1400 mV (90 kPa). Measured evidence shows D12 not LOW for 1899 ms while required and not LOW for 719 ms during a nominal ramp. Fixing the offset in millivoltsToKpa() corrects the threshold comparison. D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": true,
+          "evidence": "D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+          "root_cause": "updateGauge() at line 42 compares lastKpa against WARN_KPA, but lastKpa comes from the offset-less conversion at line 70, so the lamp lights at roughly 400 mV (~-10 kPa physical) instead of 1400 mV (90 kPa). Measured evidence shows D12 not LOW for 1899 ms while required and not LOW for 719 ms during a nominal ramp. Fixing the offset in millivoltsToKpa() corrects the threshold comparison."
+        }
+      ],
+      "patched_sketch": "// Compressed-air manifold pressure logger for the workshop.\n// Transducer on A2: 10 mV/kPa with 500 mV zero offset. Gauge lamp on D12.\n\nconst int PRESSURE_PIN = A2;\nconst int GAUGE_PIN = 12;\nconst float WARN_KPA = 90.0f;\nconst float CLEAR_KPA = 89.0f;\nconst float ZERO_MV = 500.0f;\nconst float MV_PER_KPA = 10.0f;\nconst unsigned long SAMPLE_MS = 1000;\nconst unsigned long GAUGE_MS = 20;\n\nunsigned long lastSample = 0;\nunsigned long lastGauge = 0;\nunsigned long readingCount = 0;\nfloat lastKpa = 0.0f;\nfloat minKpa = 9999.0f;\nfloat maxKpa = 0.0f;\nbool gaugeLit = false;\n\nfloat readMillivolts()\n{\n    int raw = analogRead(PRESSURE_PIN);\n    return raw * (5000.0f / 1023.0f);\n}\n\nfloat millivoltsToKpa(float mv)\n{\n    return (mv - ZERO_MV) / MV_PER_KPA;\n}\n\nvoid trackExtremes(float kpa)\n{\n    if (kpa < minKpa)\n    {\n        minKpa = kpa;\n    }\n    if (kpa > maxKpa)\n    {\n        maxKpa = kpa;\n    }\n}\n\nvoid updateGauge(float kpa)\n{\n    if (gaugeLit)\n    {\n        if (kpa < CLEAR_KPA)\n        {\n            gaugeLit = false;\n        }\n    }\n    else\n    {\n        if (kpa >= WARN_KPA)\n        {\n            gaugeLit = true;\n        }\n    }\n    digitalWrite(GAUGE_PIN, gaugeLit ? HIGH : LOW);\n}\n\nvoid printReading()\n{\n    Serial.print(\"kPa: \");\n    Serial.println(lastKpa, 1);\n}\n\nvoid setup()\n{\n    pinMode(GAUGE_PIN, OUTPUT);\n    digitalWrite(GAUGE_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastGauge = lastSample;\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastGauge >= GAUGE_MS)\n    {\n        lastGauge = now;\n        updateGauge(millivoltsToKpa(readMillivolts()));\n    }\n\n    if (now - lastSample < SAMPLE_MS)\n    {\n        return;\n    }\n    lastSample = now;\n\n    float mv = readMillivolts();\n    lastKpa = millivoltsToKpa(mv);\n    readingCount++;\n    trackExtremes(lastKpa);\n    updateGauge(lastKpa);\n    printReading();\n}\n",
+      "wall_s": 87.58,
+      "llm_calls": 4,
+      "prompt_tokens": 10227,
+      "completion_tokens": 3035,
+      "cost_usd": 0.00413826,
+      "model": "deepseek-chat"
+    }
+  ]
+}

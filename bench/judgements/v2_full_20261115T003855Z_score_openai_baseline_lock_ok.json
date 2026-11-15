@@ -1,0 +1,60 @@
+{
+  "case_id": "lock_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce on door closed sense",
+      "description": "The door closed sense on D3 does not have debounce logic, which could lead to false triggering of the lock state when the door is opened or closed rapidly.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Timing issue on unlock delay",
+      "description": "The unlock action is executed immediately when the door opens, which may not respect the 200 ms delay requirement for unlocking.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lock_ok",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce on door closed sense",
+        "description": "The door closed sense on D3 does not have debounce logic, which could lead to false triggering of the lock state when the door is opened or closed rapidly.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Timing issue on unlock delay",
+        "description": "The unlock action is executed immediately when the door opens, which may not respect the 200 ms delay requirement for unlocking.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 702,
+    "completion_tokens": 58,
+    "cost_usd": 0.0001401,
+    "cached": true
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect fan state change frequency",
+      "description": "The fan state can change more than twice in a 5000 ms window because the onHold and offHold counters are reset every sample, allowing rapid toggling.",
+      "category": "timed_pulse_length"
+    },
+    {
+      "id": "b2",
+      "title": "Missing hysteresis implementation",
+      "description": "The fan state changes immediately upon crossing the thresholds without considering the required hysteresis, which can lead to rapid toggling.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect fan state change frequency",
+        "description": "The fan state can change more than twice in a 5000 ms window because the onHold and offHold counters are reset every sample, allowing rapid toggling.",
+        "category": "timed_pulse_length"
+      },
+      {
+        "id": "b2",
+        "title": "Missing hysteresis implementation",
+        "description": "The fan state changes immediately upon crossing the thresholds without considering the required hysteresis, which can lead to rapid toggling.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 731,
+    "completion_tokens": 92,
+    "cost_usd": 0.00016485,
+    "cached": true
+  }
+}

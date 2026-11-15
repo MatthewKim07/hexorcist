@@ -1,0 +1,20 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/studio_siren_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "studio_siren_ok",
+      "run_id": "99704df0519d",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 40.84,
+      "llm_calls": 2,
+      "prompt_tokens": 3586,
+      "completion_tokens": 1786,
+      "cost_usd": 0.0017542,
+      "model": "deepseek-chat"
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "case_id": "yard_relay_miswire",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect Relay Pin Assignment",
+      "description": "The relay is assigned to pin D7 in the code, but the pin map specifies it should be on D8.",
+      "category": "wrong_pin"
+    },
+    {
+      "id": "b2",
+      "title": "Missing Hysteresis Implementation",
+      "description": "The code does not implement hysteresis between the ON and OFF thresholds, which can cause the relay to chatter around the threshold values.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b3",
+      "title": "Blocking Delay in Relay Control",
+      "description": "The relay state change is not reached within 400 ms of a sustained band crossing due to the lack of immediate state change logic.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Relay driven on D7 not D8",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Relay driven on D7 not D8",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D8 must follow its stimulus; HIGH when A0 < 400; LOW when A0 > 600; within 400 ms (Relay follows light)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "yard_relay_miswire",
+    "spec": "- Light sensor on A0 scaled as 1 mV per unit; lamp relay on D8; manual override on D3 (pull-up).\n- Relay D8 ON when light reading is below 400 units; OFF when above 600 units.\n- While D3 is held LOW, force the relay ON.\n- Reach the commanded relay state within 400 ms of a sustained band crossing.\n- Print `yard u=<n> relay=ON` or `yard u=<n> relay=OFF` every 1000 ms.\n- Hysteresis band between 400 and 600 keeps the relay from chattering at dusk.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_pin",
+        "description": "Relay driven on D7 not D8",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D8 must follow its stimulus; HIGH when A0 < 400; LOW when A0 > 600; within 400 ms (Relay follows light)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect Relay Pin Assignment",
+        "description": "The relay is assigned to pin D7 in the code, but the pin map specifies it should be on D8.",
+        "category": "wrong_pin"
+      },
+      {
+        "id": "b2",
+        "title": "Missing Hysteresis Implementation",
+        "description": "The code does not implement hysteresis between the ON and OFF thresholds, which can cause the relay to chatter around the threshold values.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b3",
+        "title": "Blocking Delay in Relay Control",
+        "description": "The relay state change is not reached within 400 ms of a sustained band crossing due to the lack of immediate state change logic.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported pin D7 vs expected D8 matches wrong pin bug\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"The other reported bugs do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported pin D7 vs expected D8 matches wrong pin bug"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "The other reported bugs do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 875,
+    "completion_tokens": 96,
+    "cost_usd": 0.00018885,
+    "cached": true
+  }
+}

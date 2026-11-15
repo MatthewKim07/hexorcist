@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/panel_dual_debounce_edge",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "panel_dual_debounce_edge",
+      "run_id": "96522a5e28ac",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Edge detection inverted and no debounce",
+          "description": "risingEdge() at lines 26-29 returns true only on LOW-to-HIGH, so the LED toggles on release rather than on the active-LOW press, and the loop at lines 52-58 acts on every raw sample with no 40 ms settle window. Measured evidence shows presses toggling D13 2-3 times each (e.g. \"press at 800 ms toggled D13 2 time(s), expected exactly 1\") and spurious toggles with no press (\"D13 toggled at 952 ms with no press to explain it\"). Bounce on both edges is therefore counted as multiple edges, and the required 40 ms debounce is entirely absent. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+          "assertion_type": "toggle_per_press",
+          "verified": true,
+          "evidence": "15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+          "root_cause": "risingEdge() at lines 26-29 returns true only on LOW-to-HIGH, so the LED toggles on release rather than on the active-LOW press, and the loop at lines 52-58 acts on every raw sample with no 40 ms settle window. Measured evidence shows presses toggling D13 2-3 times each (e.g. \"press at 800 ms toggled D13 2 time(s), expected exactly 1\") and spurious toggles with no press (\"D13 toggled at 952 ms with no press to explain it\"). Bounce on both edges is therefore counted as multiple edges, and the required 40 ms debounce is entirely absent."
+        }
+      ],
+      "patched_sketch": "// Control-panel key: toggles a status LED for the technician.\n// Key on D2 (pull-up to Vcc, closes to ground), LED on D13.\n\nconst int KEY_PIN = 2;\nconst int LED_PIN = 13;\nconst unsigned long REPORT_MS = 1000;\nconst unsigned long SETTLE_MS = 40;\n\nbool ledLit = false;\nint stableLevel = HIGH;\nint lastRaw = HIGH;\nunsigned long rawChangedMs = 0;\nunsigned long lastReport = 0;\nunsigned long edgeCount = 0;\nunsigned long bootMs = 0;\n\nvoid writeLed(bool on)\n{\n    ledLit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLed()\n{\n    writeLed(!ledLit);\n    edgeCount++;\n}\n\nvoid report()\n{\n    Serial.print(\"panel led=\");\n    Serial.print(ledLit ? 1 : 0);\n    Serial.print(\" edges=\");\n    Serial.println(edgeCount);\n}\n\nvoid setup()\n{\n    pinMode(KEY_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    writeLed(false);\n    Serial.begin(9600);\n    lastRaw = digitalRead(KEY_PIN);\n    stableLevel = lastRaw;\n    rawChangedMs = millis();\n    lastReport = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    int nowLevel = digitalRead(KEY_PIN);\n    unsigned long t = millis();\n\n    if (nowLevel != lastRaw)\n    {\n        lastRaw = nowLevel;\n        rawChangedMs = t;\n    }\n\n    if (lastRaw != stableLevel && (t - rawChangedMs) >= SETTLE_MS)\n    {\n        int newLevel = lastRaw;\n        if (stableLevel == HIGH && newLevel == LOW)\n        {\n            flipLed();\n        }\n        stableLevel = newLevel;\n    }\n\n    if (t - lastReport >= REPORT_MS)\n    {\n        lastReport = t;\n        report();\n    }\n}\n",
+      "wall_s": 51.43,
+      "llm_calls": 4,
+      "prompt_tokens": 7550,
+      "completion_tokens": 2366,
+      "cost_usd": 0.00310772,
+      "model": "deepseek-chat"
+    }
+  ]
+}

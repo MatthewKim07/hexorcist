@@ -1,0 +1,48 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/nav_beacon_byte_timer",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "nav_beacon_byte_timer",
+      "run_id": "3296268484e3",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Blink timing uses 8-bit millis slice, causing wrong beacon state",
+          "description": "Line 53 stores millis() into a uint8_t nowSlice and line 61 compares (uint8_t)(nowSlice - lastSlice) >= HALF_MS, so the difference wraps every 256 ms and the 500 ms threshold is effectively quantized to 512 ms. This makes the beacon toggle at the wrong times, and the measured evidence shows D12 was in the wrong state for 5845 ms across 24 intervals, first at 500 ms where D12 was not HIGH for 232 ms while required. The same 8-bit slice logic also resets lastSlice on quiet hold (line 59), so release timing is corrupted further. D12 was in the wrong state for 5845 ms across 24 interval(s), first at 500 ms: D12 was not HIGH for 232 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D12 was in the wrong state for 5845 ms across 24 interval(s), first at 500 ms: D12 was not HIGH for 232 ms while required (grace 500 ms).",
+          "root_cause": "Line 53 stores millis() into a uint8_t nowSlice and line 61 compares (uint8_t)(nowSlice - lastSlice) >= HALF_MS, so the difference wraps every 256 ms and the 500 ms threshold is effectively quantized to 512 ms. This makes the beacon toggle at the wrong times, and the measured evidence shows D12 was in the wrong state for 5845 ms across 24 intervals, first at 500 ms where D12 was not HIGH for 232 ms while required. The same 8-bit slice logic also resets lastSlice on quiet hold (line 59), so release timing is corrupted further."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Tick period wrong because blink period is 512 ms not 1000 ms",
+          "description": "emitTick is called on each rising edge (lines 66-68), but the rising edges are produced by the 8-bit slice comparison at line 61, which yields a ~512 ms half-period instead of 500 ms, so ticks arrive about every 487-510 ms. The measured evidence confirms 24 of 25 tick intervals were out of the 1000\u00b1120 ms tolerance, with gaps of 487-488 ms. The uint8_t nowSlice at line 53 is the root cause. Expected /^tick$/ every 1000 \u00b1 120 ms; 24 of 25 intervals were out of tolerance, worst gap 510 ms.",
+          "assertion_type": "serial_period",
+          "verified": false,
+          "evidence": "Expected /^tick$/ every 1000 \u00b1 120 ms; 24 of 25 intervals were out of tolerance, worst gap 510 ms.",
+          "root_cause": "emitTick is called on each rising edge (lines 66-68), but the rising edges are produced by the 8-bit slice comparison at line 61, which yields a ~512 ms half-period instead of 500 ms, so ticks arrive about every 487-510 ms. The measured evidence confirms 24 of 25 tick intervals were out of the 1000\u00b1120 ms tolerance, with gaps of 487-488 ms. The uint8_t nowSlice at line 53 is the root cause."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Beacon toggles too often due to slice-wrap double toggles",
+          "description": "Because lastSlice is an 8-bit slice (line 53) and the comparison at line 61 wraps every 256 ms, the loop can fire the toggle branch on consecutive iterations, producing clustered toggles. The measured evidence shows D12 toggled 8 times in a 2000 ms window starting at 245 ms, exceeding the limit of 5. Quiet-hold resets of lastSlice at line 59 make the clustering worse around switch transitions. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 24 times over the whole 10.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": false,
+          "evidence": "D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 24 times over the whole 10.00 s run.",
+          "root_cause": "Because lastSlice is an 8-bit slice (line 53) and the comparison at line 61 wraps every 256 ms, the loop can fire the toggle branch on consecutive iterations, producing clustered toggles. The measured evidence shows D12 toggled 8 times in a 2000 ms window starting at 245 ms, exceeding the limit of 5. Quiet-hold resets of lastSlice at line 59 make the clustering worse around switch transitions."
+        }
+      ],
+      "patched_sketch": "// Harbor nav beacon: 500 ms on / 500 ms off on D12.\n// Quiet mode switch on D3 (pull-up). Status over UART.\n\nconst int BEACON_PIN = 12;\nconst int QUIET_PIN = 3;\nconst byte HALF_MS = 500;\nconst unsigned long STATUS_MS = 2000;\n\nbool lampOn = false;\nunsigned long lastEdge = 0;\nunsigned long lastStatus = 0;\nunsigned long risingCount = 0;\nbool quietHeld = false;\n\nvoid setBeacon(bool on)\n{\n    lampOn = on;\n    digitalWrite(BEACON_PIN, on ? HIGH : LOW);\n}\n\nvoid emitTick()\n{\n    Serial.println(\"tick\");\n    risingCount++;\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"nav rises=\");\n    Serial.print(risingCount);\n    Serial.print(\" quiet=\");\n    Serial.println(quietHeld ? 1 : 0);\n}\n\nbool readQuiet()\n{\n    return digitalRead(QUIET_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(BEACON_PIN, OUTPUT);\n    pinMode(QUIET_PIN, INPUT_PULLUP);\n    setBeacon(false);\n    Serial.begin(9600);\n    lastEdge = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    quietHeld = readQuiet();\n    unsigned long now = millis();\n\n    if (quietHeld)\n    {\n        setBeacon(false);\n        lastEdge = now;\n    }\n    else if (now - lastEdge >= HALF_MS)\n    {\n        lastEdge += HALF_MS;\n        bool nextOn = !lampOn;\n        setBeacon(nextOn);\n        if (nextOn)\n        {\n            emitTick();\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 116.37,
+      "llm_calls": 7,
+      "prompt_tokens": 25191,
+      "completion_tokens": 4314,
+      "cost_usd": 0.00886536,
+      "model": "deepseek-chat"
+    }
+  ]
+}

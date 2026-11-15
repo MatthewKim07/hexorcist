@@ -1,0 +1,123 @@
+{
+  "case_id": "hoist_estop_invert",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "E-stop logic inverted",
+      "description": "estopActive() returns true when D3 reads HIGH, but with INPUT_PULLUP the pin is HIGH when the e-stop is released and LOW when pressed. This makes the contactor drop when the e-stop is clear and energize when pressed \u2014 the opposite of the required fail-safe behaviour.",
+      "category": "inverted_pullup"
+    },
+    {
+      "id": "b2",
+      "title": "Contactor never follows run request",
+      "description": "Both the runReq and else branches call setContactor(true), so the contactor is always HIGH whenever the e-stop is clear regardless of D6. The run request input is effectively ignored.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b3",
+      "title": "Trip count increments on release, not press",
+      "description": "Because estopActive is inverted, tripCount++ fires on the release edge (HIGH transition) rather than when the e-stop is pressed, so trips counts the wrong events.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "inverted_pullup",
+      "description": "E-stop polarity inverted vs pull-up wiring",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "inverted_pullup",
+      "description": "E-stop polarity inverted vs pull-up wiring",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D5 must follow its stimulus; HIGH when D3 == 1; LOW when D3 == 0; within 100 ms (Contactor follows e-stop)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "hoist_estop_invert",
+    "spec": "- E-stop on D3 with INPUT_PULLUP, active LOW when pressed. Contactor coil on D5. Run request on D6 (pull-up).\n- Contactor D5 must drop LOW when e-stop is held (D3 LOW), and run HIGH when e-stop is released.\n- React within 100 ms of a settled e-stop level change.\n- Settle the e-stop contact for 30 ms before counting a new trip.\n- Print `hoist run=<0|1> trips=<n>` every 1100 ms.\n- When e-stop is clear, keep the contactor available (HIGH) for hoist motion.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "inverted_pullup",
+        "description": "E-stop polarity inverted vs pull-up wiring",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D5 must follow its stimulus; HIGH when D3 == 1; LOW when D3 == 0; within 100 ms (Contactor follows e-stop)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "E-stop logic inverted",
+        "description": "estopActive() returns true when D3 reads HIGH, but with INPUT_PULLUP the pin is HIGH when the e-stop is released and LOW when pressed. This makes the contactor drop when the e-stop is clear and energize when pressed \u2014 the opposite of the required fail-safe behaviour.",
+        "category": "inverted_pullup"
+      },
+      {
+        "id": "b2",
+        "title": "Contactor never follows run request",
+        "description": "Both the runReq and else branches call setContactor(true), so the contactor is always HIGH whenever the e-stop is clear regardless of D6. The run request input is effectively ignored.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b3",
+        "title": "Trip count increments on release, not press",
+        "description": "Because estopActive is inverted, tripCount++ fires on the release edge (HIGH transition) rather than when the e-stop is pressed, so trips counts the wrong events.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause of inverted logic for e-stop.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 2}\n  ],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"Reported bug b2 does not match any truth bug and is a false alarm.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause of inverted logic for e-stop."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 2
+      }
+    ],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "Reported bug b2 does not match any truth bug and is a false alarm."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 946,
+    "completion_tokens": 115,
+    "cost_usd": 0.0002109,
+    "cached": true
+  }
+}

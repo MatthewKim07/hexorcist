@@ -1,0 +1,106 @@
+{
+  "case_id": "walk_in_cooler_failsafe",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "No out-of-range or floating-sensor fault handling",
+      "description": "readTempC() (lines 21-26) returns the raw converted temperature with no bounds check, and the control logic (lines 70-95) only compares against COOL_ON_C and COOL_OFF_C, so readings above 60 C or below 0 C are treated as ordinary temperatures. With a floating or rail-to-rail input the compressor can be commanded ON and stays ON: measured D7 not LOW for 3490 ms in the max/min range scenario and 5500 ms in the 700 mV out-of-range hold, far exceeding the 500 ms limit. There is no branch that forces the compressor OFF on a fault reading. During the fault, D7 was not in safe state LOW for 1140 ms (allowed 500 ms to react).",
+      "category": "safe_state_on_fault"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Service switch not honored and no hysteresis/debounce on D4",
+      "description": "The service check at lines 60-67 only forces OFF while D4 reads LOW at the moment of a 50 ms tick, and the hold counters are reset there, but the compressor is never re-enabled promptly on release because onHold must re-accumulate HOLD_N ticks; measured D7 not HIGH for 500-940 ms after release in the short-press and bounce scenarios. The same tick-based logic with no debounce and no latching means short presses and contact bounce are missed or misread, giving 3871 ms and 5260 ms of wrong state across multiple intervals. D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "walk_in_cooler_failsafe",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "No safe-OFF on floating/out-of-range probe",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "No out-of-range or floating-sensor fault handling",
+        "description": "readTempC() (lines 21-26) returns the raw converted temperature with no bounds check, and the control logic (lines 70-95) only compares against COOL_ON_C and COOL_OFF_C, so readings above 60 C or below 0 C are treated as ordinary temperatures. With a floating or rail-to-rail input the compressor can be commanded ON and stays ON: measured D7 not LOW for 3490 ms in the max/min range scenario and 5500 ms in the 700 mV out-of-range hold, far exceeding the 500 ms limit. There is no branch that forces the compressor OFF on a fault reading. During the fault, D7 was not in safe state LOW for 1140 ms (allowed 500 ms to react).",
+        "category": "safe_state_on_fault"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Service switch not honored and no hysteresis/debounce on D4",
+        "description": "The service check at lines 60-67 only forces OFF while D4 reads LOW at the moment of a 50 ms tick, and the hold counters are reset there, but the compressor is never re-enabled promptly on release because onHold must re-accumulate HOLD_N ticks; measured D7 not HIGH for 500-940 ms after release in the short-press and bounce scenarios. The same tick-based logic with no debounce and no latching means short presses and contact bounce are missed or misread, giving 3871 ms and 5260 ms of wrong state across multiple intervals. D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes lack of fault handling for out-of-range sensor readings, matching the missing failsafe.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes lack of fault handling for out-of-range sensor readings, matching the missing failsafe."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1167,
+    "completion_tokens": 96,
+    "cost_usd": 0.00023265,
+    "cached": true
+  }
+}

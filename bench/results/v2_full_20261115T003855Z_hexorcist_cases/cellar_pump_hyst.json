@@ -1,0 +1,48 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/cellar_pump_hyst",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "cellar_pump_hyst",
+      "run_id": "cc04dcef7ab2",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No stop threshold / no hysteresis: pump stops immediately below 45 cm instead of at 30 cm",
+          "description": "The control logic at lines 71-78 only compares against START_CM (45.0) and turns the pump off in the else branch, so there is no 30.0 cm stop point and no latch between start and stop. The measured evidence shows D7 not HIGH for 2090 ms and 5000 ms intervals while level was still above the required start level, because any dip below 45 cm immediately drops the pump. The silence latch at lines 57-61 also forces the pump off and is never cleared, which is why D7 stayed low for 4500-5000 ms in the silence scenarios. D7 was in the wrong state for 2140 ms across 2 interval(s), first at 3.98 s: D7 was not HIGH for 2090 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 2140 ms across 2 interval(s), first at 3.98 s: D7 was not HIGH for 2090 ms while required (grace 500 ms).",
+          "root_cause": "The control logic at lines 71-78 only compares against START_CM (45.0) and turns the pump off in the else branch, so there is no 30.0 cm stop point and no latch between start and stop. The measured evidence shows D7 not HIGH for 2090 ms and 5000 ms intervals while level was still above the required start level, because any dip below 45 cm immediately drops the pump. The silence latch at lines 57-61 also forces the pump off and is never cleared, which is why D7 stayed low for 4500-5000 ms in the silence scenarios."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Output chatters at threshold due to missing hysteresis and filtering",
+          "description": "Lines 71-78 compare the raw single ADC sample directly against 45.0 cm with no hysteresis band and no filtering, so noise around the threshold flips the pump on every 40 ms poll. The measured evidence shows 64 toggles in a 5000 ms window (limit 2) and 84 toggles over the run, and even a brief glitch produced 8 toggles. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": true,
+          "evidence": "D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+          "root_cause": "Lines 71-78 compare the raw single ADC sample directly against 45.0 cm with no hysteresis band and no filtering, so noise around the threshold flips the pump on every 40 ms poll. The measured evidence shows 64 toggles in a 5000 ms window (limit 2) and 84 toggles over the run, and even a brief glitch produced 8 toggles."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Reported level is off by 0.2 cm because ADC scaling uses 5000 mV full scale",
+          "description": "Line 23 converts the ADC count with 5000.0f/1023.0f, but the ADC reference is the 5 V supply and the correct full-scale divisor is 1024, biasing every reading slightly high; combined with the 10 mV/cm scale this yields 29.8 cm printed for a 30.0 cm input. The measured evidence shows 9 of 9 values wrong, each off by 0.2 cm at 30.0 cm, exceeding the \u00b10.1 cm tolerance. Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "verified": false,
+          "evidence": "Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+          "root_cause": "Line 23 converts the ADC count with 5000.0f/1023.0f, but the ADC reference is the 5 V supply and the correct full-scale divisor is 1024, biasing every reading slightly high; combined with the 10 mV/cm scale this yields 29.8 cm printed for a 30.0 cm input. The measured evidence shows 9 of 9 values wrong, each off by 0.2 cm at 30.0 cm, exceeding the \u00b10.1 cm tolerance."
+        }
+      ],
+      "patched_sketch": "// Basement sump controller.\n// Ultrasonic level proxy as linear voltage on A1, pump contactor on D7,\n// silence button on D4 (active LOW, pull-up).\n\nconst uint8_t LEVEL_PIN = A1;\nconst uint8_t PUMP_PIN = 7;\nconst uint8_t SILENCE_PIN = 4;\n\nconst float START_CM = 45.0f;\nconst float STOP_CM = 30.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long POLL_MS = 40;\nconst unsigned long LOG_MS = 800;\nconst unsigned long CONFIRM_MS = 300;\n\nbool pumpOn = false;\nbool silenceLatched = false;\nunsigned long lastPoll = 0;\nunsigned long lastLog = 0;\nfloat levelCm = 0.0f;\n\nbool wantPump = false;\nunsigned long wantSince = 0;\nbool wantValid = false;\n\nbool silenceRaw = false;\nunsigned long silenceSince = 0;\nbool silenceValid = false;\n\nfloat sampleLevelCm()\n{\n    int adc = analogRead(LEVEL_PIN);\n    float mv = adc * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid setPump(bool on)\n{\n    pumpOn = on;\n    digitalWrite(PUMP_PIN, on ? HIGH : LOW);\n}\n\nvoid emitLog()\n{\n    Serial.print(\"sump cm=\");\n    Serial.print(levelCm, 1);\n    Serial.print(\" pump=\");\n    Serial.print(pumpOn ? 1 : 0);\n    Serial.print(\" mute=\");\n    Serial.println(silenceLatched ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(PUMP_PIN, OUTPUT);\n    pinMode(SILENCE_PIN, INPUT_PULLUP);\n    digitalWrite(PUMP_PIN, LOW);\n    Serial.begin(9600);\n    lastPoll = millis();\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    unsigned long t = millis();\n\n    // Silence button: require LOW to hold continuously before latching.\n    bool rawSilence = (digitalRead(SILENCE_PIN) == LOW);\n    if (rawSilence != silenceRaw)\n    {\n        silenceRaw = rawSilence;\n        silenceSince = t;\n        silenceValid = false;\n    }\n    else if (silenceRaw && !silenceValid && (t - silenceSince >= CONFIRM_MS))\n    {\n        silenceValid = true;\n        silenceLatched = true;\n        setPump(false);\n    }\n\n    if (t - lastPoll >= POLL_MS)\n    {\n        lastPoll = t;\n        levelCm = sampleLevelCm();\n\n        if (!silenceLatched)\n        {\n            // Hysteresis: start at/above START_CM, stop at/below STOP_CM.\n            bool want;\n            if (pumpOn)\n            {\n                want = (levelCm > STOP_CM);\n            }\n            else\n            {\n                want = (levelCm >= START_CM);\n            }\n\n            // Require the requested state to hold continuously before switching.\n            if (!wantValid || want != wantPump)\n            {\n                wantPump = want;\n                wantSince = t;\n                wantValid = true;\n            }\n            else if (want != pumpOn && (t - wantSince >= CONFIRM_MS))\n            {\n                setPump(want);\n            }\n        }\n    }\n\n    if (t - lastLog >= LOG_MS)\n    {\n        lastLog = t;\n        emitLog();\n    }\n}\n",
+      "wall_s": 191.74,
+      "llm_calls": 6,
+      "prompt_tokens": 20043,
+      "completion_tokens": 5868,
+      "cost_usd": 0.0080766,
+      "model": "deepseek-chat"
+    }
+  ]
+}

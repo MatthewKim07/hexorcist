@@ -1,0 +1,74 @@
+{
+  "case_id": "lock_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Debounce timer never initialized, first press may be missed",
+      "description": "reqEdge starts at 0 and is only set when raw changes; if the button is already LOW at boot or the first transition happens before millis() reaches DEBOUNCE_MS, the (now - reqEdge) >= DEBOUNCE_MS check can pass immediately or the edge timestamp is stale, causing the first request to be accepted without 35 ms of stability. Initialize reqEdge = millis() in setup and only accept a stable LOW after a full debounce window from the actual edge.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b2",
+      "title": "Unlock not guaranteed within 200 ms of door open",
+      "description": "The door-open check runs every loop so unlock is fast, but there is no explicit timing guarantee and the lock is re-engaged logic-free; more importantly the door-open branch calls setLock(false) unconditionally every loop, which is fine, but the real issue is the request path can re-lock in the same loop iteration after unlock if the button is still held, violating 'wait for a new request after unlock'.",
+      "category": "other"
+    },
+    {
+      "id": "b3",
+      "title": "Re-engages while button held after unlock",
+      "description": "After the door opens and unlocks, if the request button is still held LOW (stableReq already LOW), the engage condition stableReq==LOW && doorClosed() && !locked can fire again once the door closes without a new press, because there is no edge/latch requirement \u2014 only a level check. Need to require a fresh HIGH->LOW transition after unlock.",
+      "category": "stuck_state_machine"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lock_ok",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Debounce timer never initialized, first press may be missed",
+        "description": "reqEdge starts at 0 and is only set when raw changes; if the button is already LOW at boot or the first transition happens before millis() reaches DEBOUNCE_MS, the (now - reqEdge) >= DEBOUNCE_MS check can pass immediately or the edge timestamp is stale, causing the first request to be accepted without 35 ms of stability. Initialize reqEdge = millis() in setup and only accept a stable LOW after a full debounce window from the actual edge.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b2",
+        "title": "Unlock not guaranteed within 200 ms of door open",
+        "description": "The door-open check runs every loop so unlock is fast, but there is no explicit timing guarantee and the lock is re-engaged logic-free; more importantly the door-open branch calls setLock(false) unconditionally every loop, which is fine, but the real issue is the request path can re-lock in the same loop iteration after unlock if the button is still held, violating 'wait for a new request after unlock'.",
+        "category": "other"
+      },
+      {
+        "id": "b3",
+        "title": "Re-engages while button held after unlock",
+        "description": "After the door opens and unlocks, if the request button is still held LOW (stableReq already LOW), the engage condition stableReq==LOW && doorClosed() && !locked can fire again once the door closes without a new press, because there is no edge/latch requirement \u2014 only a level check. Need to require a fresh HIGH->LOW transition after unlock.",
+        "category": "stuck_state_machine"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 959,
+    "completion_tokens": 64,
+    "cost_usd": 0.00018225,
+    "cached": true
+  }
+}

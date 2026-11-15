@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/vault_lock_stuck",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "vault_lock_stuck",
+      "run_id": "1d1105ec38b0",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Lock never engages on request press",
+          "description": "The debounce logic in loop() only updates stableReq when raw != stableReq after the 35 ms window (lines 59-61), but the engage condition at line 62 requires stableReq == LOW. Because the button is active LOW with a pull-up, a press drives D2 LOW, yet the code never latches an engage on the falling edge in a way that survives; measured evidence shows D9 missed 15 of 15 triggers in the rapid-press scenario and 4 of 4 in both the short-press and bounce scenarios, with D9 never going HIGH within 200 ms of any trigger. The lock output is therefore never asserted despite valid presses while the door is closed. D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+          "root_cause": "The debounce logic in loop() only updates stableReq when raw != stableReq after the 35 ms window (lines 59-61), but the engage condition at line 62 requires stableReq == LOW. Because the button is active LOW with a pull-up, a press drives D2 LOW, yet the code never latches an engage on the falling edge in a way that survives; measured evidence shows D9 missed 15 of 15 triggers in the rapid-press scenario and 4 of 4 in both the short-press and bounce scenarios, with D9 never going HIGH within 200 ms of any trigger. The lock output is therefore never asserted despite valid presses while the door is closed."
+        }
+      ],
+      "patched_sketch": "// Safe-deposit vault lock latch.\n// Request button on D2, door-closed sense on D3 (both pull-up), lock solenoid on D9.\n\nconst int REQ_PIN = 2;\nconst int DOOR_PIN = 3;\nconst int LOCK_PIN = 9;\nconst unsigned long DEBOUNCE_MS = 35;\nconst unsigned long STATUS_MS = 1000;\n\nbool locked = false;\nint stableReq = HIGH;\nint lastReq = HIGH;\nunsigned long reqEdge = 0;\nunsigned long lastStatus = 0;\nunsigned long engageCount = 0;\n\nvoid setLock(bool on)\n{\n    locked = on;\n    digitalWrite(LOCK_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"vault lock=\");\n    Serial.print(locked ? 1 : 0);\n    Serial.print(\" engages=\");\n    Serial.println(engageCount);\n}\n\nbool doorClosed()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(REQ_PIN, INPUT_PULLUP);\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(LOCK_PIN, OUTPUT);\n    setLock(false);\n    Serial.begin(9600);\n    stableReq = digitalRead(REQ_PIN);\n    lastReq = stableReq;\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(REQ_PIN);\n\n    if (raw != lastReq)\n    {\n        reqEdge = now;\n        lastReq = raw;\n    }\n\n    if ((now - reqEdge) >= DEBOUNCE_MS && raw != stableReq)\n    {\n        stableReq = raw;\n        if (stableReq == LOW && doorClosed() && !locked)\n        {\n            setLock(true);\n            engageCount++;\n        }\n    }\n\n    if (locked && !doorClosed())\n    {\n        setLock(false);\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 90.63,
+      "llm_calls": 6,
+      "prompt_tokens": 13451,
+      "completion_tokens": 3970,
+      "cost_usd": 0.00543368,
+      "model": "deepseek-chat"
+    }
+  ]
+}

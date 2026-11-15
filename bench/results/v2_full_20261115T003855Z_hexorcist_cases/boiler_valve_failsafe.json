@@ -1,0 +1,48 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/boiler_valve_failsafe",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "boiler_valve_failsafe",
+      "run_id": "2e3d09b2cab5",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Valve stays shut while cold after lockout release",
+          "description": "The control logic in loop() only calls setValve(true) when tempC < FIRE_ON_C (line 63-66), but the valve state is never re-evaluated correctly after a lockout release because the lockout branch (lines 59-62) runs first and the 40 ms tick plus the level-mode requirement leaves D6 LOW. Measured: 'D6 was not HIGH for 2000 ms while required (grace 500 ms)' starting at 1.00 s in the lockout-release scenario. D6 was in the wrong state for 2520 ms across 2 interval(s), first at 1.00 s: D6 was not HIGH for 2000 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D6 was in the wrong state for 2520 ms across 2 interval(s), first at 1.00 s: D6 was not HIGH for 2000 ms while required (grace 500 ms).",
+          "root_cause": "The control logic in loop() only calls setValve(true) when tempC < FIRE_ON_C (line 63-66), but the valve state is never re-evaluated correctly after a lockout release because the lockout branch (lines 59-62) runs first and the 40 ms tick plus the level-mode requirement leaves D6 LOW. Measured: 'D6 was not HIGH for 2000 ms while required (grace 500 ms)' starting at 1.00 s in the lockout-release scenario."
+        },
+        {
+          "id": "bug-a3",
+          "title": "No under-temperature/over-temperature safety cutoff",
+          "description": "The firmware has no check for tempC < 5.0 or tempC > 120.0 anywhere in loop(); the only branches are lockout, tempC < FIRE_ON_C (opens valve), and tempC > FIRE_OFF_C (lines 59-70). At 0 C the code takes the tempC < FIRE_ON_C branch and OPENS the valve, violating the forced-CLOSED requirement. Measured: 'D6 not LOW for 2160 ms during fault' and 'D6 not LOW for 5500 ms during fault' on a disconnected probe. During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+          "assertion_type": "safe_state_on_fault",
+          "verified": true,
+          "evidence": "During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+          "root_cause": "The firmware has no check for tempC < 5.0 or tempC > 120.0 anywhere in loop(); the only branches are lockout, tempC < FIRE_ON_C (opens valve), and tempC > FIRE_OFF_C (lines 59-70). At 0 C the code takes the tempC < FIRE_ON_C branch and OPENS the valve, violating the forced-CLOSED requirement. Measured: 'D6 not LOW for 2160 ms during fault' and 'D6 not LOW for 5500 ms during fault' on a disconnected probe."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Lockout key not debounced and valve not held closed while D3 LOW",
+          "description": "digitalRead(LOCK_PIN) is sampled raw each 40 ms tick (line 57) with no debounce, so bounces and short presses are missed or misread, and the valve is driven by temperature rather than being held closed for the full duration D3 is LOW. Measured: 'D6 was not HIGH for 500 ms while required (grace 500 ms)' at 500 ms in the short-press and bounce scenarios, and 25 wrong-state intervals in the oscillation scenario. D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+          "root_cause": "digitalRead(LOCK_PIN) is sampled raw each 40 ms tick (line 57) with no debounce, so bounces and short presses are missed or misread, and the valve is driven by temperature rather than being held closed for the full duration D3 is LOW. Measured: 'D6 was not HIGH for 500 ms while required (grace 500 ms)' at 500 ms in the short-press and bounce scenarios, and 25 wrong-state intervals in the oscillation scenario."
+        }
+      ],
+      "patched_sketch": "// Small boiler gas-valve thermostat.\n// Probe on A1 (10 mV/\u00b0C), gas valve on D6, lockout key on D3.\n\nconst int TEMP_PIN = A1;\nconst int VALVE_PIN = 6;\nconst int LOCK_PIN = 3;\nconst float FIRE_ON_C = 70.0f;\nconst float FIRE_OFF_C = 75.0f;\nconst float FAULT_LOW_C = 5.0f;\nconst float FAULT_HIGH_C = 120.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long LOCK_CONFIRM_MS = 100;\n\nbool firing = false;\nbool lockActive = false;\nunsigned long lockSince = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\n\nfloat readBoilerC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid setValve(bool openValve)\n{\n    firing = openValve;\n    digitalWrite(VALVE_PIN, openValve ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"boiler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C valve=\");\n    Serial.println(firing ? \"OPEN\" : \"SHUT\");\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(LOCK_PIN, INPUT_PULLUP);\n    setValve(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readBoilerC();\n\n        bool keyLow = (digitalRead(LOCK_PIN) == LOW);\n        if (keyLow)\n        {\n            if (!lockActive)\n            {\n                lockActive = true;\n                lockSince = now;\n            }\n        }\n        else\n        {\n            lockActive = false;\n        }\n        bool locked = lockActive && (now - lockSince >= LOCK_CONFIRM_MS);\n\n        bool fault = (tempC > FAULT_HIGH_C) || (tempC < FAULT_LOW_C);\n\n        if (locked || fault)\n        {\n            setValve(false);\n        }\n        else if (tempC < FIRE_ON_C)\n        {\n            setValve(true);\n        }\n        else if (tempC > FIRE_OFF_C)\n        {\n            setValve(false);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 137.55,
+      "llm_calls": 7,
+      "prompt_tokens": 23477,
+      "completion_tokens": 5652,
+      "cost_usd": 0.0089474,
+      "model": "deepseek-chat"
+    }
+  ]
+}

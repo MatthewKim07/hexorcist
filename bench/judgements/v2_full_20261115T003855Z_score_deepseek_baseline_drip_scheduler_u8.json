@@ -1,0 +1,120 @@
+{
+  "case_id": "drip_scheduler_u8",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "8-bit millis truncation breaks 800 ms period",
+      "description": "nextDue and now8 are uint8_t, so millis() is truncated to 0-255 ms; the 800 ms period cannot be represented and the scheduler fires at wrong/erratic intervals (and the `now8 >= nextDue` guard plus 128 window makes timing unreliable). Use unsigned long for scheduling.",
+      "category": "integer_overflow"
+    },
+    {
+      "id": "b2",
+      "title": "Pause resets period instead of resuming",
+      "description": "While paused, nextDue is continuously pushed forward by PERIOD_MS every loop, so on release the first pulse is delayed by a full period rather than resuming the schedule; also the pulse-due check is gated by the truncated 8-bit arithmetic.",
+      "category": "stuck_state_machine"
+    },
+    {
+      "id": "b3",
+      "title": "Pulse not forced LOW immediately on pause",
+      "description": "If pause is pressed mid-pulse, D8 stays HIGH until pulseUntil elapses; behaviour requires D8 LOW while D4 is held LOW, so the pulse should be terminated immediately on pause.",
+      "category": "missing_failsafe"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "drip_scheduler_u8",
+    "spec": "- Drip solenoid driver on D8; pause button on D4 to ground with internal pull-up (active LOW).\n- Emit a 50 ms HIGH pulse on D8 every 800 ms while pause is released.\n- Print the exact line `drip` at the start of each pulse; period must stay 800 ms \u00b1120 ms.\n- While D4 is held LOW, suppress new pulses and keep D8 LOW.\n- Every 1600 ms print `drip n=<count> pause=<0|1>`.\n- Stay responsive: complete each pulse without multi-second blocking waits.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+        "check_ids": [
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "8-bit millis truncation breaks 800 ms period",
+        "description": "nextDue and now8 are uint8_t, so millis() is truncated to 0-255 ms; the 800 ms period cannot be represented and the scheduler fires at wrong/erratic intervals (and the `now8 >= nextDue` guard plus 128 window makes timing unreliable). Use unsigned long for scheduling.",
+        "category": "integer_overflow"
+      },
+      {
+        "id": "b2",
+        "title": "Pause resets period instead of resuming",
+        "description": "While paused, nextDue is continuously pushed forward by PERIOD_MS every loop, so on release the first pulse is delayed by a full period rather than resuming the schedule; also the pulse-due check is gated by the truncated 8-bit arithmetic.",
+        "category": "stuck_state_machine"
+      },
+      {
+        "id": "b3",
+        "title": "Pulse not forced LOW immediately on pause",
+        "description": "If pause is pressed mid-pulse, D8 stays HIGH until pulseUntil elapses; behaviour requires D8 LOW while D4 is held LOW, so the pulse should be terminated immediately on pause.",
+        "category": "missing_failsafe"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported bug describes the same root cause of millis truncation affecting timing\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"The other reported bugs do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported bug describes the same root cause of millis truncation affecting timing"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "The other reported bugs do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 958,
+    "completion_tokens": 97,
+    "cost_usd": 0.0002019,
+    "cached": true
+  }
+}

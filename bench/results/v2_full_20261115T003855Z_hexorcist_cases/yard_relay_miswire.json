@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/yard_relay_miswire",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "yard_relay_miswire",
+      "run_id": "f2cfb636acd5",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Relay driven on wrong pin (D7 instead of D8)",
+          "description": "Line 5 defines RELAY_PIN as 7, but the spec requires the lamp relay on D8. All relay writes at lines 26, 39 and 41 therefore target D7, so D8 never follows the light reading; measured evidence shows D8 not HIGH for 600 ms at t=400 ms in the glitch scenario and 1250 ms in the nominal ramp. D8 was in the wrong state for 5450 ms across 6 interval(s), first at 400 ms: D8 was not HIGH for 600 ms while required (grace 400 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 5450 ms across 6 interval(s), first at 400 ms: D8 was not HIGH for 600 ms while required (grace 400 ms).",
+          "root_cause": "Line 5 defines RELAY_PIN as 7, but the spec requires the lamp relay on D8. All relay writes at lines 26, 39 and 41 therefore target D7, so D8 never follows the light reading; measured evidence shows D8 not HIGH for 600 ms at t=400 ms in the glitch scenario and 1250 ms in the nominal ramp."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Manual override cannot reach D8 due to relay pin mismatch",
+          "description": "The manual branch at lines 55-59 calls setRelay(true), which writes to RELAY_PIN=7 (line 5) rather than D8. Consequently holding D3 LOW never forces D8 ON, as measured by D8 not HIGH for 89 ms at 1.41 s during rapid manual toggling and 1100 ms in the manual-override-then-release scenario. D8 was in the wrong state for 270 ms across 3 interval(s), first at 1.41 s: D8 was not HIGH for 89 ms while required (grace 400 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D8 was in the wrong state for 270 ms across 3 interval(s), first at 1.41 s: D8 was not HIGH for 89 ms while required (grace 400 ms).",
+          "root_cause": "The manual branch at lines 55-59 calls setRelay(true), which writes to RELAY_PIN=7 (line 5) rather than D8. Consequently holding D3 LOW never forces D8 ON, as measured by D8 not HIGH for 89 ms at 1.41 s during rapid manual toggling and 1100 ms in the manual-override-then-release scenario."
+        }
+      ],
+      "patched_sketch": "// Yard path lamp dusk relay.\n// Light sensor on A0 (mV as lux-ish units), relay on D8, manual on D3.\n\nconst int LIGHT_PIN = A0;\nconst int RELAY_PIN = 8;\nconst int MANUAL_PIN = 3;\nconst float ON_UNITS = 400.0f;\nconst float OFF_UNITS = 600.0f;\nconst unsigned long SAMPLE_MS = 40;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 300;\n\nbool relayOn = false;\nunsigned long lastSample = 0;\nunsigned long lastStatus = 0;\nfloat lightU = 0.0f;\nbool pendingOn = false;\nunsigned long pendingSince = 0;\n\nfloat readLightUnits()\n{\n    int raw = analogRead(LIGHT_PIN);\n    return raw * (5000.0f / 1023.0f);\n}\n\nvoid setRelay(bool on)\n{\n    relayOn = on;\n    digitalWrite(RELAY_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"yard u=\");\n    Serial.print(lightU, 0);\n    Serial.print(\" relay=\");\n    Serial.println(relayOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(RELAY_PIN, OUTPUT);\n    pinMode(MANUAL_PIN, INPUT_PULLUP);\n    setRelay(false);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        lightU = readLightUnits();\n        bool manual = (digitalRead(MANUAL_PIN) == LOW);\n\n        if (manual)\n        {\n            setRelay(true);\n            pendingOn = relayOn;\n            pendingSince = now;\n        }\n        else\n        {\n            bool wantOn = relayOn;\n            if (lightU < ON_UNITS)\n            {\n                wantOn = true;\n            }\n            else if (lightU > OFF_UNITS)\n            {\n                wantOn = false;\n            }\n\n            if (wantOn != relayOn)\n            {\n                if (wantOn != pendingOn)\n                {\n                    pendingOn = wantOn;\n                    pendingSince = now;\n                }\n                else if (now - pendingSince >= CONFIRM_MS)\n                {\n                    setRelay(wantOn);\n                }\n            }\n            else\n            {\n                pendingOn = relayOn;\n                pendingSince = now;\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 93.65,
+      "llm_calls": 7,
+      "prompt_tokens": 21778,
+      "completion_tokens": 4779,
+      "cost_usd": 0.00810502,
+      "model": "deepseek-chat"
+    }
+  ]
+}

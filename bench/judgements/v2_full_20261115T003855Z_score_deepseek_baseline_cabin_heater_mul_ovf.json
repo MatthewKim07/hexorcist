@@ -1,0 +1,106 @@
+{
+  "case_id": "cabin_heater_mul_ovf",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "ADC conversion uses 5000 mV reference instead of 1100 mV",
+      "description": "analogRead is scaled with 5000/1023 but the LM35 output is only ~0.18\u20130.22 V, so the computed temperature is ~4.5x too high (e.g. 20 \u00b0C reads ~91 \u00b0C), keeping the heater permanently OFF. Use the internal 1.1 V reference (analogReference(INTERNAL)) and scale by 1100/1023.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Integer division truncates millivolt reading",
+      "description": "analogRead(TEMP_PIN) * 5000 / 1023 is integer arithmetic; with the correct 1100 mV reference the product still fits, but the truncation to whole millivolts loses resolution and the expression must be evaluated in a wider/float type to avoid truncation errors near the band edges.",
+      "category": "integer_overflow"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cabin_heater_mul_ovf",
+    "spec": "- Cabin LM35 on A0 at 10 mV/\u00b0C; heater enable on D9; frost override on D2 (pull-up, active LOW).\n- Turn the heater ON when temperature is below 18.0 \u00b0C and OFF when temperature is above 22.0 \u00b0C.\n- While D2 is held LOW, force the heater ON regardless of temperature.\n- Reach the commanded heater state within 600 ms of a sustained band crossing.\n- Print `cabin: <temp> C heat=ON` or `cabin: <temp> C heat=OFF` every 1000 ms with one decimal place.\n- Temperature in the status line is informational; control decisions use the comfort band above.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "analogRead*5000 overflows 16-bit int before /1023",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "ADC conversion uses 5000 mV reference instead of 1100 mV",
+        "description": "analogRead is scaled with 5000/1023 but the LM35 output is only ~0.18\u20130.22 V, so the computed temperature is ~4.5x too high (e.g. 20 \u00b0C reads ~91 \u00b0C), keeping the heater permanently OFF. Use the internal 1.1 V reference (analogReference(INTERNAL)) and scale by 1100/1023.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Integer division truncates millivolt reading",
+        "description": "analogRead(TEMP_PIN) * 5000 / 1023 is integer arithmetic; with the correct 1100 mV reference the product still fits, but the truncation to whole millivolts loses resolution and the expression must be evaluated in a wider/float type to avoid truncation errors near the band edges.",
+        "category": "integer_overflow"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"ADC conversion issue leads to incorrect heater control due to overflow.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"Reported bug b2 is a false alarm as it does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "ADC conversion issue leads to incorrect heater control due to overflow."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "Reported bug b2 is a false alarm as it does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 985,
+    "completion_tokens": 96,
+    "cost_usd": 0.00020535,
+    "cached": true
+  }
+}

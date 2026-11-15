@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/blend_tank_sum_ovf",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "blend_tank_sum_ovf",
+      "run_id": "666baba905c1",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "ADC average overflows int, producing negative percent",
+          "description": "`sum` is declared as `int` (line 11) but accumulates up to 50 raw ADC samples (line 54); with rail-to-rail readings near 1023 the sum reaches ~51150, overflowing the 16-bit signed int and wrapping negative. The wrapped value is divided by `n` (line 59) and scaled in `rawToPct` (lines 19-20), yielding the measured -140.3 % / -297.7 % / -265.4 % outputs against injected 500.0 % / 350.0 % / 400.4 %. Firmware printed -140.3 % at 996 ms while the injected input was 500.0 to 500.0 %: off by 640.3 % (tolerance \u00b13). 4 of 7 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "verified": true,
+          "evidence": "Firmware printed -140.3 % at 996 ms while the injected input was 500.0 to 500.0 %: off by 640.3 % (tolerance \u00b13). 4 of 7 values were wrong.",
+          "root_cause": "`sum` is declared as `int` (line 11) but accumulates up to 50 raw ADC samples (line 54); with rail-to-rail readings near 1023 the sum reaches ~51150, overflowing the 16-bit signed int and wrapping negative. The wrapped value is divided by `n` (line 59) and scaled in `rawToPct` (lines 19-20), yielding the measured -140.3 % / -297.7 % / -265.4 % outputs against injected 500.0 % / 350.0 % / 400.4 %."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Button handling blocks loop and stretches pct period",
+          "description": "When D5 is held LOW, every loop iteration calls `forceSampleNote()` and `delay(30)` (lines 65-69) on top of `delay(IDLE_MS)` (line 79), so the 50-sample window takes far longer than 1 s and the `pct:` stream drifts, measured as a 2523 ms gap. Button bounce and rapid presses add extra blocking delays without debouncing, producing the measured 1246-1337 ms gaps. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+          "assertion_type": "serial_period",
+          "verified": true,
+          "evidence": "Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+          "root_cause": "When D5 is held LOW, every loop iteration calls `forceSampleNote()` and `delay(30)` (lines 65-69) on top of `delay(IDLE_MS)` (line 79), so the 50-sample window takes far longer than 1 s and the `pct:` stream drifts, measured as a 2523 ms gap. Button bounce and rapid presses add extra blocking delays without debouncing, producing the measured 1246-1337 ms gaps."
+        }
+      ],
+      "patched_sketch": "// Blend-tank concentration logger for a process skid.\n// Probe on A4 (10 mV/%). Sample button on D5 (pull-up) forces an early print.\n\nconst int CONC_PIN = A4;\nconst int SAMPLE_BTN = 5;\nconst int WINDOW = 50;\nconst float MV_PER_PCT = 10.0f;\nconst unsigned long IDLE_MS = 20;\nconst unsigned long STATUS_MS = 1000;\n\nlong sum = 0;\nint n = 0;\nfloat lastPct = 0.0f;\nunsigned long lastStatus = 0;\nunsigned long batches = 0;\nbool lastBtn = HIGH;\n\nfloat rawToPct(int raw)\n{\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_PCT;\n}\n\nvoid resetWindow()\n{\n    sum = 0;\n    n = 0;\n}\n\nvoid publishPct(float pct)\n{\n    Serial.print(\"pct: \");\n    Serial.println(pct, 1);\n    lastPct = pct;\n    batches++;\n}\n\nvoid forceSampleNote()\n{\n    Serial.print(\"blend force last=\");\n    Serial.println(lastPct, 1);\n}\n\nvoid setup()\n{\n    pinMode(SAMPLE_BTN, INPUT_PULLUP);\n    Serial.begin(9600);\n    resetWindow();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    int raw = analogRead(CONC_PIN);\n    sum += raw;\n    n++;\n\n    bool btn = digitalRead(SAMPLE_BTN);\n    if (btn == LOW && lastBtn == HIGH)\n    {\n        forceSampleNote();\n    }\n    lastBtn = btn;\n\n    unsigned long now = millis();\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        int avg = (n > 0) ? (int)(sum / n) : raw;\n        float pct = rawToPct(avg);\n        publishPct(pct);\n        resetWindow();\n        Serial.print(\"blend batches=\");\n        Serial.println(batches);\n    }\n\n    delay(IDLE_MS);\n}\n",
+      "wall_s": 140.42,
+      "llm_calls": 5,
+      "prompt_tokens": 12276,
+      "completion_tokens": 3669,
+      "cost_usd": 0.00497826,
+      "model": "deepseek-chat"
+    }
+  ]
+}

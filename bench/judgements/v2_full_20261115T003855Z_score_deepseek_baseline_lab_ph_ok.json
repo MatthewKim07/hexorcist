@@ -1,0 +1,60 @@
+{
+  "case_id": "lab_ph_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "pH offset missing \u2014 raw mV/500 gives 0\u201310 pH, not real pH",
+      "description": "The probe is linearized at 500 mV/pH but the sketch divides absolute millivolts by 500, so a 0 V probe reads pH 0.00 and a 5 V probe reads pH 10.00; the injected pH value is never recovered, so the \u00b10.20 accuracy requirement fails and the D10 band logic is driven by the wrong number.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "ADC span uses 1023 instead of 1024",
+      "description": "Using 5000/1023 instead of 5000/1024 introduces a small full-scale gain error (~0.1%), which alone is minor but compounds the missing offset; the correct ADC conversion for a 5.000 V reference is raw * 5000/1024.",
+      "category": "wrong_unit_scaling"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "lab_ph_ok",
+    "spec": "- Linearized pH probe on A1 at 500 mV/pH; out-of-band indicator on D10.\n- Convert ADC with a 5.000 V / 1023 span, then divide millivolts by 500 for pH.\n- Print `pH: <value>` every 1000 ms with two decimal places.\n- Printed pH must stay within \u00b10.20 of the injected probe value.\n- Drive D10 HIGH when pH is outside 6.50\u20138.50 inclusive; otherwise LOW.\n- Keep the 1000 ms logging cadence while the indicator is lit.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "pH offset missing \u2014 raw mV/500 gives 0\u201310 pH, not real pH",
+        "description": "The probe is linearized at 500 mV/pH but the sketch divides absolute millivolts by 500, so a 0 V probe reads pH 0.00 and a 5 V probe reads pH 10.00; the injected pH value is never recovered, so the \u00b10.20 accuracy requirement fails and the D10 band logic is driven by the wrong number.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "ADC span uses 1023 instead of 1024",
+        "description": "Using 5000/1023 instead of 5000/1024 introduces a small full-scale gain error (~0.1%), which alone is minor but compounds the missing offset; the correct ADC conversion for a 5.000 V reference is raw * 5000/1024.",
+        "category": "wrong_unit_scaling"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 820,
+    "completion_tokens": 57,
+    "cost_usd": 0.0001572,
+    "cached": true
+  }
+}

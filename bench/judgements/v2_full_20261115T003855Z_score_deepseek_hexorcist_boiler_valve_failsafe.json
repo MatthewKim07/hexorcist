@@ -1,0 +1,122 @@
+{
+  "case_id": "boiler_valve_failsafe",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Valve stays shut while cold after lockout release",
+      "description": "The control logic in loop() only calls setValve(true) when tempC < FIRE_ON_C (line 63-66), but the valve state is never re-evaluated correctly after a lockout release because the lockout branch (lines 59-62) runs first and the 40 ms tick plus the level-mode requirement leaves D6 LOW. Measured: 'D6 was not HIGH for 2000 ms while required (grace 500 ms)' starting at 1.00 s in the lockout-release scenario. D6 was in the wrong state for 2520 ms across 2 interval(s), first at 1.00 s: D6 was not HIGH for 2000 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No under-temperature/over-temperature safety cutoff",
+      "description": "The firmware has no check for tempC < 5.0 or tempC > 120.0 anywhere in loop(); the only branches are lockout, tempC < FIRE_ON_C (opens valve), and tempC > FIRE_OFF_C (lines 59-70). At 0 C the code takes the tempC < FIRE_ON_C branch and OPENS the valve, violating the forced-CLOSED requirement. Measured: 'D6 not LOW for 2160 ms during fault' and 'D6 not LOW for 5500 ms during fault' on a disconnected probe. During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+      "category": "safe_state_on_fault"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Lockout key not debounced and valve not held closed while D3 LOW",
+      "description": "digitalRead(LOCK_PIN) is sampled raw each 40 ms tick (line 57) with no debounce, so bounces and short presses are missed or misread, and the valve is driven by temperature rather than being held closed for the full duration D3 is LOW. Measured: 'D6 was not HIGH for 500 ms while required (grace 500 ms)' at 500 ms in the short-press and bounce scenarios, and 25 wrong-state intervals in the oscillation scenario. D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "boiler_valve_failsafe",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "Valve stays open on sensor overrange",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Valve stays shut while cold after lockout release",
+        "description": "The control logic in loop() only calls setValve(true) when tempC < FIRE_ON_C (line 63-66), but the valve state is never re-evaluated correctly after a lockout release because the lockout branch (lines 59-62) runs first and the 40 ms tick plus the level-mode requirement leaves D6 LOW. Measured: 'D6 was not HIGH for 2000 ms while required (grace 500 ms)' starting at 1.00 s in the lockout-release scenario. D6 was in the wrong state for 2520 ms across 2 interval(s), first at 1.00 s: D6 was not HIGH for 2000 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No under-temperature/over-temperature safety cutoff",
+        "description": "The firmware has no check for tempC < 5.0 or tempC > 120.0 anywhere in loop(); the only branches are lockout, tempC < FIRE_ON_C (opens valve), and tempC > FIRE_OFF_C (lines 59-70). At 0 C the code takes the tempC < FIRE_ON_C branch and OPENS the valve, violating the forced-CLOSED requirement. Measured: 'D6 not LOW for 2160 ms during fault' and 'D6 not LOW for 5500 ms during fault' on a disconnected probe. During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+        "category": "safe_state_on_fault"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Lockout key not debounced and valve not held closed while D3 LOW",
+        "description": "digitalRead(LOCK_PIN) is sampled raw each 40 ms tick (line 57) with no debounce, so bounces and short presses are missed or misread, and the valve is driven by temperature rather than being held closed for the full duration D3 is LOW. Measured: 'D6 was not HIGH for 500 ms while required (grace 500 ms)' at 500 ms in the short-press and bounce scenarios, and 25 wrong-state intervals in the oscillation scenario. D6 was in the wrong state for 2520 ms across 25 interval(s), first at 560 ms: D6 was not HIGH for 121 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Describes the failure to close the valve during a fault condition.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 2, 3],\n  \"unique_false_alarm_indices\": [0, 2, 3],\n  \"notes\": \"Reported bugs 0, 2, and 3 do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Describes the failure to close the valve during a fault condition."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      2,
+      3
+    ],
+    "notes": "Reported bugs 0, 2, and 3 do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1327,
+    "completion_tokens": 110,
+    "cost_usd": 0.00026505,
+    "cached": true
+  }
+}

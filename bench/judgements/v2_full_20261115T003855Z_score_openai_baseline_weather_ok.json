@@ -1,0 +1,60 @@
+{
+  "case_id": "weather_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature reporting during freeze",
+      "description": "The variable 'frozenC' is not declared as volatile, which may lead to inconsistent readings when the freeze button is held down, especially if interrupts are involved.",
+      "category": "missing_volatile"
+    },
+    {
+      "id": "b2",
+      "title": "Range lamp logic error",
+      "description": "The range lamp is turned on when the temperature is within range, but it should be turned on when the temperature is out of range. The logic in updateRangeLamp is inverted.",
+      "category": "wrong_pin"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "weather_ok",
+    "spec": "- TMP36 on A0 (10 mV/\u00b0C with 500 mV offset); freeze button on D5 (pull-up); range lamp on D7.\n- Every 1000 ms print exactly `Temp: <celsius>` with a space after the colon and one decimal place.\n- Printed temperature must stay within \u00b11.5 \u00b0C of the injected probe value.\n- While D5 is held LOW, freeze the reported value at the last sample.\n- Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.\n- Also print `weather n=<samples>` each second after the Temp line.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature reporting during freeze",
+        "description": "The variable 'frozenC' is not declared as volatile, which may lead to inconsistent readings when the freeze button is held down, especially if interrupts are involved.",
+        "category": "missing_volatile"
+      },
+      {
+        "id": "b2",
+        "title": "Range lamp logic error",
+        "description": "The range lamp is turned on when the temperature is within range, but it should be turned on when the temperature is out of range. The logic in updateRangeLamp is inverted.",
+        "category": "wrong_pin"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 728,
+    "completion_tokens": 58,
+    "cost_usd": 0.000144,
+    "cached": true
+  }
+}

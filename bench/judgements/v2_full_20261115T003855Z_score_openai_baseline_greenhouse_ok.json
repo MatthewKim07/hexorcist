@@ -1,0 +1,74 @@
+{
+  "case_id": "greenhouse_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature reading scaling",
+      "description": "The temperature reading from the analog pin is incorrectly scaled. The conversion from raw ADC value to millivolts should use the correct reference voltage (5V), but the sketch uses 5000.0f directly, which is correct. However, the scaling from millivolts to Celsius is incorrect because it assumes a linear relationship without considering the ADC resolution properly.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Fault state not handled correctly",
+      "description": "The fan should be forced ON within 600 ms when the temperature is out of range, but the current implementation does not enforce this timing requirement, potentially leading to delays in activating the fan during fault conditions.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b3",
+      "title": "Fan state change frequency not limited",
+      "description": "The sketch does not implement a mechanism to limit the fan state changes to a maximum of 2 times in any 5000 ms window, which could lead to rapid toggling of the fan state.",
+      "category": "other"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "greenhouse_ok",
+    "spec": "- Air temperature probe on A0 at 10 mV/\u00b0C; potting-shed vent fan on D6.\n- Open the fan at 30.0 \u00b0C or above; close the fan at 26.0 \u00b0C or below.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- If the probe is floating, or temperature reads below 5.0 \u00b0C or above 100.0 \u00b0C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.\n- Print `shed: <temp> C fan=ON` or `shed: <temp> C fan=OFF` every 1000 ms with one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature reading scaling",
+        "description": "The temperature reading from the analog pin is incorrectly scaled. The conversion from raw ADC value to millivolts should use the correct reference voltage (5V), but the sketch uses 5000.0f directly, which is correct. However, the scaling from millivolts to Celsius is incorrect because it assumes a linear relationship without considering the ADC resolution properly.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Fault state not handled correctly",
+        "description": "The fan should be forced ON within 600 ms when the temperature is out of range, but the current implementation does not enforce this timing requirement, potentially leading to delays in activating the fan during fault conditions.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b3",
+        "title": "Fan state change frequency not limited",
+        "description": "The sketch does not implement a mechanism to limit the fan state changes to a maximum of 2 times in any 5000 ms window, which could lead to rapid toggling of the fan state.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 896,
+    "completion_tokens": 64,
+    "cost_usd": 0.0001728,
+    "cached": true
+  }
+}

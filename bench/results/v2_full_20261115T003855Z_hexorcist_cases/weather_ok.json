@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/weather_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "weather_ok",
+      "run_id": "ecec34860d39",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a4",
+          "title": "Range lamp chatters at the 50 \u00b0C threshold (no hysteresis)",
+          "description": "updateRangeLamp (lines 25-29) compares the reported temperature against HIGH_C with a hard `c <= HIGH_C` test and no hysteresis or debounce, so when the probe sits near 50 \u00b0C any ADC noise flips D7 every loop iteration. The measured evidence shows D7 in the wrong state for 3584 ms across 1365 intervals in the threshold-hover scenario, and 2660 ms across 1062 intervals at the 50 \u00b0C boundary, i.e. the lamp toggles instead of holding a level. D7 was in the wrong state for 3332 ms across 1403 interval(s), first at 502 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 3332 ms across 1403 interval(s), first at 502 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "root_cause": "updateRangeLamp (lines 25-29) compares the reported temperature against HIGH_C with a hard `c <= HIGH_C` test and no hysteresis or debounce, so when the probe sits near 50 \u00b0C any ADC noise flips D7 every loop iteration. The measured evidence shows D7 in the wrong state for 3584 ms across 1365 intervals in the threshold-hover scenario, and 2660 ms across 1062 intervals at the 50 \u00b0C boundary, i.e. the lamp toggles instead of holding a level."
+        },
+        {
+          "id": "bug-a5",
+          "title": "Range lamp chatters at the -10 \u00b0C threshold (no hysteresis)",
+          "description": "The same hard comparison in updateRangeLamp (line 27) applies at the LOW_C edge, so a probe held at -10.0 \u00b0C with noise straddles the threshold and D7 flickers. Measured: D7 was in the wrong state for 3332 ms across 1403 intervals in the -10 \u00b0C boundary scenario, and 4739 ms across 15 intervals during a bouncy freeze press, because each bounce re-latches frozenC (lines 51-54) and the lamp is driven from that transient value (lines 56-57). D7 was in the wrong state for 2660 ms across 1062 interval(s), first at 500 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 2660 ms across 1062 interval(s), first at 500 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "root_cause": "The same hard comparison in updateRangeLamp (line 27) applies at the LOW_C edge, so a probe held at -10.0 \u00b0C with noise straddles the threshold and D7 flickers. Measured: D7 was in the wrong state for 3332 ms across 1403 intervals in the -10 \u00b0C boundary scenario, and 4739 ms across 15 intervals during a bouncy freeze press, because each bounce re-latches frozenC (lines 51-54) and the lamp is driven from that transient value (lines 56-57)."
+        }
+      ],
+      "patched_sketch": "// Patio weather node: TMP36 logger (known-good build).\n// TMP36 on A0 (10 mV/\u00b0C + 500 mV), freeze button on D5, range lamp on D7.\n\nconst int TEMP_PIN = A0;\nconst int FREEZE_PIN = 5;\nconst int RANGE_PIN = 7;\nconst float OFFSET_MV = 500.0f;\nconst float LOW_C = -10.0f;\nconst float HIGH_C = 50.0f;\nconst float HYST_C = 1.0f;\nconst unsigned long PERIOD_MS = 1000;\nconst unsigned long LAMP_CONFIRM_MS = 300;\n\nunsigned long lastPrint = 0;\nfloat tempC = 0.0f;\nfloat frozenC = 0.0f;\nbool freezeHeld = false;\nbool lampOn = false;\nbool lampPending = false;\nunsigned long lampPendingSince = 0;\nunsigned long samples = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float volts = raw * (5.0f / 1023.0f);\n    return (volts - (OFFSET_MV / 1000.0f)) * 100.0f;\n}\n\nvoid updateRangeLamp(float c)\n{\n    bool wantOn;\n    if (!lampOn)\n    {\n        wantOn = ((c > HIGH_C) || (c < LOW_C));\n    }\n    else\n    {\n        wantOn = !((c <= (HIGH_C - HYST_C)) && (c >= (LOW_C + HYST_C)));\n    }\n\n    unsigned long now = millis();\n    if (wantOn == lampOn)\n    {\n        lampPending = false;\n    }\n    else\n    {\n        if (!lampPending)\n        {\n            lampPending = true;\n            lampPendingSince = now;\n        }\n        else if (now - lampPendingSince >= LAMP_CONFIRM_MS)\n        {\n            lampOn = wantOn;\n            lampPending = false;\n        }\n    }\n    digitalWrite(RANGE_PIN, lampOn ? HIGH : LOW);\n}\n\nvoid printTemp(float c)\n{\n    Serial.print(\"Temp: \");\n    Serial.println(c, 1);\n}\n\nvoid setup()\n{\n    pinMode(FREEZE_PIN, INPUT_PULLUP);\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    tempC = readTempC();\n    samples++;\n    freezeHeld = (digitalRead(FREEZE_PIN) == LOW);\n    if (freezeHeld)\n    {\n        frozenC = tempC;\n    }\n\n    float report = freezeHeld ? frozenC : tempC;\n    updateRangeLamp(tempC);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printTemp(report);\n        Serial.print(\"weather n=\");\n        Serial.println(samples);\n    }\n}\n",
+      "wall_s": 197.74,
+      "llm_calls": 6,
+      "prompt_tokens": 19000,
+      "completion_tokens": 5068,
+      "cost_usd": 0.00744856,
+      "model": "deepseek-chat"
+    }
+  ]
+}

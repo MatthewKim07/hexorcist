@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/mist_injector_long",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "mist_injector_long",
+      "run_id": "f31dab66facd",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Injector pulse is 2000 ms instead of 800 ms",
+          "description": "Line 7 sets PULSE_MS to 2000, but the spec requires an 800 ms pulse. The pulse-end check on line 79 uses this constant, so every pulse runs 2000 ms; measured pulses lasted 2001 ms and 2000 ms against an expected 800 \u00b1 150 ms. Because the pulse is too long, the !pulsing guard on line 69 also ignores retriggers that should have been accepted after 800 ms. 2 of 2 pulse(s) had the wrong length: pulse from 1.03 s lasted 2000 ms, expected 800 \u00b1 150 ms. A trigger at 2.51 s came during this pulse, which must not change its length.",
+          "assertion_type": "timed_pulse",
+          "verified": true,
+          "evidence": "2 of 2 pulse(s) had the wrong length: pulse from 1.03 s lasted 2000 ms, expected 800 \u00b1 150 ms. A trigger at 2.51 s came during this pulse, which must not change its length.",
+          "root_cause": "Line 7 sets PULSE_MS to 2000, but the spec requires an 800 ms pulse. The pulse-end check on line 79 uses this constant, so every pulse runs 2000 ms; measured pulses lasted 2001 ms and 2000 ms against an expected 800 \u00b1 150 ms. Because the pulse is too long, the !pulsing guard on line 69 also ignores retriggers that should have been accepted after 800 ms."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Ready lamp stays LOW for the whole over-long pulse",
+          "description": "setReady(false) on line 75 and setReady(true) on line 83 tie D12 to the pulse, but the pulse length comes from PULSE_MS on line 7 (2000 ms). D12 therefore stays LOW for 2000 ms while D9 is HIGH, and the checker reports D12 was not HIGH for 2000 ms while required. The lamp logic is correct in structure; the wrong pulse duration makes it fail. D12 was in the wrong state for 6000 ms across 3 interval(s), first at 825 ms: D12 was not HIGH for 2000 ms while required (grace 50 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D12 was in the wrong state for 6000 ms across 3 interval(s), first at 825 ms: D12 was not HIGH for 2000 ms while required (grace 50 ms).",
+          "root_cause": "setReady(false) on line 75 and setReady(true) on line 83 tie D12 to the pulse, but the pulse length comes from PULSE_MS on line 7 (2000 ms). D12 therefore stays LOW for 2000 ms while D9 is HIGH, and the checker reports D12 was not HIGH for 2000 ms while required. The lamp logic is correct in structure; the wrong pulse duration makes it fail."
+        }
+      ],
+      "patched_sketch": "// Greenhouse mist injector timed pulse.\n// Trigger on D4 (pull-up), injector on D9, ready lamp on D12.\n\nconst int TRIG_PIN = 4;\nconst int INJ_PIN = 9;\nconst int READY_PIN = 12;\nconst unsigned long PULSE_MS = 800;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 450;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastTrig = HIGH;\nunsigned long trigEdge = 0;\nunsigned long lastHb = 0;\nunsigned long shots = 0;\n\nvoid injHigh()\n{\n    digitalWrite(INJ_PIN, HIGH);\n}\n\nvoid injLow()\n{\n    digitalWrite(INJ_PIN, LOW);\n}\n\nvoid setReady(bool on)\n{\n    digitalWrite(READY_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"mist shots=\");\n    Serial.print(shots);\n    Serial.print(\" busy=\");\n    Serial.println(pulsing ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(INJ_PIN, OUTPUT);\n    pinMode(READY_PIN, OUTPUT);\n    injLow();\n    setReady(true);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastTrig = stableTrig;\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (raw != lastTrig)\n    {\n        trigEdge = now;\n        lastTrig = raw;\n    }\n\n    if ((now - trigEdge) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            shots++;\n            injHigh();\n            setReady(false);\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        injLow();\n        setReady(true);\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 119.35,
+      "llm_calls": 8,
+      "prompt_tokens": 21985,
+      "completion_tokens": 5226,
+      "cost_usd": 0.00835072,
+      "model": "deepseek-chat"
+    }
+  ]
+}

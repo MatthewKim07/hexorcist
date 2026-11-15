@@ -14,8 +14,8 @@ Presets used for product tuning (`thermostat`, `button`, `logger`, `alarm`, `con
 
 - **v1** (archived under `bench/archive/v1/`): discarded. Sketches were too short (median ~8 non-blank lines vs a 30–150 target), some comments revealed bugs, and several `spec.md` files omitted requirements that `checks.json` tested. Only a **3-case dry run** was ever executed against v1; there was no full run.
 - **v2** (current `bench/cases/`): hand-written realistic sketches, specs that cover every check, linted for bug-hinting language.
-  - **Frozen** at SHA-256 `6512d059501717c0e271c7058d0053fff2ef08ee13db31ed953d0b3e3325ac97` (hash over sorted `bench/cases/**` file paths + contents; 40 cases, 241 files).
-  - Dry run `dry_v2_20261114T230218Z` (OpenAI `gpt-4o-mini` judge): `bench_led_miswire`, `greenhouse_dual`, `loft_fan_ok`. No full run yet.
+  - **Frozen** at commit `6a92c57`, 40 cases, 240 files. Fingerprint from `bench/freeze_hash.py` (method documented in the script): `330d5ca3f0e29c6b30c4e54e30ef7b217cf86e3c35326d7c77131e01984a98d8`. Verify with `python bench/freeze_hash.py --check`. The same value comes out of a `git archive` of the freeze commit. The earlier hash `6512d059…` in this file used an undocumented method and could not be reproduced, so it is retired.
+  - Dry run `dry_v2_20261114T230218Z` (3 cases), then the full run `v2_full_20261115T003855Z`: all 40 cases, three systems, results in `bench/results/summary.md`, false-alarm review in `bench/adjudication.md`.
 
 ## Freeze rule
 
@@ -32,6 +32,19 @@ bench/cases/<id>/
   truth.json      # real bugs (or [])
   checks.json     # frozen assertions + stimulus; each assertion has "covers"
 ```
+
+## Full run
+
+`bench/run_all.sh` rebuilds the stack, checks health, and runs both baselines and Hexorcist over all 40 cases with budget caps and caching (about 2 hours). It raises the app's rate limit for the run only, through `bench/docker-compose.bench.yml`. Then score with `bench.score`, review with `bench.summarize`:
+
+```bash
+bench/run_all.sh
+backend/.venv/bin/python -m bench.score --run-id RUN_score_deepseek --baseline bench/results/RUN_baseline_deepseek.json --hexorcist bench/results/RUN_hexorcist.json
+backend/.venv/bin/python -m bench.score --run-id RUN_score_openai --baseline bench/results/RUN_baseline_openai.json
+backend/.venv/bin/python -m bench.summarize RUN
+```
+
+`bench.summarize` reads `bench/adjudication.json` (manual verdicts with run evidence) and `bench/results/RUN_replay.json` (known-good firmware replayed through each Hexorcist run's own checks).
 
 ## Commands
 

@@ -1,0 +1,136 @@
+{
+  "case_id": "cellar_pump_hyst",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No stop threshold / missing hysteresis",
+      "description": "Pump is turned off as soon as level drops below 45.0 cm instead of at 30.0 cm, so it chatters around the start mark rather than using the 45/30 band.",
+      "category": "missing_hysteresis"
+    },
+    {
+      "id": "b2",
+      "title": "No toggle-rate limit",
+      "description": "Nothing enforces the max 2 pump toggles per 5000 ms window; with a noisy level near a threshold the contactor can toggle far faster than allowed.",
+      "category": "other"
+    },
+    {
+      "id": "b3",
+      "title": "Silence button not debounced",
+      "description": "D4 is read raw each loop with no debounce, so contact bounce or noise can spuriously latch silence mode.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b4",
+      "title": "ADC scaling uses 1023 instead of 1024",
+      "description": "mV conversion uses 5000/1023 rather than 5000/1024, biasing the reported level slightly high (minor but systematic).",
+      "category": "wrong_unit_scaling"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cellar_pump_hyst",
+    "spec": "- Linear water-level sensor on A1 at 10 mV/cm; sump pump contactor on D7; silence pushbutton on D4 to ground with internal pull-up (active LOW).\n- Start the pump when level reaches 45.0 cm or higher; stop the pump when level falls to 30.0 cm or lower.\n- Holding D4 LOW latches silence mode and keeps the pump OFF until reset (power cycle).\n- Pump output must not toggle more than 2 times in any 5000 ms window.\n- Every 800 ms print `sump cm=<level> pump=<0|1> mute=<0|1>` with level to one decimal place.\n- Apply pump start/stop within 500 ms of a sustained band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 45 cm start level short-cycles the pump",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No stop threshold / missing hysteresis",
+        "description": "Pump is turned off as soon as level drops below 45.0 cm instead of at 30.0 cm, so it chatters around the start mark rather than using the 45/30 band.",
+        "category": "missing_hysteresis"
+      },
+      {
+        "id": "b2",
+        "title": "No toggle-rate limit",
+        "description": "Nothing enforces the max 2 pump toggles per 5000 ms window; with a noisy level near a threshold the contactor can toggle far faster than allowed.",
+        "category": "other"
+      },
+      {
+        "id": "b3",
+        "title": "Silence button not debounced",
+        "description": "D4 is read raw each loop with no debounce, so contact bounce or noise can spuriously latch silence mode.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b4",
+        "title": "ADC scaling uses 1023 instead of 1024",
+        "description": "mV conversion uses 5000/1023 rather than 5000/1024, biasing the reported level slightly high (minor but systematic).",
+        "category": "wrong_unit_scaling"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same missing hysteresis issue causing short cycling.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2, 3, 4],\n  \"unique_false_alarm_indices\": [1, 2, 3, 4],\n  \"notes\": \"All other reported bugs do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same missing hysteresis issue causing short cycling."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "notes": "All other reported bugs do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1002,
+    "completion_tokens": 109,
+    "cost_usd": 0.0002157,
+    "cached": true
+  }
+}

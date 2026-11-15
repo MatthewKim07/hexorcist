@@ -1,0 +1,108 @@
+{
+  "case_id": "walk_in_cooler_failsafe",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect temperature handling for out-of-range values",
+      "description": "The sketch does not handle cases where the temperature is below 0.0 \u00b0C or above 60.0 \u00b0C, which should force the compressor OFF within 500 ms.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "Floating sensor handling",
+      "description": "The sketch does not account for the scenario where the temperature sensor is floating, which should also force the compressor OFF within 500 ms.",
+      "category": "missing_failsafe"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "walk_in_cooler_failsafe",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "No safe-OFF on floating/out-of-range probe",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect temperature handling for out-of-range values",
+        "description": "The sketch does not handle cases where the temperature is below 0.0 \u00b0C or above 60.0 \u00b0C, which should force the compressor OFF within 500 ms.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b2",
+        "title": "Floating sensor handling",
+        "description": "The sketch does not account for the scenario where the temperature sensor is floating, which should also force the compressor OFF within 500 ms.",
+        "category": "missing_failsafe"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes the same observable behavior for out-of-range values\"},\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"describes the same observable behavior for floating sensor\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs describe aspects of the same true bug regarding failsafe handling.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes the same observable behavior for out-of-range values"
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "describes the same observable behavior for floating sensor"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs describe aspects of the same true bug regarding failsafe handling."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 904,
+    "completion_tokens": 124,
+    "cost_usd": 0.00021,
+    "cached": true
+  }
+}

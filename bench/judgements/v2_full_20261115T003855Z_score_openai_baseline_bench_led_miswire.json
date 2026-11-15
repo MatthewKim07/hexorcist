@@ -1,0 +1,106 @@
+{
+  "case_id": "bench_led_miswire",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect LED Pin Assignment",
+      "description": "The LED is assigned to pin D12 in the sketch, but according to the pin map, it should be on pin D13.",
+      "category": "wrong_pin"
+    },
+    {
+      "id": "b2",
+      "title": "Timing Issue with LED State Change",
+      "description": "The LED state change does not guarantee reaching the commanded state within 100 ms due to the lack of a delay after setting the LED state.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "bench_led_miswire",
+    "spec": "- Button on D2 with INPUT_PULLUP (active LOW); user LED on D13; blink-mode switch on D4 (pull-up).\n- While D2 is pressed and D4 is released, light D13 HIGH; release turns D13 LOW.\n- Reach the commanded LED state within 100 ms of the button level.\n- While D4 is held LOW and D2 is pressed, blink D13 with ~120 ms half-period.\n- Print `bench led=<0|1> held_ms=<n>` every 1000 ms.\n- Idle (D2 released) always keeps D13 LOW.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_pin",
+        "description": "Drives D12 instead of D13",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect LED Pin Assignment",
+        "description": "The LED is assigned to pin D12 in the sketch, but according to the pin map, it should be on pin D13.",
+        "category": "wrong_pin"
+      },
+      {
+        "id": "b2",
+        "title": "Timing Issue with LED State Change",
+        "description": "The LED state change does not guarantee reaching the commanded state within 100 ms due to the lack of a delay after setting the LED state.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported LED pin assignment matches the wrong pin bug\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported LED pin assignment matches the wrong pin bug"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 812,
+    "completion_tokens": 86,
+    "cost_usd": 0.0001734,
+    "cached": true
+  }
+}

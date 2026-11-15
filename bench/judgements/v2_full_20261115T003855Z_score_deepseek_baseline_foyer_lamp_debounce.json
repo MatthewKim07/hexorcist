@@ -1,0 +1,107 @@
+{
+  "case_id": "foyer_lamp_debounce",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No debounce/settle window",
+      "description": "The sketch toggles on every raw HIGH-to-LOW transition with no 40 ms settle window, so contact bounce on press (and bounce-induced edges on release) will produce multiple toggles per physical press.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Release bounce can retrigger toggle",
+      "description": "Because previousRaw is updated every loop with no debounce, a bounce sequence HIGH-LOW-HIGH-LOW during a single press/release can register multiple press edges, violating the 'exactly once per press' requirement.",
+      "category": "missing_hysteresis"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Raw edge sampling multi-toggles through bounce",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Raw edge sampling multi-toggles through bounce",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D11 toggles exactly once per settled press on None (One lamp toggle per settled press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "foyer_lamp_debounce",
+    "spec": "- Momentary wall switch on D5 to ground with internal pull-up (active LOW); foyer lamp driver on D11.\n- Each settled press toggles the lamp exactly once within 150 ms; releasing the switch must not toggle.\n- Contact bounce up to 20 ms on press and release must not produce extra toggles.\n- Debounce / settle window of 40 ms before accepting a press edge.\n- Every 1500 ms print `foyer lamp=ON` or `foyer lamp=OFF`.\n- Idle (unpressed) switch reads HIGH; a physical press is a HIGH-to-LOW transition after settle.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "Raw edge sampling multi-toggles through bounce",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D11 toggles exactly once per settled press on None (One lamp toggle per settled press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No debounce/settle window",
+        "description": "The sketch toggles on every raw HIGH-to-LOW transition with no 40 ms settle window, so contact bounce on press (and bounce-induced edges on release) will produce multiple toggles per physical press.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Release bounce can retrigger toggle",
+        "description": "Because previousRaw is updated every loop with no debounce, a bounce sequence HIGH-LOW-HIGH-LOW during a single press/release can register multiple press edges, violating the 'exactly once per press' requirement.",
+        "category": "missing_hysteresis"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same observable behavior of toggling multiple times due to lack of debounce.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The second report describes a related issue but does not match the truth bug directly.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same observable behavior of toggling multiple times due to lack of debounce."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The second report describes a related issue but does not match the truth bug directly."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 843,
+    "completion_tokens": 114,
+    "cost_usd": 0.00019485,
+    "cached": true
+  }
+}

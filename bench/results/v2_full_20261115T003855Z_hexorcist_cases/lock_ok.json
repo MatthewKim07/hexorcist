@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/lock_ok",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "lock_ok",
+      "run_id": "c5f20ecb69f1",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Lock does not engage on a held request after door closes",
+          "description": "Engagement is gated on a debounced level change at line 59 (`raw != stableReq`), so once stableReq has settled to LOW while the door was open, a later door close with the button still held produces no new edge and line 62 never fires. Measured: D9 was not HIGH for 2798 ms while required in the 'door opens just before debounce completes' scenario, and for 1298 ms in the 'press during door open then close' scenario. The lock should engage whenever the request is stably LOW and the door is closed and not already locked, not only on a fresh edge. D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+          "root_cause": "Engagement is gated on a debounced level change at line 59 (`raw != stableReq`), so once stableReq has settled to LOW while the door was open, a later door close with the button still held produces no new edge and line 62 never fires. Measured: D9 was not HIGH for 2798 ms while required in the 'door opens just before debounce completes' scenario, and for 1298 ms in the 'press during door open then close' scenario. The lock should engage whenever the request is stably LOW and the door is closed and not already locked, not only on a fresh edge."
+        }
+      ],
+      "patched_sketch": "// Safe-deposit vault lock latch (known-good build).\n// Request button on D2, door-closed sense on D3 (both pull-up), lock solenoid on D9.\n\nconst int REQ_PIN = 2;\nconst int DOOR_PIN = 3;\nconst int LOCK_PIN = 9;\nconst unsigned long DEBOUNCE_MS = 35;\nconst unsigned long STATUS_MS = 1000;\n\nbool locked = false;\nint stableReq = HIGH;\nint lastReq = HIGH;\nunsigned long reqEdge = 0;\nunsigned long lastStatus = 0;\nunsigned long engageCount = 0;\n\nvoid setLock(bool on)\n{\n    locked = on;\n    digitalWrite(LOCK_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"vault lock=\");\n    Serial.print(locked ? 1 : 0);\n    Serial.print(\" engages=\");\n    Serial.println(engageCount);\n}\n\nbool doorClosed()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(REQ_PIN, INPUT_PULLUP);\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(LOCK_PIN, OUTPUT);\n    setLock(false);\n    Serial.begin(9600);\n    stableReq = digitalRead(REQ_PIN);\n    lastReq = stableReq;\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(REQ_PIN);\n\n    if (raw != lastReq)\n    {\n        reqEdge = now;\n        lastReq = raw;\n    }\n\n    if ((now - reqEdge) >= DEBOUNCE_MS && raw != stableReq)\n    {\n        stableReq = raw;\n    }\n\n    if (stableReq == LOW && doorClosed() && !locked)\n    {\n        setLock(true);\n        engageCount++;\n    }\n\n    if (!doorClosed())\n    {\n        setLock(false);\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 83.11,
+      "llm_calls": 7,
+      "prompt_tokens": 16209,
+      "completion_tokens": 4943,
+      "cost_usd": 0.00661458,
+      "model": "deepseek-chat"
+    }
+  ]
+}

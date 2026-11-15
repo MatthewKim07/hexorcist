@@ -1,0 +1,106 @@
+{
+  "case_id": "drip_scheduler_u8",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect pulse timing due to overflow",
+      "description": "The variable 'nextDue' is cast to uint8_t, which can cause overflow and incorrect timing when the millis() value exceeds 255. This will lead to missed pulses and incorrect timing.",
+      "category": "integer_overflow"
+    },
+    {
+      "id": "b2",
+      "title": "Inconsistent pulse period when paused",
+      "description": "When the pause button is pressed, the next pulse timing is incorrectly calculated, which can lead to a situation where the pulse is emitted too soon after being unpaused.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "drip_scheduler_u8",
+    "spec": "- Drip solenoid driver on D8; pause button on D4 to ground with internal pull-up (active LOW).\n- Emit a 50 ms HIGH pulse on D8 every 800 ms while pause is released.\n- Print the exact line `drip` at the start of each pulse; period must stay 800 ms \u00b1120 ms.\n- While D4 is held LOW, suppress new pulses and keep D8 LOW.\n- Every 1600 ms print `drip n=<count> pause=<0|1>`.\n- Stay responsive: complete each pulse without multi-second blocking waits.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+        "check_ids": [
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect pulse timing due to overflow",
+        "description": "The variable 'nextDue' is cast to uint8_t, which can cause overflow and incorrect timing when the millis() value exceeds 255. This will lead to missed pulses and incorrect timing.",
+        "category": "integer_overflow"
+      },
+      {
+        "id": "b2",
+        "title": "Inconsistent pulse period when paused",
+        "description": "When the pause button is pressed, the next pulse timing is incorrectly calculated, which can lead to a situation where the pulse is emitted too soon after being unpaused.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes the same root cause of overflow affecting timing\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report describes a different issue related to pause timing and does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes the same root cause of overflow affecting timing"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report describes a different issue related to pause timing and does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 831,
+    "completion_tokens": 96,
+    "cost_usd": 0.00018225,
+    "cached": true
+  }
+}

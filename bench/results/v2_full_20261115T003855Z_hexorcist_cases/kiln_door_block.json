@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/kiln_door_block",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "kiln_door_block",
+      "run_id": "74f3165758a4",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Heartbeat starved during siren pulse",
+          "description": "runSirenBurst() blocks in delay(SIREN_MS) at line 38 for the full 2000 ms, so loop() cannot reach the heartbeat check at lines 60-65. Measured gaps of 2000 ms and 2249 ms between 'hb' lines confirm the serial output stops for the whole pulse. Expected /^hb$/ every 250 \u00b1 100 ms; 5 of 4 intervals were out of tolerance, worst gap 2000 ms.",
+          "assertion_type": "serial_period",
+          "verified": true,
+          "evidence": "Expected /^hb$/ every 250 \u00b1 100 ms; 5 of 4 intervals were out of tolerance, worst gap 2000 ms.",
+          "root_cause": "runSirenBurst() blocks in delay(SIREN_MS) at line 38 for the full 2000 ms, so loop() cannot reach the heartbeat check at lines 60-65. Measured gaps of 2000 ms and 2249 ms between 'hb' lines confirm the serial output stops for the whole pulse."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Firmware silent for 2000 ms during siren",
+          "description": "The blocking delay(SIREN_MS) at line 38 halts all serial and pin activity for 2000 ms, exceeding the 700 ms limit. Measured 'no activity for 2000 ms' gaps across all scenarios confirm this. Firmware went silent for 2000 ms with no serial output or pin activity (limit 700 ms); 5 such gap(s).",
+          "assertion_type": "responsive",
+          "verified": true,
+          "evidence": "Firmware went silent for 2000 ms with no serial output or pin activity (limit 700 ms); 5 such gap(s).",
+          "root_cause": "The blocking delay(SIREN_MS) at line 38 halts all serial and pin activity for 2000 ms, exceeding the 700 ms limit. Measured 'no activity for 2000 ms' gaps across all scenarios confirm this."
+        }
+      ],
+      "patched_sketch": "// Studio kiln door interlock siren.\n// Door-open switch on D2 (pull-up, active LOW), piezo driver on D8.\n// Spec requires a serial heartbeat while the siren runs.\n\nconst int DOOR_PIN = 2;\nconst int SIREN_PIN = 8;\nconst unsigned long SIREN_MS = 2000;\nconst unsigned long HEARTBEAT_MS = 250;\n\nunsigned long lastHeartbeat = 0;\nunsigned long tripCount = 0;\nbool sirenArmed = false;\nbool sirenActive = false;\nunsigned long sirenStart = 0;\n\nvoid sirenOn()\n{\n    digitalWrite(SIREN_PIN, HIGH);\n}\n\nvoid sirenOff()\n{\n    digitalWrite(SIREN_PIN, LOW);\n}\n\nvoid emitHeartbeat()\n{\n    Serial.println(\"hb\");\n}\n\nbool doorOpen()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid startSirenBurst()\n{\n    tripCount++;\n    sirenOn();\n    sirenActive = true;\n    sirenStart = millis();\n}\n\nvoid setup()\n{\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(SIREN_PIN, OUTPUT);\n    sirenOff();\n    Serial.begin(9600);\n    lastHeartbeat = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (sirenActive)\n    {\n        if (now - sirenStart >= SIREN_MS)\n        {\n            sirenOff();\n            sirenActive = false;\n        }\n    }\n\n    if (doorOpen())\n    {\n        if (!sirenActive && !sirenArmed)\n        {\n            sirenArmed = true;\n            startSirenBurst();\n        }\n    }\n    else\n    {\n        sirenArmed = false;\n    }\n\n    if (now - lastHeartbeat >= HEARTBEAT_MS)\n    {\n        lastHeartbeat = now;\n        emitHeartbeat();\n    }\n}\n",
+      "wall_s": 55.92,
+      "llm_calls": 4,
+      "prompt_tokens": 8690,
+      "completion_tokens": 2528,
+      "cost_usd": 0.00349496,
+      "model": "deepseek-chat"
+    }
+  ]
+}

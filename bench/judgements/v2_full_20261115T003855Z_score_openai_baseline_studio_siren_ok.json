@@ -1,0 +1,67 @@
+{
+  "case_id": "studio_siren_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing failsafe for siren timing",
+      "description": "If the panic button is pressed and held longer than the pulse duration, the siren will not turn off until the button is released, potentially causing it to stay on indefinitely.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b2",
+      "title": "Blocking delay in heartbeat",
+      "description": "The heartbeat printing does not account for the siren timing, which could lead to periods of silence exceeding 700 ms if the siren is active and the button is held.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "studio_siren_ok",
+    "spec": "- Panic button on D4 to ground with internal pull-up (active LOW); siren on D7.\n- A settled press as short as 40 ms starts a 2500 ms HIGH pulse on D7 within 150 ms.\n- Presses while the siren is already sounding are ignored (do not restart the pulse).\n- Print the exact line `hb` every 400 ms at all times, including during the siren.\n- Never remain silent (no serial and no output change) for more than 700 ms.\n- Idle button reads HIGH.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing failsafe for siren timing",
+        "description": "If the panic button is pressed and held longer than the pulse duration, the siren will not turn off until the button is released, potentially causing it to stay on indefinitely.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b2",
+        "title": "Blocking delay in heartbeat",
+        "description": "The heartbeat printing does not account for the siren timing, which could lead to periods of silence exceeding 700 ms if the siren is active and the button is held.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 700,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001602,
+    "cached": true
+  }
+}

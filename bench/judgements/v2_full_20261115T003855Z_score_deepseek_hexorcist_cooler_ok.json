@@ -1,0 +1,53 @@
+{
+  "case_id": "cooler_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a4",
+      "title": "Compressor not driven ON promptly after service switch release",
+      "description": "The control loop only re-evaluates the compressor every TICK_MS (50 ms) and additionally requires the temperature to satisfy the band condition for HOLD_N (3) consecutive ticks before acting (lines 73-98), so after D4 is released the compressor stays OFF until the hold counter fills. The measured evidence shows D7 not HIGH for 500 ms while required at t=500-1000 ms in the bounce and short-press scenarios, and 80-86 ms gaps in the nominal ramp (lines 570-650, 7854-7940 ms), confirming the delayed response. There is no debounce or immediate service-release handling, so the output does not follow D4 within the required 500 ms. D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "cooler_ok",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a4",
+        "title": "Compressor not driven ON promptly after service switch release",
+        "description": "The control loop only re-evaluates the compressor every TICK_MS (50 ms) and additionally requires the temperature to satisfy the band condition for HOLD_N (3) consecutive ticks before acting (lines 73-98), so after D4 is released the compressor stays OFF until the hold counter fills. The measured evidence shows D7 not HIGH for 500 ms while required at t=500-1000 ms in the bounce and short-press scenarios, and 80-86 ms gaps in the nominal ramp (lines 570-650, 7854-7940 ms), confirming the delayed response. There is no debounce or immediate service-release handling, so the output does not follow D4 within the required 500 ms. D7 was in the wrong state for 3871 ms across 5 interval(s), first at 500 ms: D7 was not HIGH for 500 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 859,
+    "completion_tokens": 86,
+    "cost_usd": 0.00018045,
+    "cached": true
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "case_id": "glue_solenoid_short",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Pulse length is 1000 ms not 2500 ms",
+      "description": "PULSE_MS is set to 1000, so the solenoid HIGH pulse lasts 1 s instead of the required 2500 ms.",
+      "category": "timed_pulse_length"
+    },
+    {
+      "id": "b2",
+      "title": "Debounce edge timer not reset on stable transition",
+      "description": "trigEdge is only updated when raw changes; after a stable transition the timer is not re-armed, so a subsequent bounce within 25 ms of the previous edge can be accepted early, and the 25 ms stability window is measured from the last raw change rather than from the last stable sample, allowing a press shorter than 30 ms to register.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b3",
+      "title": "Trigger latency can exceed 120 ms",
+      "description": "The debounce logic requires raw to differ from stableTrig for 25 ms after the last edge, but because trigEdge is not refreshed on stable acceptance, a press arriving just after a prior edge can be delayed by up to ~50 ms plus loop jitter; combined with the missing re-arm this can push detection past the 120 ms requirement.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "timed_pulse_length",
+      "description": "Solenoid pulse is 1 s not 2.5 s",
+      "check_ids": [
+        "a_pulse"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "timed_pulse_length",
+      "description": "Solenoid pulse is 1 s not 2.5 s",
+      "check_ids": [
+        "a_pulse"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_pulse",
+          "type": "timed_pulse",
+          "behaviour": "D8 pulse length around None ms (tolerance 200 ms) (2.5 s pulse)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "glue_solenoid_short",
+    "spec": "- Trigger on D2 with INPUT_PULLUP (active LOW); glue solenoid on D8; armed LED on D11.\n- A settled press as short as 30 ms starts a 2500 ms HIGH pulse on D8 within 120 ms.\n- Retriggers during an active pulse are ignored.\n- Debounce the trigger with 25 ms of stability.\n- Keep D11 HIGH when idle and LOW while the solenoid pulse is active.\n- Print `glue dots=<n> busy=<0|1>` every 500 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "timed_pulse_length",
+        "description": "Solenoid pulse is 1 s not 2.5 s",
+        "check_ids": [
+          "a_pulse"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_pulse",
+            "type": "timed_pulse",
+            "behaviour": "D8 pulse length around None ms (tolerance 200 ms) (2.5 s pulse)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Pulse length is 1000 ms not 2500 ms",
+        "description": "PULSE_MS is set to 1000, so the solenoid HIGH pulse lasts 1 s instead of the required 2500 ms.",
+        "category": "timed_pulse_length"
+      },
+      {
+        "id": "b2",
+        "title": "Debounce edge timer not reset on stable transition",
+        "description": "trigEdge is only updated when raw changes; after a stable transition the timer is not re-armed, so a subsequent bounce within 25 ms of the previous edge can be accepted early, and the 25 ms stability window is measured from the last raw change rather than from the last stable sample, allowing a press shorter than 30 ms to register.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b3",
+        "title": "Trigger latency can exceed 120 ms",
+        "description": "The debounce logic requires raw to differ from stableTrig for 25 ms after the last edge, but because trigEdge is not refreshed on stable acceptance, a press arriving just after a prior edge can be delayed by up to ~50 ms plus loop jitter; combined with the missing re-arm this can push detection past the 120 ms requirement.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported pulse length matches the true bug's description\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"No other reported bugs match the truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported pulse length matches the true bug's description"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "No other reported bugs match the truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 968,
+    "completion_tokens": 91,
+    "cost_usd": 0.0001998,
+    "cached": true
+  }
+}

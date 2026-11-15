@@ -1,0 +1,134 @@
+{
+  "case_id": "bench_led_miswire",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "LED on wrong pin",
+      "description": "LED_PIN is 12 but the pin map and behaviour specify D13; the user LED never lights on the intended pin.",
+      "category": "wrong_pin"
+    },
+    {
+      "id": "b2",
+      "title": "held_ms reports timestamp not duration",
+      "description": "pressMs is assigned millis() (an absolute timestamp) and printed as held_ms, so the serial output shows a huge timestamp instead of the elapsed hold time in ms.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b3",
+      "title": "Blink half-period drifts and first toggle delayed",
+      "description": "lastBlink is reset to now on each toggle rather than advanced by BLINK_MS, so loop latency accumulates and the blink period exceeds ~120 ms; also the initial setLed(true) plus immediate toggle logic can produce an uneven first cycle.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b4",
+      "title": "Steady mode ignores blink-mode release timing",
+      "description": "When D4 is released while D2 is held, the code sets LED HIGH but does not reset lastBlink/pressMs consistently, and switching from blink to steady leaves lit state dependent on prior toggle rather than forcing steady HIGH within 100 ms.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "bench_led_miswire",
+    "spec": "- Button on D2 with INPUT_PULLUP (active LOW); user LED on D13; blink-mode switch on D4 (pull-up).\n- While D2 is pressed and D4 is released, light D13 HIGH; release turns D13 LOW.\n- Reach the commanded LED state within 100 ms of the button level.\n- While D4 is held LOW and D2 is pressed, blink D13 with ~120 ms half-period.\n- Print `bench led=<0|1> held_ms=<n>` every 1000 ms.\n- Idle (D2 released) always keeps D13 LOW.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_pin",
+        "description": "Drives D12 instead of D13",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "LED on wrong pin",
+        "description": "LED_PIN is 12 but the pin map and behaviour specify D13; the user LED never lights on the intended pin.",
+        "category": "wrong_pin"
+      },
+      {
+        "id": "b2",
+        "title": "held_ms reports timestamp not duration",
+        "description": "pressMs is assigned millis() (an absolute timestamp) and printed as held_ms, so the serial output shows a huge timestamp instead of the elapsed hold time in ms.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b3",
+        "title": "Blink half-period drifts and first toggle delayed",
+        "description": "lastBlink is reset to now on each toggle rather than advanced by BLINK_MS, so loop latency accumulates and the blink period exceeds ~120 ms; also the initial setLed(true) plus immediate toggle logic can produce an uneven first cycle.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b4",
+        "title": "Steady mode ignores blink-mode release timing",
+        "description": "When D4 is released while D2 is held, the code sets LED HIGH but does not reset lastBlink/pressMs consistently, and switching from blink to steady leaves lit state dependent on prior toggle rather than forcing steady HIGH within 100 ms.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes wrong pin for LED\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2, 3],\n  \"unique_false_alarm_indices\": [1, 2, 3],\n  \"notes\": \"All other reports do not match any true bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes wrong pin for LED"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2,
+      3
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2,
+      3
+    ],
+    "notes": "All other reports do not match any true bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 998,
+    "completion_tokens": 95,
+    "cost_usd": 0.0002067,
+    "cached": true
+  }
+}

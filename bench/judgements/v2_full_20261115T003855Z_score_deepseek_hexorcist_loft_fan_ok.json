@@ -1,0 +1,81 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Fan stays ON after boost release at low temperature",
+      "description": "When boost is released at 0 C, the code only turns the fan OFF after offHold reaches HOLD (4 samples) at lines 78-94, but the measured evidence shows D5 was not LOW for 2833 ms starting at 3.32 s. The hysteresis logic at lines 87-94 never forces an immediate OFF on release, so the fan remains ON well beyond the 500 ms grace period. D5 was in the wrong state for 2833 ms across 1 interval(s), first at 3.32 s: D5 was not LOW for 2833 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Boost override not applied while button held",
+      "description": "The boost check at line 62 only runs inside the 50 ms sample block (line 57), and driveFan(true) at line 66 is only reached when a sample occurs; the measured evidence shows D5 was not LOW for 3602 ms starting at 500 ms while D4 was held. Because the fan state is only updated on sample ticks and the boost branch resets holds but the fan can be driven OFF by the offHold path in other samples, the forced-ON requirement is not sustained. D5 was in the wrong state for 8100 ms across 3 interval(s), first at 500 ms: D5 was not LOW for 3602 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Fan toggles far exceed 2 per 5000 ms window",
+      "description": "Each boost press calls driveFan(true) at line 66 and each release lets offHold accumulate to driveFan(false) at line 93, with no rate limiting or minimum dwell time anywhere in the code. The measured evidence shows 8 toggles in a 5000 ms window starting at 1.00 s and 26 toggles in another window, far above the limit of 2. D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Fan stays ON after boost release at low temperature",
+        "description": "When boost is released at 0 C, the code only turns the fan OFF after offHold reaches HOLD (4 samples) at lines 78-94, but the measured evidence shows D5 was not LOW for 2833 ms starting at 3.32 s. The hysteresis logic at lines 87-94 never forces an immediate OFF on release, so the fan remains ON well beyond the 500 ms grace period. D5 was in the wrong state for 2833 ms across 1 interval(s), first at 3.32 s: D5 was not LOW for 2833 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Boost override not applied while button held",
+        "description": "The boost check at line 62 only runs inside the 50 ms sample block (line 57), and driveFan(true) at line 66 is only reached when a sample occurs; the measured evidence shows D5 was not LOW for 3602 ms starting at 500 ms while D4 was held. Because the fan state is only updated on sample ticks and the boost branch resets holds but the fan can be driven OFF by the offHold path in other samples, the forced-ON requirement is not sustained. D5 was in the wrong state for 8100 ms across 3 interval(s), first at 500 ms: D5 was not LOW for 3602 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Fan toggles far exceed 2 per 5000 ms window",
+        "description": "Each boost press calls driveFan(true) at line 66 and each release lets offHold accumulate to driveFan(false) at line 93, with no rate limiting or minimum dwell time anywhere in the code. The measured evidence shows 8 toggles in a 5000 ms window starting at 1.00 s and 26 toggles in another window, far above the limit of 2. D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1129,
+    "completion_tokens": 98,
+    "cost_usd": 0.00022815,
+    "cached": true
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "case_id": "greenhouse_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "No rate limit on fan toggling",
+      "description": "The sketch has no 5000 ms / 2-transition limiter; a temperature hovering near the 30/26 thresholds can toggle the fan far more than twice per 5 s window.",
+      "category": "other"
+    },
+    {
+      "id": "b2",
+      "title": "Floating probe not detected",
+      "description": "A floating A0 reads an arbitrary voltage that may land inside 5\u2013100 \u00b0C, so the required force-ON safe state is never entered; there is no open-circuit/rail detection.",
+      "category": "missing_failsafe"
+    },
+    {
+      "id": "b3",
+      "title": "Fault force-ON latency too slow",
+      "description": "Fault must force fan ON within 600 ms, but faultHold requires HOLD_N=4 ticks at 50 ms plus loop jitter; combined with the missing floating detection the 600 ms deadline is not reliably met.",
+      "category": "off_by_one_timing"
+    },
+    {
+      "id": "b4",
+      "title": "ADC reference scaling assumes 5 V Vcc",
+      "description": "readTempC uses 5000/1023 mV per count; with the default AVcc reference this mis-scales temperature if Vcc differs from 5.000 V, shifting the 30/26 \u00b0C trip points.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b5",
+      "title": "Status print uses stale temp on first tick",
+      "description": "printStatus can run before the first 50 ms tick has populated tempC, printing 0.0 C on the first status line.",
+      "category": "other"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "greenhouse_ok",
+    "spec": "- Air temperature probe on A0 at 10 mV/\u00b0C; potting-shed vent fan on D6.\n- Open the fan at 30.0 \u00b0C or above; close the fan at 26.0 \u00b0C or below.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- If the probe is floating, or temperature reads below 5.0 \u00b0C or above 100.0 \u00b0C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.\n- Print `shed: <temp> C fan=ON` or `shed: <temp> C fan=OFF` every 1000 ms with one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "No rate limit on fan toggling",
+        "description": "The sketch has no 5000 ms / 2-transition limiter; a temperature hovering near the 30/26 thresholds can toggle the fan far more than twice per 5 s window.",
+        "category": "other"
+      },
+      {
+        "id": "b2",
+        "title": "Floating probe not detected",
+        "description": "A floating A0 reads an arbitrary voltage that may land inside 5\u2013100 \u00b0C, so the required force-ON safe state is never entered; there is no open-circuit/rail detection.",
+        "category": "missing_failsafe"
+      },
+      {
+        "id": "b3",
+        "title": "Fault force-ON latency too slow",
+        "description": "Fault must force fan ON within 600 ms, but faultHold requires HOLD_N=4 ticks at 50 ms plus loop jitter; combined with the missing floating detection the 600 ms deadline is not reliably met.",
+        "category": "off_by_one_timing"
+      },
+      {
+        "id": "b4",
+        "title": "ADC reference scaling assumes 5 V Vcc",
+        "description": "readTempC uses 5000/1023 mV per count; with the default AVcc reference this mis-scales temperature if Vcc differs from 5.000 V, shifting the 30/26 \u00b0C trip points.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b5",
+        "title": "Status print uses stale temp on first tick",
+        "description": "printStatus can run before the first 50 ms tick has populated tempC, printing 0.0 C on the first status line.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2, 3, 4],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1033,
+    "completion_tokens": 64,
+    "cost_usd": 0.00019335,
+    "cached": true
+  }
+}

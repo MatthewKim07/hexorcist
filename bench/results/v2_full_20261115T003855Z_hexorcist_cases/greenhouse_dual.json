@@ -1,0 +1,39 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/greenhouse_dual",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "greenhouse_dual",
+      "run_id": "783564d8518f",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Fan relay chatters at threshold due to no hysteresis",
+          "description": "The control logic at lines 72-79 sets the fan ON whenever tempC >= OPEN_C and OFF otherwise, with no hysteresis band and no debounce. Any noise around 28.0 C flips the output every 50 ms tick, producing the measured 46 toggles in a 5000 ms window (limit 2) and 64 toggles over the run. The spec's 24.0 C close threshold is never used, so the required deadband is absent. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "verified": true,
+          "evidence": "D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "root_cause": "The control logic at lines 72-79 sets the fan ON whenever tempC >= OPEN_C and OFF otherwise, with no hysteresis band and no debounce. Any noise around 28.0 C flips the output every 50 ms tick, producing the measured 46 toggles in a 5000 ms window (limit 2) and 64 toggles over the run. The spec's 24.0 C close threshold is never used, so the required deadband is absent."
+        },
+        {
+          "id": "bug-a3",
+          "title": "No fault detection: sub-5 C and floating probe drive fan OFF",
+          "description": "readTempC (lines 19-24) returns the raw scaled value with no validity check, and the control branch at lines 72-79 treats any reading below OPEN_C as a normal 'fan OFF' command. A 0 V disconnected probe or a 3 C cold reading therefore forces the fan OFF instead of the required safe ON, leaving D9 not HIGH for 5400 ms and 3010 ms respectively against the 600 ms allowance. There is no fault branch anywhere in loop() to force and hold the safe state. During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "assertion_type": "safe_state_on_fault",
+          "verified": true,
+          "evidence": "During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "root_cause": "readTempC (lines 19-24) returns the raw scaled value with no validity check, and the control branch at lines 72-79 treats any reading below OPEN_C as a normal 'fan OFF' command. A 0 V disconnected probe or a 3 C cold reading therefore forces the fan OFF instead of the required safe ON, leaving D9 not HIGH for 5400 ms and 3010 ms respectively against the 600 ms allowance. There is no fault branch anywhere in loop() to force and hold the safe state."
+        }
+      ],
+      "patched_sketch": "// Greenhouse ridge-vent controller.\n// Soil-air LM35 on A2, exhaust fan relay on D9, UART status.\n\nconst int SENSOR_PIN = A2;\nconst int FAN_PIN = 9;\nconst float OPEN_C = 28.0f;\nconst float CLOSE_C = 24.0f;\nconst float FAULT_LOW_C = 5.0f;\nconst float FAULT_HIGH_C = 100.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 400;\nconst unsigned long FAULT_CONFIRM_MS = 300;\n\nbool fanOn = false;\nbool pendingValid = false;\nbool pendingState = false;\nunsigned long pendingSince = 0;\nbool faultPending = false;\nunsigned long faultSince = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nunsigned long sampleCount = 0;\nfloat tempC = 0.0f;\nfloat tempMin = 999.0f;\nfloat tempMax = -999.0f;\n\nfloat readTempC()\n{\n    int raw = analogRead(SENSOR_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid trackTemp(float c)\n{\n    if (c < tempMin)\n    {\n        tempMin = c;\n    }\n    if (c > tempMax)\n    {\n        tempMax = c;\n    }\n}\n\nvoid setFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"gh: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        sampleCount++;\n        trackTemp(tempC);\n\n        bool fault = (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n        bool want;\n\n        if (fault)\n        {\n            want = true;\n        }\n        else if (tempC >= OPEN_C)\n        {\n            want = true;\n        }\n        else if (tempC <= CLOSE_C)\n        {\n            want = false;\n        }\n        else\n        {\n            want = fanOn;\n        }\n\n        if (fault)\n        {\n            // Fail-safe: require the fault to hold before tripping.\n            pendingValid = false;\n            if (!faultPending)\n            {\n                faultPending = true;\n                faultSince = now;\n            }\n            else if (now - faultSince >= FAULT_CONFIRM_MS)\n            {\n                if (!fanOn)\n                {\n                    setFan(true);\n                }\n            }\n        }\n        else\n        {\n            faultPending = false;\n            if (want != fanOn)\n            {\n                if (!pendingValid || pendingState != want)\n                {\n                    pendingValid = true;\n                    pendingState = want;\n                    pendingSince = now;\n                }\n                else if (now - pendingSince >= CONFIRM_MS)\n                {\n                    setFan(want);\n                    pendingValid = false;\n                }\n            }\n            else\n            {\n                pendingValid = false;\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 126.81,
+      "llm_calls": 5,
+      "prompt_tokens": 12096,
+      "completion_tokens": 4295,
+      "cost_usd": 0.00519078,
+      "model": "deepseek-chat"
+    }
+  ]
+}

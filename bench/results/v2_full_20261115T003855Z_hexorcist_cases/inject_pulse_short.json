@@ -1,0 +1,30 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/inject_pulse_short",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "inject_pulse_short",
+      "run_id": "125d0fbc0b3d",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Inject pulse is 2000 ms instead of 3000 ms",
+          "description": "PULSE_MS is defined as 2000 on line 7, but the spec requires a 3000 ms HIGH pulse. The pulse-end check on line 70 uses this constant, so every pulse terminates early; measured pulses lasted 2000-2001 ms (e.g. \"pulse from 831 ms lasted 2000 ms, expected 3000 \u00b1 150 ms\"). 3 of 3 pulse(s) had the wrong length: pulse from 831 ms lasted 2000 ms, expected 3000 \u00b1 150 ms. A trigger at 1.20 s came during this pulse, which must not change its length.",
+          "assertion_type": "timed_pulse",
+          "verified": true,
+          "evidence": "3 of 3 pulse(s) had the wrong length: pulse from 831 ms lasted 2000 ms, expected 3000 \u00b1 150 ms. A trigger at 1.20 s came during this pulse, which must not change its length.",
+          "root_cause": "PULSE_MS is defined as 2000 on line 7, but the spec requires a 3000 ms HIGH pulse. The pulse-end check on line 70 uses this constant, so every pulse terminates early; measured pulses lasted 2000-2001 ms (e.g. \"pulse from 831 ms lasted 2000 ms, expected 3000 \u00b1 150 ms\")."
+        }
+      ],
+      "patched_sketch": "// Bench reagent inject one-shot.\n// Start button on D2 (pull-up), inject indicator on D4.\n// Heartbeat on UART while idle and during the pulse.\n\nconst int START_PIN = 2;\nconst int INJECT_PIN = 4;\nconst unsigned long PULSE_MS = 3000;\nconst unsigned long DEBOUNCE_MS = 30;\nconst unsigned long HB_MS = 400;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableBtn = HIGH;\nint lastBtn = HIGH;\nunsigned long btnEdge = 0;\nunsigned long lastHb = 0;\nunsigned long shots = 0;\n\nvoid injectHigh()\n{\n    digitalWrite(INJECT_PIN, HIGH);\n}\n\nvoid injectLow()\n{\n    digitalWrite(INJECT_PIN, LOW);\n}\n\nvoid sendHb()\n{\n    Serial.print(\"inject hb shots=\");\n    Serial.println(shots);\n}\n\nvoid setup()\n{\n    pinMode(START_PIN, INPUT_PULLUP);\n    pinMode(INJECT_PIN, OUTPUT);\n    injectLow();\n    Serial.begin(9600);\n    stableBtn = digitalRead(START_PIN);\n    lastBtn = stableBtn;\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(START_PIN);\n\n    if (raw != lastBtn)\n    {\n        btnEdge = now;\n        lastBtn = raw;\n    }\n\n    if ((now - btnEdge) >= DEBOUNCE_MS && raw != stableBtn)\n    {\n        stableBtn = raw;\n        if (stableBtn == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            shots++;\n            injectHigh();\n            Serial.println(\"go\");\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        injectLow();\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        sendHb();\n    }\n}\n",
+      "wall_s": 49.86,
+      "llm_calls": 4,
+      "prompt_tokens": 8332,
+      "completion_tokens": 2465,
+      "cost_usd": 0.00336826,
+      "model": "deepseek-chat"
+    }
+  ]
+}

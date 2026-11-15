@@ -1,0 +1,106 @@
+{
+  "case_id": "inject_pulse_short",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect pulse duration",
+      "description": "The pulse duration is set to 2000 ms instead of the intended 3000 ms, causing the inject indicator to turn off too early.",
+      "category": "timed_pulse_length"
+    },
+    {
+      "id": "b2",
+      "title": "Missing heartbeat output during pulse",
+      "description": "The heartbeat output is not sent during the pulse, which can lead to silent periods longer than 700 ms if the pulse is active.",
+      "category": "missing_failsafe"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "off_by_one_timing",
+      "description": "Pulse length 2000 ms instead of 3000 ms",
+      "check_ids": [
+        "a_pulse"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "off_by_one_timing",
+      "description": "Pulse length 2000 ms instead of 3000 ms",
+      "check_ids": [
+        "a_pulse"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_pulse",
+          "type": "timed_pulse",
+          "behaviour": "D4 pulse length around None ms (tolerance 200 ms) (3 s pulse)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "inject_pulse_short",
+    "spec": "- Start button on D2 with INPUT_PULLUP (active LOW); inject indicator on D4.\n- Each settled press as short as 40 ms starts a 3000 ms HIGH pulse on D4 within 120 ms.\n- Presses during an active pulse are ignored.\n- Debounce the start contact with 30 ms of stability.\n- Print `go` when a pulse starts, and `inject hb shots=<n>` every 400 ms at all times.\n- Never remain silent (no serial and no output change) for more than 700 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "off_by_one_timing",
+        "description": "Pulse length 2000 ms instead of 3000 ms",
+        "check_ids": [
+          "a_pulse"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_pulse",
+            "type": "timed_pulse",
+            "behaviour": "D4 pulse length around None ms (tolerance 200 ms) (3 s pulse)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect pulse duration",
+        "description": "The pulse duration is set to 2000 ms instead of the intended 3000 ms, causing the inject indicator to turn off too early.",
+        "category": "timed_pulse_length"
+      },
+      {
+        "id": "b2",
+        "title": "Missing heartbeat output during pulse",
+        "description": "The heartbeat output is not sent during the pulse, which can lead to silent periods longer than 700 ms if the pulse is active.",
+        "category": "missing_failsafe"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes the same observable behavior of pulse duration\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second report does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes the same observable behavior of pulse duration"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second report does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 801,
+    "completion_tokens": 86,
+    "cost_usd": 0.00017175,
+    "cached": true
+  }
+}

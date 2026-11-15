@@ -1,0 +1,123 @@
+{
+  "case_id": "attic_vent_hyst",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "No 38 \u00b0C release threshold; fan drops out below 42 \u00b0C",
+      "description": "Line 66 uses a single trip point at FAN_ON_C (42.0) and line 72 turns the fan off for any reading below it, so there is no 38.0 \u00b0C release threshold. The measured evidence shows D8 not LOW for 619 ms while required at 1.00 s in the override-release scenario, and wrong-state intervals of ~200 ms in the override chatter scenario, because the fan follows the single 42 \u00b0C comparison instead of holding until 38 \u00b0C. D8 was in the wrong state for 999 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 200 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Override release and temperature control chatter the relay",
+      "description": "The override branch at lines 58-62 forces the fan ON while D3 is LOW, but on release the code falls straight into the single-threshold comparison at line 66 with no hysteresis or debounce, so the relay flips as the reading crosses 42.0. Measured evidence shows D8 in the wrong state for 5348 ms across 60 intervals (first at 801 ms) and 5206 ms across 57 intervals (first at 1.70 s), with 50-150 ms wrong-state spans matching the 50 ms sample period. D8 was in the wrong state for 5348 ms across 60 interval(s), first at 801 ms: D8 was not LOW for 99 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Relay toggles far beyond 2 per 5000 ms due to no hysteresis or filtering",
+      "description": "Every 50 ms sample re-evaluates a bare `lastTempC >= FAN_ON_C` comparison at line 66 and calls applyFan unconditionally at lines 68/72, with no hysteresis band and no input filtering or minimum dwell time. Measured evidence: 57 toggles in a 5000 ms window starting at 900 ms (limit 2), 34 toggles starting at 551 ms, and 8 toggles starting at 1.00 s for a glitch spike, so sensor noise and threshold hover directly chatter the relay. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "attic_vent_hyst",
+    "spec": "- LM35 temperature probe on A0 scaled at 10 mV/\u00b0C; ridge-vent relay on D8; override pushbutton on D3 to ground with internal pull-up (active LOW).\n- Turn the vent fan ON when attic temperature reaches 42.0 \u00b0C or above, and turn it OFF when temperature falls to 38.0 \u00b0C or below.\n- While D3 is held LOW, force the fan ON regardless of temperature.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print one status line every 1000 ms in the form `attic: <temp> C fan=ON` or `attic: <temp> C fan=OFF` with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 42 C trip point chatters under sensor noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "No 38 \u00b0C release threshold; fan drops out below 42 \u00b0C",
+        "description": "Line 66 uses a single trip point at FAN_ON_C (42.0) and line 72 turns the fan off for any reading below it, so there is no 38.0 \u00b0C release threshold. The measured evidence shows D8 not LOW for 619 ms while required at 1.00 s in the override-release scenario, and wrong-state intervals of ~200 ms in the override chatter scenario, because the fan follows the single 42 \u00b0C comparison instead of holding until 38 \u00b0C. D8 was in the wrong state for 999 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 200 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Override release and temperature control chatter the relay",
+        "description": "The override branch at lines 58-62 forces the fan ON while D3 is LOW, but on release the code falls straight into the single-threshold comparison at line 66 with no hysteresis or debounce, so the relay flips as the reading crosses 42.0. Measured evidence shows D8 in the wrong state for 5348 ms across 60 intervals (first at 801 ms) and 5206 ms across 57 intervals (first at 1.70 s), with 50-150 ms wrong-state spans matching the 50 ms sample period. D8 was in the wrong state for 5348 ms across 60 interval(s), first at 801 ms: D8 was not LOW for 99 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Relay toggles far beyond 2 per 5000 ms due to no hysteresis or filtering",
+        "description": "Every 50 ms sample re-evaluates a bare `lastTempC >= FAN_ON_C` comparison at line 66 and calls applyFan unconditionally at lines 68/72, with no hysteresis band and no input filtering or minimum dwell time. Measured evidence: 57 toggles in a 5000 ms window starting at 900 ms (limit 2), 34 toggles starting at 551 ms, and 8 toggles starting at 1.00 s for a glitch spike, so sensor noise and threshold hover directly chatter the relay. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the lack of hysteresis causing the fan to drop out below 42 \u00b0C.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [2],\n  \"unique_false_alarm_indices\": [2],\n  \"notes\": \"Reported bugs a2 and a3 describe symptoms related to the same root cause but do not match the truth bug directly.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the lack of hysteresis causing the fan to drop out below 42 \u00b0C."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [
+      2
+    ],
+    "unique_false_alarm_indices": [
+      2
+    ],
+    "notes": "Reported bugs a2 and a3 describe symptoms related to the same root cause but do not match the truth bug directly."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1366,
+    "completion_tokens": 128,
+    "cost_usd": 0.0002817,
+    "cached": true
+  }
+}

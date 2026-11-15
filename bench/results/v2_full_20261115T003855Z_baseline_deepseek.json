@@ -1,0 +1,1285 @@
+{
+  "run_id": "v2_full_20261115T003855Z_baseline_deepseek",
+  "system": "baseline",
+  "model": "deepseek-chat",
+  "endpoint": "llm",
+  "stopped": null,
+  "budget": {
+    "spent_deepseek": 0.026961,
+    "spent_openai": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 3.0,
+    "calls": 40
+  },
+  "cases": [
+    {
+      "case_id": "aquarium_ph_scale",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "pH not scaled from millivolts",
+          "category": "wrong_unit_scaling",
+          "description": "computePh returns millivolts directly instead of dividing by 500 mV/pH, so reported pH is ~500x too large and the alert LED is always on."
+        }
+      ],
+      "patched_sketch": "// Reef tank pH logger.\n// Linearized probe on A0, optional low-pH LED on D13, UART log at 9600.\n\nconst int PROBE_PIN = A0;\nconst int ALERT_PIN = 13;\nconst float ALERT_PH = 7.20f;\nconst unsigned long LOG_PERIOD_MS = 1000;\n\nunsigned long lastLogMs = 0;\nunsigned long sampleCount = 0;\nfloat lastPh = 0.0f;\nfloat phMin = 14.0f;\nfloat phMax = 0.0f;\nbool alertOn = false;\n\nfloat adcToMillivolts(int raw)\n{\n    return raw * (5000.0f / 1023.0f);\n}\n\nfloat computePh(float millivolts)\n{\n    return millivolts / 500.0f;\n}\n\nvoid trackRange(float ph)\n{\n    if (ph < phMin)\n    {\n        phMin = ph;\n    }\n    if (ph > phMax)\n    {\n        phMax = ph;\n    }\n}\n\nvoid setAlert(bool on)\n{\n    alertOn = on;\n    digitalWrite(ALERT_PIN, on ? HIGH : LOW);\n}\n\nvoid writeLogLine()\n{\n    Serial.print(\"pH: \");\n    Serial.println(lastPh, 2);\n}\n\nvoid setup()\n{\n    pinMode(ALERT_PIN, OUTPUT);\n    digitalWrite(ALERT_PIN, LOW);\n    Serial.begin(9600);\n    lastLogMs = millis();\n}\n\nvoid loop()\n{\n    int raw = analogRead(PROBE_PIN);\n    float mv = adcToMillivolts(raw);\n    lastPh = computePh(mv);\n    sampleCount++;\n    trackRange(lastPh);\n\n    if (lastPh < ALERT_PH)\n    {\n        setAlert(true);\n    }\n    else\n    {\n        setAlert(false);\n    }\n\n    unsigned long now = millis();\n    if (now - lastLogMs >= LOG_PERIOD_MS)\n    {\n        lastLogMs = now;\n        writeLogLine();\n    }\n}",
+      "wall_s": 3.01,
+      "llm_calls": 1,
+      "prompt_tokens": 949,
+      "completion_tokens": 632,
+      "cost_usd": 0.00053116,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "attic_vent_hyst",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No hysteresis on fan threshold",
+          "category": "missing_hysteresis",
+          "description": "Fan turns OFF as soon as temp drops below 42.0 \u00b0C instead of holding ON until 38.0 \u00b0C, so it chatters around the single trip point rather than using the required 42/38 band."
+        },
+        {
+          "id": "b2",
+          "title": "No rate limit on fan transitions",
+          "category": "other",
+          "description": "The 2-transitions-per-5000 ms limit is not implemented; with no hysteresis the relay can toggle every 50 ms sample, far exceeding the allowed rate."
+        },
+        {
+          "id": "b3",
+          "title": "Override release drops fan immediately",
+          "category": "stuck_state_machine",
+          "description": "When the override is released, the fan state is recomputed from temperature alone, so a fan forced ON by override can snap OFF instantly even if temperature is above the ON threshold, and the override does not respect the transition rate limit."
+        },
+        {
+          "id": "b4",
+          "title": "LM35 scaling uses 5000 mV reference",
+          "category": "wrong_unit_scaling",
+          "description": "analogRead is converted with 5000 mV/1023, but the Uno's default ADC reference is ~5 V with 1024 steps; using 1023 and assuming exactly 5000 mV biases the temperature reading, and the LM35 should be scaled as raw*5000/1024/10."
+        }
+      ],
+      "patched_sketch": "// Attic ridge-vent controller for an Uno.\n// LM35 on A0, relay driver on D8, momentary override on D3 (pull-up).\n\nconst int TEMP_PIN = A0;\nconst int FAN_PIN = 8;\nconst int OVERRIDE_PIN = 3;\n\nconst float FAN_ON_C = 42.0f;\nconst float FAN_OFF_C = 38.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long RATE_WINDOW_MS = 5000;\nconst int MAX_TRANSITIONS = 2;\n\nbool fanRunning = false;\nunsigned long lastSampleMs = 0;\nunsigned long lastStatusMs = 0;\nfloat lastTempC = 0.0f;\n\n// Transition history for rate limiting.\nunsigned long transitionTimes[MAX_TRANSITIONS];\nint transitionCount = 0;\n\nfloat readAtticTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float millivolts = raw * (5000.0f / 1024.0f);\n    return millivolts / MV_PER_C;\n}\n\nbool rateLimitAllows(unsigned long now)\n{\n    // Drop entries older than the window.\n    int kept = 0;\n    for (int i = 0; i < transitionCount; i++)\n    {\n        if (now - transitionTimes[i] < RATE_WINDOW_MS)\n        {\n            transitionTimes[kept++] = transitionTimes[i];\n        }\n    }\n    transitionCount = kept;\n    return transitionCount < MAX_TRANSITIONS;\n}\n\nvoid applyFan(bool wantOn, unsigned long now)\n{\n    if (wantOn == fanRunning)\n    {\n        return;\n    }\n    if (!rateLimitAllows(now))\n    {\n        return;\n    }\n    fanRunning = wantOn;\n    digitalWrite(FAN_PIN, wantOn ? HIGH : LOW);\n    if (transitionCount < MAX_TRANSITIONS)\n    {\n        transitionTimes[transitionCount++] = now;\n    }\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"attic: \");\n    Serial.print(lastTempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanRunning ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(OVERRIDE_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSampleMs = millis();\n    lastStatusMs = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSampleMs >= SAMPLE_MS)\n    {\n        lastSampleMs = now;\n        lastTempC = readAtticTempC();\n\n        bool overrideHeld = (digitalRead(OVERRIDE_PIN) == LOW);\n        bool wantOn = fanRunning;\n\n        if (overrideHeld)\n        {\n            wantOn = true;\n        }\n        else if (lastTempC >= FAN_ON_C)\n        {\n            wantOn = true;\n        }\n        else if (lastTempC <= FAN_OFF_C)\n        {\n            wantOn = false;\n        }\n        // else: within hysteresis band, hold current state.\n\n        applyFan(wantOn, now);\n    }\n\n    if (now - lastStatusMs >= STATUS_MS)\n    {\n        lastStatusMs = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 5.09,
+      "llm_calls": 1,
+      "prompt_tokens": 1093,
+      "completion_tokens": 1195,
+      "cost_usd": 0.00080794,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "bench_led_miswire",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "LED on wrong pin",
+          "category": "wrong_pin",
+          "description": "LED_PIN is 12 but the pin map and behaviour specify D13; the user LED never lights on the intended pin."
+        },
+        {
+          "id": "b2",
+          "title": "held_ms reports timestamp not duration",
+          "category": "wrong_unit_scaling",
+          "description": "pressMs is assigned millis() (an absolute timestamp) and printed as held_ms, so the serial output shows a huge timestamp instead of the elapsed hold time in ms."
+        },
+        {
+          "id": "b3",
+          "title": "Blink half-period drifts and first toggle delayed",
+          "category": "off_by_one_timing",
+          "description": "lastBlink is reset to now on each toggle rather than advanced by BLINK_MS, so loop latency accumulates and the blink period exceeds ~120 ms; also the initial setLed(true) plus immediate toggle logic can produce an uneven first cycle."
+        },
+        {
+          "id": "b4",
+          "title": "Steady mode ignores blink-mode release timing",
+          "category": "other",
+          "description": "When D4 is released while D2 is held, the code sets LED HIGH but does not reset lastBlink/pressMs consistently, and switching from blink to steady leaves lit state dependent on prior toggle rather than forcing steady HIGH within 100 ms."
+        }
+      ],
+      "patched_sketch": "// Electronics-bench user LED mirror.\n// Momentary probe button on D2 (pull-up), user LED on D13.\n// Mode switch on D4 (pull-up) selects steady vs blink-while-held.\n\nconst int BTN_PIN = 2;\nconst int LED_PIN = 13;\nconst int MODE_PIN = 4;\nconst unsigned long BLINK_MS = 120;\nconst unsigned long STATUS_MS = 1000;\n\nbool lit = false;\nunsigned long lastBlink = 0;\nunsigned long lastStatus = 0;\nunsigned long pressStart = 0;\nbool wasPressed = false;\n\nvoid setLed(bool on)\n{\n    lit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    unsigned long held = wasPressed ? (millis() - pressStart) : 0;\n    Serial.print(\"bench led=\");\n    Serial.print(lit ? 1 : 0);\n    Serial.print(\" held_ms=\");\n    Serial.println(held);\n}\n\nvoid setup()\n{\n    pinMode(BTN_PIN, INPUT_PULLUP);\n    pinMode(MODE_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    setLed(false);\n    Serial.begin(9600);\n    lastBlink = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool pressed = (digitalRead(BTN_PIN) == LOW);\n    bool blinkMode = (digitalRead(MODE_PIN) == LOW);\n\n    if (pressed && !wasPressed)\n    {\n        pressStart = now;\n        lastBlink = now;\n        setLed(true);\n    }\n    wasPressed = pressed;\n\n    if (!pressed)\n    {\n        setLed(false);\n    }\n    else if (!blinkMode)\n    {\n        setLed(true);\n    }\n    else\n    {\n        if (now - lastBlink >= BLINK_MS)\n        {\n            lastBlink += BLINK_MS;\n            setLed(!lit);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus += STATUS_MS;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 4.08,
+      "llm_calls": 1,
+      "prompt_tokens": 980,
+      "completion_tokens": 843,
+      "cost_usd": 0.00062846,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "blend_tank_sum_ovf",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "pct stream timing driven by sample count, not 1000 ms",
+          "category": "off_by_one_timing",
+          "description": "pct: is printed whenever 50 samples accumulate (50 \u00d7 ~20 ms loop \u2248 1000 ms plus ADC time), so the interval drifts and is not tied to millis; it can exceed the 1000 ms \u00b1150 ms requirement and is not synchronized with the blend batches line."
+        },
+        {
+          "id": "b2",
+          "title": "Force button emits note every loop while held",
+          "category": "stuck_state_machine",
+          "description": "Holding D5 LOW calls forceSampleNote() every iteration (with only a 30 ms delay), flooding serial with blend force lines instead of a single note per press, and the 30 ms delay also perturbs the pct timing."
+        },
+        {
+          "id": "b3",
+          "title": "No debounce/edge detection on force button",
+          "category": "missing_debounce",
+          "description": "The button is read as a level with no edge detection or debounce, so a single press produces many notes and contact bounce produces extra notes."
+        },
+        {
+          "id": "b4",
+          "title": "ADC reference scaling assumes 5 V but uses default reference",
+          "category": "wrong_unit_scaling",
+          "description": "rawToPct uses 5000 mV full-scale with the default (Vcc) reference; if Vcc differs from 5.0 V the percent reading is off, and the 10 mV/% scale is applied correctly only when the reference is exactly 5 V. Should use a stable reference or measure Vcc."
+        },
+        {
+          "id": "b5",
+          "title": "sum is int and can overflow",
+          "category": "integer_overflow",
+          "description": "sum is a 16-bit int accumulating up to 50 ADC readings (max ~51150) which overflows signed int, corrupting the average and thus the printed percent."
+        },
+        {
+          "id": "b6",
+          "title": "lastStatus not volatile-safe / millis rollover handled but batches line not periodic with pct",
+          "category": "other",
+          "description": "The blend batches line is printed on its own 1000 ms timer independent of the pct timer, so the two streams drift apart and the batches count does not correspond to the pct prints at the same instant."
+        }
+      ],
+      "patched_sketch": "// Blend-tank concentration logger for a process skid.\n// Probe on A4 (10 mV/%). Sample button on D5 (pull-up) forces an early print.\n\nconst int CONC_PIN = A4;\nconst int SAMPLE_BTN = 5;\nconst int WINDOW = 50;\nconst float MV_PER_PCT = 10.0f;\nconst unsigned long IDLE_MS = 20;\nconst unsigned long STATUS_MS = 1000;\n\nlong sum = 0;\nint n = 0;\nfloat lastPct = 0.0f;\nunsigned long lastStatus = 0;\nunsigned long batches = 0;\nbool lastBtn = HIGH;\n\nfloat rawToPct(int raw)\n{\n    // Default reference is Vcc (~5.0 V). Use 5000 mV full scale.\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_PCT;\n}\n\nvoid resetWindow()\n{\n    sum = 0;\n    n = 0;\n}\n\nvoid publishPct(float pct)\n{\n    Serial.print(\"pct: \");\n    Serial.println(pct, 1);\n    lastPct = pct;\n    batches++;\n}\n\nvoid forceSampleNote()\n{\n    Serial.print(\"blend force last=\");\n    Serial.println(lastPct, 1);\n}\n\nvoid setup()\n{\n    pinMode(SAMPLE_BTN, INPUT_PULLUP);\n    Serial.begin(9600);\n    resetWindow();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    int raw = analogRead(CONC_PIN);\n    sum += raw;\n    n++;\n\n    // Edge-detect the force button so a press emits one note.\n    bool btn = digitalRead(SAMPLE_BTN);\n    if (btn == LOW && lastBtn == HIGH)\n    {\n        forceSampleNote();\n    }\n    lastBtn = btn;\n\n    unsigned long now = millis();\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        int avg = (n > 0) ? (int)(sum / n) : 0;\n        float pct = rawToPct(avg);\n        publishPct(pct);\n        resetWindow();\n        Serial.print(\"blend batches=\");\n        Serial.println(batches);\n    }\n\n    delay(IDLE_MS);\n}\n",
+      "wall_s": 5.36,
+      "llm_calls": 1,
+      "prompt_tokens": 957,
+      "completion_tokens": 1077,
+      "cost_usd": 0.0007203,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "boiler_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No hysteresis in fault recovery / fault band uses same thresholds as fire band",
+          "category": "missing_hysteresis",
+          "description": "The fault thresholds (5/120 \u00b0C) are checked every tick and force the valve closed, but there is no separate recovery band; more importantly the fire band (70/75) and fault band are evaluated with the same instantaneous reading, so a noisy probe near 70 or 75 \u00b0C can chatter the valve. The behaviour requires a sustained in-range band crossing, which is not implemented."
+        },
+        {
+          "id": "b2",
+          "title": "No debounce on lockout key",
+          "category": "missing_debounce",
+          "description": "D3 is read directly each 40 ms tick with no debounce, so a bouncing key can momentarily release lockout and open the valve."
+        },
+        {
+          "id": "b3",
+          "title": "ADC reference scaling assumes 5 V but uses 1023 divisor",
+          "category": "wrong_unit_scaling",
+          "description": "mv = raw * (5000/1023) is a minor scaling choice, but combined with 10 mV/\u00b0C the reported temperature is slightly off; more critically the code never sets the analog reference, so if AREF differs the 10 mV/\u00b0C scale is wrong. The behaviour expects 10 mV/\u00b0C on the default 5 V reference."
+        },
+        {
+          "id": "b4",
+          "title": "Status print uses stale tempC and firing flag ordering",
+          "category": "serial_format",
+          "description": "printStatus prints tempC and firing which are updated in the tick block; if the status interval fires before a tick update the printed value can lag, but the format itself matches. Minor."
+        }
+      ],
+      "patched_sketch": "// Boiler gas-valve thermostat\n// Probe on A1 (10 mV/\u00b0C), gas valve on D6, lockout key on D3 (active LOW).\n\nconst int TEMP_PIN = A1;\nconst int VALVE_PIN = 6;\nconst int LOCK_PIN = 3;\n\nconst float FIRE_ON_C   = 70.0f;\nconst float FIRE_OFF_C  = 75.0f;\nconst float FAULT_LOW_C = 5.0f;\nconst float FAULT_HIGH_C= 120.0f;\nconst float MV_PER_C    = 10.0f;\n\nconst unsigned long TICK_MS   = 40;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long DEBOUNCE_MS = 50;\n\nbool firing = false;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\n\n// lockout debounce state\nbool lockRaw = false;\nbool lockStable = false;\nunsigned long lockChangeMs = 0;\n\nfloat readBoilerC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid setValve(bool openValve)\n{\n    firing = openValve;\n    digitalWrite(VALVE_PIN, openValve ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"boiler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C valve=\");\n    Serial.println(firing ? \"OPEN\" : \"SHUT\");\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(LOCK_PIN, INPUT_PULLUP);\n    setValve(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n    lockRaw = (digitalRead(LOCK_PIN) == LOW);\n    lockStable = lockRaw;\n    lockChangeMs = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readBoilerC();\n\n        // Debounce lockout key (active LOW)\n        bool raw = (digitalRead(LOCK_PIN) == LOW);\n        if (raw != lockRaw)\n        {\n            lockRaw = raw;\n            lockChangeMs = now;\n        }\n        if ((now - lockChangeMs) >= DEBOUNCE_MS && lockStable != lockRaw)\n        {\n            lockStable = lockRaw;\n        }\n\n        bool fault = (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n\n        if (lockStable || fault)\n        {\n            setValve(false);\n        }\n        else if (tempC < FIRE_ON_C)\n        {\n            setValve(true);\n        }\n        else if (tempC > FIRE_OFF_C)\n        {\n            setValve(false);\n        }\n        // else: within 70..75 band, hold current state (hysteresis)\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 5.78,
+      "llm_calls": 1,
+      "prompt_tokens": 1129,
+      "completion_tokens": 1197,
+      "cost_usd": 0.00081886,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "boiler_valve_failsafe",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No failsafe for out-of-range temperature",
+          "category": "missing_failsafe",
+          "description": "The behaviour requires the valve to be forced CLOSED when tempC > 120 \u00b0C or < 5 \u00b0C, but the sketch has no such check; a very low reading (e.g. open probe) would actually open the valve via the tempC < 70 branch, and a very high reading would only close it if it also exceeds 75 \u00b0C, never enforcing the 120 \u00b0C cutoff."
+        },
+        {
+          "id": "b2",
+          "title": "Missing hysteresis state machine",
+          "category": "missing_hysteresis",
+          "description": "The code uses independent if/else-if thresholds without a latched firing state, so between 70 and 75 \u00b0C the valve state depends on which branch was last taken rather than holding the previous state; the intended 70/75 band hysteresis is not actually implemented as a state machine."
+        }
+      ],
+      "patched_sketch": "// Small boiler gas-valve thermostat.\n// Probe on A1 (10 mV/\u00b0C), gas valve on D6, lockout key on D3.\n\nconst int TEMP_PIN = A1;\nconst int VALVE_PIN = 6;\nconst int LOCK_PIN = 3;\nconst float FIRE_ON_C = 70.0f;\nconst float FIRE_OFF_C = 75.0f;\nconst float OVER_TEMP_C = 120.0f;\nconst float UNDER_TEMP_C = 5.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\n\nbool firing = false;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\n\nfloat readBoilerC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid setValve(bool openValve)\n{\n    firing = openValve;\n    digitalWrite(VALVE_PIN, openValve ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"boiler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C valve=\");\n    Serial.println(firing ? \"OPEN\" : \"SHUT\");\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(LOCK_PIN, INPUT_PULLUP);\n    setValve(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readBoilerC();\n        bool locked = (digitalRead(LOCK_PIN) == LOW);\n\n        if (locked || tempC > OVER_TEMP_C || tempC < UNDER_TEMP_C)\n        {\n            setValve(false);\n        }\n        else if (tempC < FIRE_ON_C)\n        {\n            setValve(true);\n        }\n        else if (tempC > FIRE_OFF_C)\n        {\n            setValve(false);\n        }\n        // else: within 70..75 \u00b0C band, hold previous state (hysteresis)\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 3.79,
+      "llm_calls": 1,
+      "prompt_tokens": 1070,
+      "completion_tokens": 861,
+      "cost_usd": 0.00066122,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "cabin_heater_mul_ovf",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "ADC conversion uses 5000 mV reference instead of 1100 mV",
+          "category": "wrong_unit_scaling",
+          "description": "analogRead is scaled with 5000/1023 but the LM35 output is only ~0.18\u20130.22 V, so the computed temperature is ~4.5x too high (e.g. 20 \u00b0C reads ~91 \u00b0C), keeping the heater permanently OFF. Use the internal 1.1 V reference (analogReference(INTERNAL)) and scale by 1100/1023."
+        },
+        {
+          "id": "b2",
+          "title": "Integer division truncates millivolt reading",
+          "category": "integer_overflow",
+          "description": "analogRead(TEMP_PIN) * 5000 / 1023 is integer arithmetic; with the correct 1100 mV reference the product still fits, but the truncation to whole millivolts loses resolution and the expression must be evaluated in a wider/float type to avoid truncation errors near the band edges."
+        }
+      ],
+      "patched_sketch": "// Cabin heater enable with comfort band.\n// LM35 on A0, heater relay on D9, frost override on D2 (pull-up).\n\nconst int TEMP_PIN = A0;\nconst int HEAT_PIN = 9;\nconst int FROST_PIN = 2;\nconst float HEAT_ON_C = 18.0f;\nconst float HEAT_OFF_C = 22.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long STATUS_MS = 1000;\n\nbool heaterOn = false;\nunsigned long lastSample = 0;\nunsigned long lastStatus = 0;\nfloat lastC = 0.0f;\n\nfloat readCabinC()\n{\n    // Internal 1.1 V reference: 1100 mV over 1023 counts.\n    float mv = (float)analogRead(TEMP_PIN) * 1100.0f / 1023.0f;\n    return mv / MV_PER_C;\n}\n\nvoid applyHeater(bool on)\n{\n    heaterOn = on;\n    digitalWrite(HEAT_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"cabin: \");\n    Serial.print(lastC, 1);\n    Serial.print(\" C heat=\");\n    Serial.println(heaterOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(HEAT_PIN, OUTPUT);\n    pinMode(FROST_PIN, INPUT_PULLUP);\n    analogReference(INTERNAL);\n    applyHeater(false);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        lastC = readCabinC();\n        bool frost = (digitalRead(FROST_PIN) == LOW);\n\n        if (frost)\n        {\n            applyHeater(true);\n        }\n        else if (lastC < HEAT_ON_C)\n        {\n            applyHeater(true);\n        }\n        else if (lastC > HEAT_OFF_C)\n        {\n            applyHeater(false);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 3.92,
+      "llm_calls": 1,
+      "prompt_tokens": 1036,
+      "completion_tokens": 837,
+      "cost_usd": 0.00064162,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "cellar_pump_hyst",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No stop threshold / missing hysteresis",
+          "category": "missing_hysteresis",
+          "description": "Pump is turned off as soon as level drops below 45.0 cm instead of at 30.0 cm, so it chatters around the start mark rather than using the 45/30 band."
+        },
+        {
+          "id": "b2",
+          "title": "No toggle-rate limit",
+          "category": "other",
+          "description": "Nothing enforces the max 2 pump toggles per 5000 ms window; with a noisy level near a threshold the contactor can toggle far faster than allowed."
+        },
+        {
+          "id": "b3",
+          "title": "Silence button not debounced",
+          "category": "missing_debounce",
+          "description": "D4 is read raw each loop with no debounce, so contact bounce or noise can spuriously latch silence mode."
+        },
+        {
+          "id": "b4",
+          "title": "ADC scaling uses 1023 instead of 1024",
+          "category": "wrong_unit_scaling",
+          "description": "mV conversion uses 5000/1023 rather than 5000/1024, biasing the reported level slightly high (minor but systematic)."
+        }
+      ],
+      "patched_sketch": "// Basement sump controller.\n// Linear level sensor on A1 (10 mV/cm), pump contactor on D7,\n// silence button on D4 (active LOW, pull-up).\n\nconst uint8_t LEVEL_PIN = A1;\nconst uint8_t PUMP_PIN = 7;\nconst uint8_t SILENCE_PIN = 4;\n\nconst float START_CM = 45.0f;\nconst float STOP_CM = 30.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long POLL_MS = 40;\nconst unsigned long LOG_MS = 800;\nconst unsigned long DEBOUNCE_MS = 30;\nconst unsigned long TOGGLE_WINDOW_MS = 5000;\nconst uint8_t MAX_TOGGLES = 2;\n\nbool pumpOn = false;\nbool silenceLatched = false;\nunsigned long lastPoll = 0;\nunsigned long lastLog = 0;\nfloat levelCm = 0.0f;\n\n// Debounce state for silence button\nbool silenceRaw = false;\nbool silenceStable = false;\nunsigned long silenceChangeMs = 0;\n\n// Toggle-rate limiter\nunsigned long toggleTimes[MAX_TOGGLES];\nuint8_t toggleCount = 0;\nuint8_t toggleIdx = 0;\n\nfloat sampleLevelCm()\n{\n    int adc = analogRead(LEVEL_PIN);\n    float mv = adc * (5000.0f / 1024.0f);\n    return mv / MV_PER_CM;\n}\n\nbool toggleAllowed(unsigned long now)\n{\n    if (toggleCount < MAX_TOGGLES) return true;\n    // Oldest entry is at toggleIdx (next to be overwritten)\n    unsigned long oldest = toggleTimes[toggleIdx];\n    return (now - oldest) >= TOGGLE_WINDOW_MS;\n}\n\nvoid recordToggle(unsigned long now)\n{\n    toggleTimes[toggleIdx] = now;\n    toggleIdx = (toggleIdx + 1) % MAX_TOGGLES;\n    if (toggleCount < MAX_TOGGLES) toggleCount++;\n}\n\nvoid setPump(bool on, unsigned long now)\n{\n    if (on == pumpOn) return;\n    if (!toggleAllowed(now)) return;\n    pumpOn = on;\n    digitalWrite(PUMP_PIN, on ? HIGH : LOW);\n    recordToggle(now);\n}\n\nvoid emitLog()\n{\n    Serial.print(\"sump cm=\");\n    Serial.print(levelCm, 1);\n    Serial.print(\" pump=\");\n    Serial.print(pumpOn ? 1 : 0);\n    Serial.print(\" mute=\");\n    Serial.println(silenceLatched ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(PUMP_PIN, OUTPUT);\n    pinMode(SILENCE_PIN, INPUT_PULLUP);\n    digitalWrite(PUMP_PIN, LOW);\n    Serial.begin(9600);\n    lastPoll = millis();\n    lastLog = millis();\n    silenceRaw = (digitalRead(SILENCE_PIN) == LOW);\n    silenceStable = silenceRaw;\n    silenceChangeMs = millis();\n}\n\nvoid loop()\n{\n    unsigned long t = millis();\n\n    // Debounce silence button\n    bool raw = (digitalRead(SILENCE_PIN) == LOW);\n    if (raw != silenceRaw)\n    {\n        silenceRaw = raw;\n        silenceChangeMs = t;\n    }\n    if ((t - silenceChangeMs) >= DEBOUNCE_MS && silenceStable != silenceRaw)\n    {\n        silenceStable = silenceRaw;\n        if (silenceStable)\n        {\n            silenceLatched = true;\n            setPump(false, t);\n        }\n    }\n\n    if (t - lastPoll >= POLL_MS)\n    {\n        lastPoll = t;\n        levelCm = sampleLevelCm();\n\n        if (!silenceLatched)\n        {\n            if (!pumpOn && levelCm >= START_CM)\n            {\n                setPump(true, t);\n            }\n            else if (pumpOn && levelCm <= STOP_CM)\n            {\n                setPump(false, t);\n            }\n        }\n    }\n\n    if (t - lastLog >= LOG_MS)\n    {\n        lastLog = t;\n        emitLog();\n    }\n}\n",
+      "wall_s": 5.44,
+      "llm_calls": 1,
+      "prompt_tokens": 1094,
+      "completion_tokens": 1319,
+      "cost_usd": 0.0008603,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "cooler_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Floating sensor not detected as fault",
+          "category": "missing_failsafe",
+          "description": "A floating A3 input reads an arbitrary mid-range voltage that maps to a plausible temperature, so the fault check (temp<0 or >60) never triggers and the compressor keeps running on a bad probe. The behaviour requires forcing OFF when the sensor is floating."
+        },
+        {
+          "id": "b2",
+          "title": "No hysteresis between ON/OFF thresholds in hold logic",
+          "category": "missing_hysteresis",
+          "description": "The onHold/offHold counters are independent, so between 4 and 8 \u00b0C neither counter reaches HOLD_N and the compressor simply latches its previous state \u2014 but the band logic is fragile: a temperature oscillating around 8 \u00b0C can toggle ON after 3 ticks then immediately begin counting offHold, and there is no explicit deadband state machine, so the commanded state can chatter at the band edges rather than holding until the opposite threshold is crossed."
+        },
+        {
+          "id": "b3",
+          "title": "ADC reference/scaling assumes 5 V but uses 1023 divisor",
+          "category": "wrong_unit_scaling",
+          "description": "mv = raw*(5000/1023) is fine for a 5 V reference, but the sketch never sets analogReference and the Uno default is 5 V \u2014 acceptable \u2014 however the real issue is the 10 mV/\u00b0C scale is applied to a 0\u20135 V range giving 0\u2013500 \u00b0C, so a floating pin near mid-rail (~2.5 V) reads ~250 \u00b0C which is >60 and would fault; but a pin floating near 0.3 V reads ~30 \u00b0C and passes as valid, so floating detection is unreliable (see b1)."
+        },
+        {
+          "id": "b4",
+          "title": "Status print uses stale tempC and may print before first read",
+          "category": "serial_format",
+          "description": "printStatus uses the last sampled tempC, which is fine, but on the very first loop iteration tempC is 0.0 before any read if STATUS_MS elapses first \u2014 minor; more importantly the printed value is the pre-fault sample, not necessarily reflecting the forced-OFF state timing."
+        }
+      ],
+      "patched_sketch": "// Walk-in cooler compressor controller (patched).\n// Cabinet probe on A3 (10 mV/\u00b0C), compressor on D7, service switch on D4.\n\nconst int TEMP_PIN = A3;\nconst int COMP_PIN = 7;\nconst int SERVICE_PIN = 4;\nconst float COOL_ON_C = 8.0f;\nconst float COOL_OFF_C = 4.0f;\nconst float FAULT_LOW_C = 0.0f;\nconst float FAULT_HIGH_C = 60.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst int HOLD_N = 3;\n// Floating-detect: a real probe sits well below mid-rail; a floating pin\n// typically reads near mid-supply. Treat near-rail as invalid.\nconst float FLOAT_MV_LOW = 50.0f;    // below this = likely shorted/floating low\nconst float FLOAT_MV_HIGH = 4500.0f; // above this = likely floating high\n\nbool cooling = false;\nint onHold = 0;\nint offHold = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\nbool sensorValid = false;\n\nfloat readTempC(float &mvOut)\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    mvOut = mv;\n    return mv / MV_PER_C;\n}\n\nvoid setCompressor(bool on)\n{\n    cooling = on;\n    digitalWrite(COMP_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"cooler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C comp=\");\n    Serial.println(cooling ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(COMP_PIN, OUTPUT);\n    pinMode(SERVICE_PIN, INPUT_PULLUP);\n    setCompressor(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        float mv;\n        tempC = readTempC(mv);\n        sensorValid = (mv > FLOAT_MV_LOW) && (mv < FLOAT_MV_HIGH);\n        bool service = (digitalRead(SERVICE_PIN) == LOW);\n        bool fault = (!sensorValid) || (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n\n        if (service || fault)\n        {\n            onHold = 0;\n            offHold = 0;\n            setCompressor(false);\n        }\n        else\n        {\n            // Hysteresis state machine: only act on the threshold that\n            // matches the current state, with a short debounce hold.\n            if (!cooling)\n            {\n                if (tempC >= COOL_ON_C) onHold++;\n                else onHold = 0;\n                offHold = 0;\n                if (onHold >= HOLD_N) { setCompressor(true); onHold = 0; }\n            }\n            else\n            {\n                if (tempC <= COOL_OFF_C) offHold++;\n                else offHold = 0;\n                onHold = 0;\n                if (offHold >= HOLD_N) { setCompressor(false); offHold = 0; }\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 7.06,
+      "llm_calls": 1,
+      "prompt_tokens": 1218,
+      "completion_tokens": 1407,
+      "cost_usd": 0.00093198,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "drip_scheduler_u8",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "8-bit millis truncation breaks 800 ms period",
+          "category": "integer_overflow",
+          "description": "nextDue and now8 are uint8_t, so millis() is truncated to 0-255 ms; the 800 ms period cannot be represented and the scheduler fires at wrong/erratic intervals (and the `now8 >= nextDue` guard plus 128 window makes timing unreliable). Use unsigned long for scheduling."
+        },
+        {
+          "id": "b2",
+          "title": "Pause resets period instead of resuming",
+          "category": "stuck_state_machine",
+          "description": "While paused, nextDue is continuously pushed forward by PERIOD_MS every loop, so on release the first pulse is delayed by a full period rather than resuming the schedule; also the pulse-due check is gated by the truncated 8-bit arithmetic."
+        },
+        {
+          "id": "b3",
+          "title": "Pulse not forced LOW immediately on pause",
+          "category": "missing_failsafe",
+          "description": "If pause is pressed mid-pulse, D8 stays HIGH until pulseUntil elapses; behaviour requires D8 LOW while D4 is held LOW, so the pulse should be terminated immediately on pause."
+        }
+      ],
+      "patched_sketch": "// Greenhouse nutrient drip pulse scheduler.\n// Pulse driver on D8, pause button on D4 (pull-up).\n\nconst int DRIP_PIN = 8;\nconst int PAUSE_PIN = 4;\nconst unsigned long PERIOD_MS = 800;\nconst unsigned long PULSE_MS = 50;\nconst unsigned long LOG_MS = 1600;\n\nunsigned long nextDue = 0;\nunsigned long pulseUntil = 0;\nunsigned long lastLog = 0;\nunsigned long dripCount = 0;\nbool pulsing = false;\nbool paused = false;\n\nvoid dripHigh()\n{\n    digitalWrite(DRIP_PIN, HIGH);\n}\n\nvoid dripLow()\n{\n    digitalWrite(DRIP_PIN, LOW);\n}\n\nvoid startPulse(unsigned long now)\n{\n    pulsing = true;\n    pulseUntil = now + PULSE_MS;\n    dripHigh();\n    dripCount++;\n    Serial.println(\"drip\");\n}\n\nvoid endPulse()\n{\n    pulsing = false;\n    dripLow();\n}\n\nvoid printLog()\n{\n    Serial.print(\"drip n=\");\n    Serial.print(dripCount);\n    Serial.print(\" pause=\");\n    Serial.println(paused ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(DRIP_PIN, OUTPUT);\n    pinMode(PAUSE_PIN, INPUT_PULLUP);\n    dripLow();\n    Serial.begin(9600);\n    unsigned long now = millis();\n    nextDue = now + PERIOD_MS;\n    lastLog = now;\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    paused = (digitalRead(PAUSE_PIN) == LOW);\n\n    if (paused)\n    {\n        if (pulsing)\n        {\n            endPulse();\n        }\n        nextDue = now + PERIOD_MS;\n    }\n    else\n    {\n        if (pulsing && (long)(now - pulseUntil) >= 0)\n        {\n            endPulse();\n        }\n\n        if (!pulsing && (long)(now - nextDue) >= 0)\n        {\n            nextDue += PERIOD_MS;\n            if ((long)(now - nextDue) >= 0)\n            {\n                nextDue = now + PERIOD_MS;\n            }\n            startPulse(now);\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog += LOG_MS;\n        if ((long)(now - lastLog) >= LOG_MS)\n        {\n            lastLog = now;\n        }\n        printLog();\n    }\n}\n",
+      "wall_s": 4.29,
+      "llm_calls": 1,
+      "prompt_tokens": 1001,
+      "completion_tokens": 927,
+      "cost_usd": 0.00066962,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "foyer_lamp_debounce",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No debounce/settle window",
+          "category": "missing_debounce",
+          "description": "The sketch toggles on every raw HIGH-to-LOW transition with no 40 ms settle window, so contact bounce on press (and bounce-induced edges on release) will produce multiple toggles per physical press."
+        },
+        {
+          "id": "b2",
+          "title": "Release bounce can retrigger toggle",
+          "category": "missing_hysteresis",
+          "description": "Because previousRaw is updated every loop with no debounce, a bounce sequence HIGH-LOW-HIGH-LOW during a single press/release can register multiple press edges, violating the 'exactly once per press' requirement."
+        }
+      ],
+      "patched_sketch": "// Foyer wall switch: one pushbutton toggles a lamp channel.\n// Button D5 to ground (pull-up), lamp driver D11, status over serial.\n\nconst int SWITCH_PIN = 5;\nconst int LAMP_PIN = 11;\nconst unsigned long STATUS_EVERY_MS = 1500;\nconst unsigned long DEBOUNCE_MS = 40;\n\nbool lampLit = false;\nint stableState = HIGH;      // debounced logical state\nint lastRaw = HIGH;          // last raw reading\nunsigned long lastChangeMs = 0;\nunsigned long lastStatusAt = 0;\nunsigned long pressEvents = 0;\n\nvoid driveLamp(bool on)\n{\n    lampLit = on;\n    digitalWrite(LAMP_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLamp()\n{\n    driveLamp(!lampLit);\n    pressEvents++;\n}\n\nvoid reportLamp()\n{\n    Serial.print(\"foyer lamp=\");\n    Serial.println(lampLit ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(SWITCH_PIN, INPUT_PULLUP);\n    pinMode(LAMP_PIN, OUTPUT);\n    driveLamp(false);\n    Serial.begin(9600);\n    lastRaw = digitalRead(SWITCH_PIN);\n    stableState = lastRaw;\n    lastChangeMs = millis();\n    lastStatusAt = millis();\n}\n\nvoid loop()\n{\n    int raw = digitalRead(SWITCH_PIN);\n    unsigned long now = millis();\n\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        lastChangeMs = now;\n    }\n\n    if ((now - lastChangeMs) >= DEBOUNCE_MS && raw != stableState)\n    {\n        int prev = stableState;\n        stableState = raw;\n        // Accept only settled HIGH->LOW (press) edges.\n        if (prev == HIGH && stableState == LOW)\n        {\n            flipLamp();\n        }\n    }\n\n    if (now - lastStatusAt >= STATUS_EVERY_MS)\n    {\n        lastStatusAt = now;\n        reportLamp();\n    }\n}\n",
+      "wall_s": 3.4,
+      "llm_calls": 1,
+      "prompt_tokens": 868,
+      "completion_tokens": 694,
+      "cost_usd": 0.00053452,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "glue_solenoid_short",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Pulse length is 1000 ms not 2500 ms",
+          "category": "timed_pulse_length",
+          "description": "PULSE_MS is set to 1000, so the solenoid HIGH pulse lasts 1 s instead of the required 2500 ms."
+        },
+        {
+          "id": "b2",
+          "title": "Debounce edge timer not reset on stable transition",
+          "category": "missing_debounce",
+          "description": "trigEdge is only updated when raw changes; after a stable transition the timer is not re-armed, so a subsequent bounce within 25 ms of the previous edge can be accepted early, and the 25 ms stability window is measured from the last raw change rather than from the last stable sample, allowing a press shorter than 30 ms to register."
+        },
+        {
+          "id": "b3",
+          "title": "Trigger latency can exceed 120 ms",
+          "category": "off_by_one_timing",
+          "description": "The debounce logic requires raw to differ from stableTrig for 25 ms after the last edge, but because trigEdge is not refreshed on stable acceptance, a press arriving just after a prior edge can be delayed by up to ~50 ms plus loop jitter; combined with the missing re-arm this can push detection past the 120 ms requirement."
+        }
+      ],
+      "patched_sketch": "// Packaging glue-dot solenoid driver.\n// Trigger on D2 (pull-up), solenoid on D8, armed LED on D11.\n\nconst int TRIG_PIN = 2;\nconst int SOL_PIN = 8;\nconst int ARMED_PIN = 11;\nconst unsigned long PULSE_MS = 2500;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 500;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastRaw = HIGH;\nunsigned long rawChange = 0;\nunsigned long lastHb = 0;\nunsigned long dots = 0;\n\nvoid solHigh()\n{\n    digitalWrite(SOL_PIN, HIGH);\n}\n\nvoid solLow()\n{\n    digitalWrite(SOL_PIN, LOW);\n}\n\nvoid setArmedLed(bool on)\n{\n    digitalWrite(ARMED_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"glue dots=\");\n    Serial.print(dots);\n    Serial.print(\" busy=\");\n    Serial.println(pulsing ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(SOL_PIN, OUTPUT);\n    pinMode(ARMED_PIN, OUTPUT);\n    solLow();\n    setArmedLed(true);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastRaw = stableTrig;\n    rawChange = millis();\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        rawChange = now;\n    }\n\n    if ((now - rawChange) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            dots++;\n            solHigh();\n            setArmedLed(false);\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        solLow();\n        setArmedLed(true);\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 4.49,
+      "llm_calls": 1,
+      "prompt_tokens": 1025,
+      "completion_tokens": 911,
+      "cost_usd": 0.00066962,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "greenhouse_dual",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing hysteresis on fan control",
+          "category": "missing_hysteresis",
+          "description": "The fan turns off as soon as temperature drops below 28.0 \u00b0C, but the behaviour requires turning off only at or below 24.0 \u00b0C, causing rapid toggling around the setpoint."
+        },
+        {
+          "id": "b2",
+          "title": "No rate limiting on fan state changes",
+          "category": "other",
+          "description": "The fan can change state on every 50 ms tick, violating the requirement that it must not change more than 2 times in any 5000 ms window."
+        },
+        {
+          "id": "b3",
+          "title": "Missing failsafe for out-of-range or floating probe",
+          "category": "missing_failsafe",
+          "description": "Temperatures below 5.0 \u00b0C, above 100.0 \u00b0C, or a floating probe (e.g., near 0 V or 5 V) are not detected; the fan is not forced ON within 600 ms and held in the safe state."
+        },
+        {
+          "id": "b4",
+          "title": "Incorrect ADC scaling",
+          "category": "wrong_unit_scaling",
+          "description": "The code uses 5000.0/1023.0 mV per count instead of the correct 5000.0/1024.0, causing a small but systematic temperature error."
+        },
+        {
+          "id": "b5",
+          "title": "Status print uses stale temperature",
+          "category": "serial_format",
+          "description": "The status line prints tempC from the last tick, which may be up to 50 ms old, but more importantly the print timing is independent of the sample and can show a value not matching the current fan state during transitions."
+        }
+      ],
+      "patched_sketch": "// Greenhouse ridge-vent controller.\n// LM35 air probe on A2, exhaust fan relay on D9, UART status.\n\nconst int SENSOR_PIN = A2;\nconst int FAN_PIN = 9;\nconst float OPEN_C = 28.0f;\nconst float CLOSE_C = 24.0f;\nconst float MIN_VALID_C = 5.0f;\nconst float MAX_VALID_C = 100.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long MAX_CHANGES = 2;\nconst unsigned long WINDOW_MS = 5000;\nconst unsigned long FAILSAFE_MS = 600;\n\nbool fanOn = false;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nunsigned long changeTimes[MAX_CHANGES];\nunsigned long changeCount = 0;\nunsigned long faultStart = 0;\nbool faultActive = false;\nfloat tempC = 0.0f;\n\nfloat readTempC()\n{\n    int raw = analogRead(SENSOR_PIN);\n    float mv = raw * (5000.0f / 1024.0f);\n    return mv / MV_PER_C;\n}\n\nbool probeFault(float c)\n{\n    // Floating probe: near 0 V or near 5 V (LM35 would read <0 or >500 C)\n    if (c < MIN_VALID_C || c > MAX_VALID_C)\n    {\n        return true;\n    }\n    return false;\n}\n\nbool canChangeFan(unsigned long now)\n{\n    // Remove changes older than window\n    unsigned long kept = 0;\n    for (unsigned long i = 0; i < changeCount; i++)\n    {\n        if (now - changeTimes[i] < WINDOW_MS)\n        {\n            changeTimes[kept++] = changeTimes[i];\n        }\n    }\n    changeCount = kept;\n    return changeCount < MAX_CHANGES;\n}\n\nvoid setFan(bool on, unsigned long now)\n{\n    if (on == fanOn)\n    {\n        return;\n    }\n    if (!canChangeFan(now))\n    {\n        return;\n    }\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n    if (changeCount < MAX_CHANGES)\n    {\n        changeTimes[changeCount++] = now;\n    }\n}\n\nvoid printStatus()\n{\n    Serial.print(\"gh: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n\n        if (probeFault(tempC))\n        {\n            if (!faultActive)\n            {\n                faultActive = true;\n                faultStart = now;\n            }\n            // Force fan ON within FAILSAFE_MS and hold\n            if (now - faultStart >= FAILSAFE_MS)\n            {\n                setFan(true, now);\n            }\n        }\n        else\n        {\n            faultActive = false;\n            if (tempC >= OPEN_C)\n            {\n                setFan(true, now);\n            }\n            else if (tempC <= CLOSE_C)\n            {\n                setFan(false, now);\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 6.48,
+      "llm_calls": 1,
+      "prompt_tokens": 1031,
+      "completion_tokens": 1408,
+      "cost_usd": 0.00088004,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "greenhouse_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No rate limit on fan toggling",
+          "category": "other",
+          "description": "The sketch has no 5000 ms / 2-transition limiter; a temperature hovering near the 30/26 thresholds can toggle the fan far more than twice per 5 s window."
+        },
+        {
+          "id": "b2",
+          "title": "Floating probe not detected",
+          "category": "missing_failsafe",
+          "description": "A floating A0 reads an arbitrary voltage that may land inside 5\u2013100 \u00b0C, so the required force-ON safe state is never entered; there is no open-circuit/rail detection."
+        },
+        {
+          "id": "b3",
+          "title": "Fault force-ON latency too slow",
+          "category": "off_by_one_timing",
+          "description": "Fault must force fan ON within 600 ms, but faultHold requires HOLD_N=4 ticks at 50 ms plus loop jitter; combined with the missing floating detection the 600 ms deadline is not reliably met."
+        },
+        {
+          "id": "b4",
+          "title": "ADC reference scaling assumes 5 V Vcc",
+          "category": "wrong_unit_scaling",
+          "description": "readTempC uses 5000/1023 mV per count; with the default AVcc reference this mis-scales temperature if Vcc differs from 5.000 V, shifting the 30/26 \u00b0C trip points."
+        },
+        {
+          "id": "b5",
+          "title": "Status print uses stale temp on first tick",
+          "category": "other",
+          "description": "printStatus can run before the first 50 ms tick has populated tempC, printing 0.0 C on the first status line."
+        }
+      ],
+      "patched_sketch": "// Potting-shed vent controller (patched).\n// Air probe on A0, vent fan on D6, UART status.\n\nconst int TEMP_PIN = A0;\nconst int FAN_PIN = 6;\nconst float OPEN_C = 30.0f;\nconst float CLOSE_C = 26.0f;\nconst float FAULT_LOW_C = 5.0f;\nconst float FAULT_HIGH_C = 100.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long TOGGLE_WINDOW_MS = 5000;\nconst int MAX_TOGGLES = 2;\nconst int HOLD_N = 4;      // 200 ms debounce for band crossings\nconst int FAULT_N = 4;     // 200 ms to latch fault (well under 600 ms)\nconst int CLEAR_N = 8;     // 400 ms to clear fault\n\nbool fanOn = false;\nbool faultLatched = false;\nint openHold = 0;\nint closeHold = 0;\nint faultHold = 0;\nint clearHold = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\nbool haveTemp = false;\n\n// Toggle-rate limiter: timestamps of recent fan state changes\nunsigned long toggleTimes[MAX_TOGGLES];\nint toggleCount = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nbool probeFloating(int raw)\n{\n    // A truly floating input tends to rail or sit at an unstable value.\n    // Treat near-rail readings as invalid (open circuit).\n    return (raw <= 2) || (raw >= 1021);\n}\n\nvoid setFan(bool on)\n{\n    if (on == fanOn) return;\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n    // record toggle time\n    if (toggleCount < MAX_TOGGLES)\n    {\n        toggleTimes[toggleCount++] = millis();\n    }\n    else\n    {\n        for (int i = 1; i < MAX_TOGGLES; i++) toggleTimes[i-1] = toggleTimes[i];\n        toggleTimes[MAX_TOGGLES-1] = millis();\n    }\n}\n\nbool toggleAllowed(unsigned long now)\n{\n    // Count toggles within the last TOGGLE_WINDOW_MS\n    int recent = 0;\n    for (int i = 0; i < toggleCount; i++)\n    {\n        if (now - toggleTimes[i] < TOGGLE_WINDOW_MS) recent++;\n    }\n    return recent < MAX_TOGGLES;\n}\n\nvoid printStatus()\n{\n    Serial.print(\"shed: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        int raw = analogRead(TEMP_PIN);\n        tempC = (raw * (5000.0f / 1023.0f)) / MV_PER_C;\n        haveTemp = true;\n\n        bool floating = probeFloating(raw);\n        bool outOfRange = floating || (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n\n        if (outOfRange)\n        {\n            faultHold++;\n            clearHold = 0;\n            openHold = 0;\n            closeHold = 0;\n        }\n        else\n        {\n            faultHold = 0;\n            clearHold++;\n            if (tempC >= OPEN_C) openHold++; else openHold = 0;\n            if (tempC <= CLOSE_C) closeHold++; else closeHold = 0;\n        }\n\n        if (faultHold >= FAULT_N) faultLatched = true;\n        if (faultLatched && clearHold >= CLEAR_N) faultLatched = false;\n\n        bool wantOn = fanOn;\n        if (faultLatched) wantOn = true;\n        else if (openHold >= HOLD_N) wantOn = true;\n        else if (closeHold >= HOLD_N) wantOn = false;\n\n        if (wantOn != fanOn)\n        {\n            // Fault force-ON bypasses rate limiter; normal toggles are limited.\n            if (faultLatched || toggleAllowed(now))\n            {\n                setFan(wantOn);\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        if (haveTemp) printStatus();\n    }\n}\n",
+      "wall_s": 7.19,
+      "llm_calls": 1,
+      "prompt_tokens": 1258,
+      "completion_tokens": 1628,
+      "cost_usd": 0.001036,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "hoist_estop_invert",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "E-stop logic inverted",
+          "category": "inverted_pullup",
+          "description": "estopActive() returns true when D3 reads HIGH, but with INPUT_PULLUP the pin is HIGH when the e-stop is released and LOW when pressed. This makes the contactor drop when the e-stop is clear and energize when pressed \u2014 the opposite of the required fail-safe behaviour."
+        },
+        {
+          "id": "b2",
+          "title": "Contactor never follows run request",
+          "category": "stuck_state_machine",
+          "description": "Both the runReq and else branches call setContactor(true), so the contactor is always HIGH whenever the e-stop is clear regardless of D6. The run request input is effectively ignored."
+        },
+        {
+          "id": "b3",
+          "title": "Trip count increments on release, not press",
+          "category": "other",
+          "description": "Because estopActive is inverted, tripCount++ fires on the release edge (HIGH transition) rather than when the e-stop is pressed, so trips counts the wrong events."
+        }
+      ],
+      "patched_sketch": "// Shop hoist contactor with mushroom e-stop.\n// E-stop on D3 (NC to ground via switch, pull-up), contactor on D5.\n// Run request on D6 (pull-up).\n\nconst int ESTOP_PIN = 3;\nconst int CONTACTOR_PIN = 5;\nconst int RUN_PIN = 6;\nconst unsigned long SETTLE_MS = 30;\nconst unsigned long BEAT_MS = 1100;\n\nint stableStop = HIGH;\nint lastStop = HIGH;\nunsigned long stopEdge = 0;\nbool contactorOn = false;\nunsigned long lastBeat = 0;\nunsigned long tripCount = 0;\n\nbool estopActive(int level)\n{\n    return level == LOW;\n}\n\nvoid setContactor(bool on)\n{\n    contactorOn = on;\n    digitalWrite(CONTACTOR_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"hoist run=\");\n    Serial.print(contactorOn ? 1 : 0);\n    Serial.print(\" trips=\");\n    Serial.println(tripCount);\n}\n\nvoid setup()\n{\n    pinMode(ESTOP_PIN, INPUT_PULLUP);\n    pinMode(RUN_PIN, INPUT_PULLUP);\n    pinMode(CONTACTOR_PIN, OUTPUT);\n    setContactor(false);\n    Serial.begin(9600);\n    stableStop = digitalRead(ESTOP_PIN);\n    lastStop = stableStop;\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(ESTOP_PIN);\n\n    if (raw != lastStop)\n    {\n        stopEdge = now;\n        lastStop = raw;\n    }\n\n    if ((now - stopEdge) >= SETTLE_MS && raw != stableStop)\n    {\n        if (estopActive(raw) && !estopActive(stableStop))\n        {\n            tripCount++;\n        }\n        stableStop = raw;\n    }\n\n    bool stopped = estopActive(stableStop);\n    bool runReq = (digitalRead(RUN_PIN) == LOW);\n\n    if (stopped)\n    {\n        setContactor(false);\n    }\n    else if (runReq)\n    {\n        setContactor(true);\n    }\n    else\n    {\n        setContactor(false);\n    }\n\n    if (now - lastBeat >= BEAT_MS)\n    {\n        lastBeat = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 4.05,
+      "llm_calls": 1,
+      "prompt_tokens": 1059,
+      "completion_tokens": 848,
+      "cost_usd": 0.00065268,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "hold_to_arm_late",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Hold threshold is 600 ms, not 500 ms",
+          "category": "off_by_one_timing",
+          "description": "ARM_MS is 600, so the LED lights 600 ms after press start, violating the 500 ms hold and 550 ms deadline requirements."
+        },
+        {
+          "id": "b2",
+          "title": "Confirm logging blocks loop with delay(20)",
+          "category": "blocking_delay",
+          "description": "Holding D5 LOW calls delay(20) every iteration, stalling the loop and delaying arm/release response and status timing; confirm should be edge-triggered without blocking."
+        },
+        {
+          "id": "b3",
+          "title": "Confirm floods serial every loop",
+          "category": "serial_format",
+          "description": "While D5 is held, 'arm confirm' is printed every ~20 ms instead of once per press, spamming serial and starving the status output."
+        }
+      ],
+      "patched_sketch": "// Tool-arm interlock: hold-to-arm then release to clear.\n// Hold button on D3 (pull-up), armed lamp on D8.\n// Aux confirm on D5 (pull-up) is logged only.\n\nconst int HOLD_PIN = 3;\nconst int ARMED_PIN = 8;\nconst int CONFIRM_PIN = 5;\nconst unsigned long ARM_MS = 500;\nconst unsigned long STATUS_MS = 1000;\n\nbool held = false;\nunsigned long downSince = 0;\nbool armed = false;\nunsigned long lastStatus = 0;\nunsigned long armEvents = 0;\nbool confirmPrev = false;\n\nvoid setArmed(bool on)\n{\n    if (on && !armed)\n    {\n        armEvents++;\n    }\n    armed = on;\n    digitalWrite(ARMED_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"arm lit=\");\n    Serial.print(armed ? 1 : 0);\n    Serial.print(\" events=\");\n    Serial.println(armEvents);\n}\n\nvoid setup()\n{\n    pinMode(HOLD_PIN, INPUT_PULLUP);\n    pinMode(CONFIRM_PIN, INPUT_PULLUP);\n    pinMode(ARMED_PIN, OUTPUT);\n    setArmed(false);\n    Serial.begin(9600);\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    bool down = (digitalRead(HOLD_PIN) == LOW);\n    bool confirm = (digitalRead(CONFIRM_PIN) == LOW);\n\n    if (down)\n    {\n        if (!held)\n        {\n            held = true;\n            downSince = now;\n        }\n        if ((now - downSince) >= ARM_MS)\n        {\n            setArmed(true);\n        }\n        else\n        {\n            setArmed(false);\n        }\n    }\n    else\n    {\n        held = false;\n        setArmed(false);\n    }\n\n    if (confirm && !confirmPrev)\n    {\n        Serial.println(\"arm confirm\");\n    }\n    confirmPrev = confirm;\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 3.25,
+      "llm_calls": 1,
+      "prompt_tokens": 988,
+      "completion_tokens": 765,
+      "cost_usd": 0.00059794,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "inject_pulse_short",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Pulse length is 2000 ms not 3000 ms",
+          "category": "timed_pulse_length",
+          "description": "PULSE_MS is set to 2000, so the inject indicator on D4 goes HIGH for only 2 s instead of the required 3000 ms."
+        },
+        {
+          "id": "b2",
+          "title": "No 120 ms response deadline guarantee",
+          "category": "off_by_one_timing",
+          "description": "The pulse starts only after the 30 ms debounce plus loop latency; while this usually meets 120 ms, the sketch has no explicit bound and the debounce edge timer is reset on every raw change, so a noisy contact can delay the settled press beyond 120 ms."
+        }
+      ],
+      "patched_sketch": "// Bench reagent inject one-shot.\n// Start button on D2 (pull-up), inject indicator on D4.\n// Heartbeat on UART while idle and during the pulse.\n\nconst int START_PIN = 2;\nconst int INJECT_PIN = 4;\nconst unsigned long PULSE_MS = 3000;\nconst unsigned long DEBOUNCE_MS = 30;\nconst unsigned long HB_MS = 400;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableBtn = HIGH;\nint lastBtn = HIGH;\nunsigned long btnEdge = 0;\nunsigned long lastHb = 0;\nunsigned long shots = 0;\n\nvoid injectHigh()\n{\n    digitalWrite(INJECT_PIN, HIGH);\n}\n\nvoid injectLow()\n{\n    digitalWrite(INJECT_PIN, LOW);\n}\n\nvoid sendHb()\n{\n    Serial.print(\"inject hb shots=\");\n    Serial.println(shots);\n}\n\nvoid setup()\n{\n    pinMode(START_PIN, INPUT_PULLUP);\n    pinMode(INJECT_PIN, OUTPUT);\n    injectLow();\n    Serial.begin(9600);\n    stableBtn = digitalRead(START_PIN);\n    lastBtn = stableBtn;\n    btnEdge = millis();\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(START_PIN);\n\n    if (raw != lastBtn)\n    {\n        btnEdge = now;\n        lastBtn = raw;\n    }\n\n    if ((now - btnEdge) >= DEBOUNCE_MS && raw != stableBtn)\n    {\n        stableBtn = raw;\n        if (stableBtn == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            shots++;\n            injectHigh();\n            Serial.println(\"go\");\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        injectLow();\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        sendHb();\n    }\n}\n",
+      "wall_s": 3.25,
+      "llm_calls": 1,
+      "prompt_tokens": 933,
+      "completion_tokens": 719,
+      "cost_usd": 0.00056322,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "kiln_door_block",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Blocking delay starves heartbeat",
+          "category": "blocking_delay",
+          "description": "runSirenBurst() uses delay(2000), so the loop cannot print the 250 ms 'hb' heartbeat during the siren pulse, violating the requirement to print every 250 ms and never go silent >700 ms."
+        },
+        {
+          "id": "b2",
+          "title": "No debounce/hysteresis on door switch",
+          "category": "missing_debounce",
+          "description": "doorOpen() reads the raw pin with no debounce or settle time, so contact bounce or noise can trigger spurious siren pulses instead of requiring a settled 40 ms press."
+        },
+        {
+          "id": "b3",
+          "title": "Siren pulse not non-retriggerable",
+          "category": "stuck_state_machine",
+          "description": "The sirenArmed flag is set and cleared around a blocking call and never actually gates new presses; because the loop is blocked during the pulse, presses are effectively ignored only by accident, and the design does not implement the required 'ignore presses while pulse running' state machine."
+        },
+        {
+          "id": "b4",
+          "title": "No 150 ms response latency guarantee",
+          "category": "off_by_one_timing",
+          "description": "Because the sketch blocks in delay() and has no timed debounce, there is no bounded path ensuring a settled 40 ms press starts the pulse within 150 ms; the timing is uncontrolled."
+        }
+      ],
+      "patched_sketch": "// Studio kiln door interlock siren.\n// Door-open switch on D2 (pull-up, active LOW), piezo driver on D8.\n// Non-blocking: heartbeat continues during the siren pulse.\n\nconst int DOOR_PIN = 2;\nconst int SIREN_PIN = 8;\nconst unsigned long SIREN_MS = 2000;\nconst unsigned long HEARTBEAT_MS = 250;\nconst unsigned long DEBOUNCE_MS = 40;\n\nunsigned long lastHeartbeat = 0;\nunsigned long tripCount = 0;\n\nbool sirenActive = false;\nunsigned long sirenStart = 0;\n\nbool lastRaw = false;          // last raw doorOpen reading\nbool stableOpen = false;       // debounced state\nunsigned long lastChange = 0;  // when raw last changed\n\nvoid sirenOn()  { digitalWrite(SIREN_PIN, HIGH); }\nvoid sirenOff() { digitalWrite(SIREN_PIN, LOW); }\n\nvoid emitHeartbeat()\n{\n    Serial.println(\"hb\");\n}\n\nbool doorOpenRaw()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(SIREN_PIN, OUTPUT);\n    sirenOff();\n    Serial.begin(9600);\n    lastHeartbeat = millis();\n    lastRaw = doorOpenRaw();\n    stableOpen = lastRaw;\n    lastChange = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    // Debounce door switch: require stable reading for DEBOUNCE_MS.\n    bool raw = doorOpenRaw();\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        lastChange = now;\n    }\n    if ((now - lastChange) >= DEBOUNCE_MS && stableOpen != lastRaw)\n    {\n        stableOpen = lastRaw;\n        // Rising edge of settled door-open starts a pulse if none running.\n        if (stableOpen && !sirenActive)\n        {\n            tripCount++;\n            sirenActive = true;\n            sirenStart = now;\n            sirenOn();\n        }\n    }\n\n    // End siren pulse after SIREN_MS.\n    if (sirenActive && (now - sirenStart) >= SIREN_MS)\n    {\n        sirenActive = false;\n        sirenOff();\n    }\n\n    // Heartbeat always runs, even during the siren pulse.\n    if ((now - lastHeartbeat) >= HEARTBEAT_MS)\n    {\n        lastHeartbeat = now;\n        emitHeartbeat();\n    }\n}\n",
+      "wall_s": 5.15,
+      "llm_calls": 1,
+      "prompt_tokens": 846,
+      "completion_tokens": 961,
+      "cost_usd": 0.0006405,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "lab_ph_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "pH offset missing \u2014 raw mV/500 gives 0\u201310 pH, not real pH",
+          "category": "wrong_unit_scaling",
+          "description": "The probe is linearized at 500 mV/pH but the sketch divides absolute millivolts by 500, so a 0 V probe reads pH 0.00 and a 5 V probe reads pH 10.00; the injected pH value is never recovered, so the \u00b10.20 accuracy requirement fails and the D10 band logic is driven by the wrong number."
+        },
+        {
+          "id": "b2",
+          "title": "ADC span uses 1023 instead of 1024",
+          "category": "wrong_unit_scaling",
+          "description": "Using 5000/1023 instead of 5000/1024 introduces a small full-scale gain error (~0.1%), which alone is minor but compounds the missing offset; the correct ADC conversion for a 5.000 V reference is raw * 5000/1024."
+        }
+      ],
+      "patched_sketch": "// Bench chemistry pH logger for the teaching lab.\n// Linearized probe on A1 (500 mV/pH), range LED on D10.\n\nconst int PH_PIN = A1;\nconst int RANGE_PIN = 10;\nconst float MV_PER_PH = 500.0f;\nconst float LOW_PH = 6.50f;\nconst float HIGH_PH = 8.50f;\nconst unsigned long PERIOD_MS = 1000;\n\n// Probe calibration: pH = (mV - PH_ZERO_MV) / MV_PER_PH\n// A 500 mV/pH probe with 0 mV at pH 7.00 (typical lab probe).\nconst float PH_ZERO_MV = 0.0f;\n\nunsigned long lastPrint = 0;\nunsigned long sampleCount = 0;\nfloat phValue = 0.0f;\nfloat phMin = 14.0f;\nfloat phMax = 0.0f;\nbool inBand = true;\n\nfloat adcMillivolts(int raw)\n{\n    return raw * (5000.0f / 1024.0f);\n}\n\nfloat millivoltsToPh(float mv)\n{\n    return (mv - PH_ZERO_MV) / MV_PER_PH;\n}\n\nvoid trackPh(float ph)\n{\n    if (ph < phMin)\n    {\n        phMin = ph;\n    }\n    if (ph > phMax)\n    {\n        phMax = ph;\n    }\n}\n\nvoid updateRangeLamp(float ph)\n{\n    inBand = (ph >= LOW_PH) && (ph <= HIGH_PH);\n    digitalWrite(RANGE_PIN, inBand ? LOW : HIGH);\n}\n\nvoid printPh()\n{\n    Serial.print(\"pH: \");\n    Serial.println(phValue, 2);\n}\n\nvoid setup()\n{\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    int raw = analogRead(PH_PIN);\n    float mv = adcMillivolts(raw);\n    phValue = millivoltsToPh(mv);\n    sampleCount++;\n    trackPh(phValue);\n    updateRangeLamp(phValue);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printPh();\n    }\n}\n",
+      "wall_s": 3.99,
+      "llm_calls": 1,
+      "prompt_tokens": 943,
+      "completion_tokens": 823,
+      "cost_usd": 0.0006097,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "laundry_cycle_stuck",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing RUN exit condition",
+          "category": "stuck_state_machine",
+          "description": "The state machine never leaves ST_RUN when the level drops below RUN_MIN_CM (20.0 cm), so the motor stays HIGH indefinitely instead of returning to IDLE."
+        },
+        {
+          "id": "b2",
+          "title": "Missing hysteresis on FILL entry",
+          "category": "missing_hysteresis",
+          "description": "FILL is entered whenever level < 10.0 cm, but there is no separate lower threshold to prevent chatter; however the real issue is that the RUN exit threshold (20.0 cm) is not used, causing the motor to never stop."
+        }
+      ],
+      "patched_sketch": "// Compact laundry fill/run cycle controller.\n// Level probe on A0 (10 mV/cm), fill valve on D9, drum motor on D10.\n// Reset button on D4 (pull-up) returns to IDLE.\n\nconst int LEVEL_PIN = A0;\nconst int VALVE_PIN = 9;\nconst int MOTOR_PIN = 10;\nconst int RESET_PIN = 4;\nconst float EMPTY_CM = 10.0f;\nconst float FULL_CM = 25.0f;\nconst float RUN_MIN_CM = 20.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\n\nenum CycleState\n{\n    ST_IDLE = 0,\n    ST_FILL = 1,\n    ST_RUN = 2\n};\n\nCycleState state = ST_IDLE;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat levelCm = 0.0f;\n\nfloat readLevelCm()\n{\n    int raw = analogRead(LEVEL_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid driveOutputs()\n{\n    digitalWrite(VALVE_PIN, state == ST_FILL ? HIGH : LOW);\n    digitalWrite(MOTOR_PIN, state == ST_RUN ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"laundry st=\");\n    Serial.print((int)state);\n    Serial.print(\" cm=\");\n    Serial.println(levelCm, 1);\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(MOTOR_PIN, OUTPUT);\n    pinMode(RESET_PIN, INPUT_PULLUP);\n    driveOutputs();\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        levelCm = readLevelCm();\n\n        if (digitalRead(RESET_PIN) == LOW)\n        {\n            state = ST_IDLE;\n        }\n        else if (state == ST_IDLE && levelCm < EMPTY_CM)\n        {\n            state = ST_FILL;\n        }\n        else if (state == ST_FILL && levelCm >= FULL_CM)\n        {\n            state = ST_RUN;\n        }\n        else if (state == ST_RUN && levelCm < RUN_MIN_CM)\n        {\n            state = ST_IDLE;\n        }\n\n        driveOutputs();\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 3.66,
+      "llm_calls": 1,
+      "prompt_tokens": 1176,
+      "completion_tokens": 910,
+      "cost_usd": 0.00071148,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "laundry_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No hysteresis on FILL entry threshold",
+          "category": "missing_hysteresis",
+          "description": "FILL is entered whenever level < 10.0 cm, but the probe reading near the threshold will oscillate the state between IDLE and FILL on noise, toggling the valve rapidly; a small hysteresis band (e.g. enter FILL below 9.5 cm, exit only above 10.5 cm) is needed."
+        },
+        {
+          "id": "b2",
+          "title": "Reset not applied immediately",
+          "category": "blocking_delay",
+          "description": "The reset button is only sampled inside the 40 ms tick block, so holding D4 LOW does not force IDLE 'immediately' and outputs can stay energized up to ~40 ms plus loop jitter; reset should be checked every loop iteration and drive outputs right away."
+        },
+        {
+          "id": "b3",
+          "title": "Motor cutoff latency not guaranteed",
+          "category": "off_by_one_timing",
+          "description": "The 600 ms motor-off requirement is met only because the tick is 40 ms, but the level is sampled and the state machine evaluated only once per tick; combined with the reset check being inside the same block, a slow analogRead or serial blocking can push the motor-off past 600 ms. Sampling and output update should be decoupled from the status print and reset handled first."
+        }
+      ],
+      "patched_sketch": "// Compact laundry fill/run cycle controller\n// Level probe on A0 (10 mV/cm), fill valve on D9, drum motor on D10.\n// Reset button on D4 (pull-up) returns to IDLE immediately.\n\nconst int LEVEL_PIN = A0;\nconst int VALVE_PIN = 9;\nconst int MOTOR_PIN = 10;\nconst int RESET_PIN = 4;\nconst float EMPTY_CM = 10.0f;\nconst float FULL_CM = 25.0f;\nconst float RUN_MIN_CM = 20.0f;\nconst float HYST_CM = 0.5f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long TICK_MS = 40;\nconst unsigned long STATUS_MS = 1000;\n\nenum CycleState\n{\n    ST_IDLE = 0,\n    ST_FILL = 1,\n    ST_RUN = 2\n};\n\nCycleState state = ST_IDLE;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat levelCm = 0.0f;\n\nfloat readLevelCm()\n{\n    int raw = analogRead(LEVEL_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid driveOutputs()\n{\n    digitalWrite(VALVE_PIN, state == ST_FILL ? HIGH : LOW);\n    digitalWrite(MOTOR_PIN, state == ST_RUN ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"laundry st=\");\n    Serial.print((int)state);\n    Serial.print(\" cm=\");\n    Serial.println(levelCm, 1);\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(MOTOR_PIN, OUTPUT);\n    pinMode(RESET_PIN, INPUT_PULLUP);\n    driveOutputs();\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    // Reset is checked every iteration for immediate response.\n    if (digitalRead(RESET_PIN) == LOW)\n    {\n        state = ST_IDLE;\n        driveOutputs();\n    }\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        levelCm = readLevelCm();\n\n        if (digitalRead(RESET_PIN) == LOW)\n        {\n            state = ST_IDLE;\n        }\n        else if (state == ST_IDLE && levelCm < (EMPTY_CM - HYST_CM))\n        {\n            state = ST_FILL;\n        }\n        else if (state == ST_FILL && levelCm >= FULL_CM)\n        {\n            state = ST_RUN;\n        }\n        else if (state == ST_RUN && levelCm < RUN_MIN_CM)\n        {\n            state = ST_IDLE;\n        }\n\n        driveOutputs();\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 5.01,
+      "llm_calls": 1,
+      "prompt_tokens": 1209,
+      "completion_tokens": 1085,
+      "cost_usd": 0.00079422,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "lobby_lamp_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No debounce window; bounce toggles multiple times",
+          "category": "missing_debounce",
+          "description": "The settle logic only requires the raw level to be unchanged for 45 ms, but a bouncing contact re-arms edgeMs on every transition, so a 20 ms bounce burst can still produce multiple accepted LOW transitions and multiple toggles. A proper debounce must require the raw input to be stable for the full settle window before accepting a new state, and must not re-trigger on release."
+        },
+        {
+          "id": "b2",
+          "title": "Release can toggle lamp",
+          "category": "stuck_state_machine",
+          "description": "Because stable is updated to any raw level after 45 ms and the toggle fires whenever stable==LOW, a slow or noisy release that dips LOW again after settling can produce an extra toggle; the state machine does not latch that a press was already consumed until a clean HIGH is seen."
+        }
+      ],
+      "patched_sketch": "// Lobby accent lamp toggle with contact settle.\n// Momentary switch on D3 (pull-up), lamp channel on D12.\n\nconst uint8_t BTN_PIN = 3;\nconst uint8_t LAMP_PIN = 12;\nconst unsigned long SETTLE_MS = 45;\nconst unsigned long STATUS_MS = 1400;\n\nbool lampOn = false;\nuint8_t stable = HIGH;\nuint8_t lastRaw = HIGH;\nunsigned long edgeMs = 0;\nunsigned long statusMs = 0;\nunsigned long toggles = 0;\n\nvoid setLamp(bool on)\n{\n    lampOn = on;\n    digitalWrite(LAMP_PIN, on ? HIGH : LOW);\n}\n\nvoid toggleLamp()\n{\n    setLamp(!lampOn);\n    toggles++;\n}\n\nvoid printStatus()\n{\n    Serial.print(\"lobby lamp=\");\n    Serial.print(lampOn ? \"ON\" : \"OFF\");\n    Serial.print(\" n=\");\n    Serial.println(toggles);\n}\n\nvoid setup()\n{\n    pinMode(BTN_PIN, INPUT_PULLUP);\n    pinMode(LAMP_PIN, OUTPUT);\n    setLamp(false);\n    Serial.begin(9600);\n    stable = digitalRead(BTN_PIN);\n    lastRaw = stable;\n    edgeMs = millis();\n    statusMs = millis();\n}\n\nvoid loop()\n{\n    uint8_t raw = digitalRead(BTN_PIN);\n    unsigned long now = millis();\n\n    // Re-arm the settle timer on any raw transition.\n    if (raw != lastRaw)\n    {\n        edgeMs = now;\n        lastRaw = raw;\n    }\n\n    // Accept a new stable level only after the input has been\n    // unchanged for the full settle window.\n    if ((now - edgeMs) >= SETTLE_MS && raw != stable)\n    {\n        stable = raw;\n        if (stable == LOW)\n        {\n            toggleLamp();\n        }\n    }\n\n    if (now - statusMs >= STATUS_MS)\n    {\n        statusMs = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 4.06,
+      "llm_calls": 1,
+      "prompt_tokens": 881,
+      "completion_tokens": 742,
+      "cost_usd": 0.00055832,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "lock_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Debounce timer never initialized, first press may be missed",
+          "category": "off_by_one_timing",
+          "description": "reqEdge starts at 0 and is only set when raw changes; if the button is already LOW at boot or the first transition happens before millis() reaches DEBOUNCE_MS, the (now - reqEdge) >= DEBOUNCE_MS check can pass immediately or the edge timestamp is stale, causing the first request to be accepted without 35 ms of stability. Initialize reqEdge = millis() in setup and only accept a stable LOW after a full debounce window from the actual edge."
+        },
+        {
+          "id": "b2",
+          "title": "Unlock not guaranteed within 200 ms of door open",
+          "category": "other",
+          "description": "The door-open check runs every loop so unlock is fast, but there is no explicit timing guarantee and the lock is re-engaged logic-free; more importantly the door-open branch calls setLock(false) unconditionally every loop, which is fine, but the real issue is the request path can re-lock in the same loop iteration after unlock if the button is still held, violating 'wait for a new request after unlock'."
+        },
+        {
+          "id": "b3",
+          "title": "Re-engages while button held after unlock",
+          "category": "stuck_state_machine",
+          "description": "After the door opens and unlocks, if the request button is still held LOW (stableReq already LOW), the engage condition stableReq==LOW && doorClosed() && !locked can fire again once the door closes without a new press, because there is no edge/latch requirement \u2014 only a level check. Need to require a fresh HIGH->LOW transition after unlock."
+        }
+      ],
+      "patched_sketch": "// Safe-deposit vault lock latch (patched).\n// Request button on D2, door-closed sense on D3 (both pull-up), lock solenoid on D9.\n\nconst int REQ_PIN = 2;\nconst int DOOR_PIN = 3;\nconst int LOCK_PIN = 9;\nconst unsigned long DEBOUNCE_MS = 35;\nconst unsigned long STATUS_MS = 1000;\n\nbool locked = false;\nint stableReq = HIGH;\nint lastReq = HIGH;\nunsigned long reqEdge = 0;\nunsigned long lastStatus = 0;\nunsigned long engageCount = 0;\nbool reqArmed = true;   // must see a fresh press before engaging again\n\nvoid setLock(bool on)\n{\n    locked = on;\n    digitalWrite(LOCK_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"vault lock=\");\n    Serial.print(locked ? 1 : 0);\n    Serial.print(\" engages=\");\n    Serial.println(engageCount);\n}\n\nbool doorClosed()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(REQ_PIN, INPUT_PULLUP);\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(LOCK_PIN, OUTPUT);\n    setLock(false);\n    Serial.begin(9600);\n    stableReq = digitalRead(REQ_PIN);\n    lastReq = stableReq;\n    reqEdge = millis();\n    lastStatus = millis();\n    reqArmed = (stableReq == HIGH);\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(REQ_PIN);\n\n    if (raw != lastReq)\n    {\n        reqEdge = now;\n        lastReq = raw;\n    }\n\n    if ((now - reqEdge) >= DEBOUNCE_MS && raw != stableReq)\n    {\n        stableReq = raw;\n        if (stableReq == HIGH)\n        {\n            reqArmed = true;   // fresh release arms a new request\n        }\n        else if (stableReq == LOW && reqArmed && doorClosed() && !locked)\n        {\n            setLock(true);\n            engageCount++;\n            reqArmed = false;  // consume this press\n        }\n    }\n\n    if (!doorClosed())\n    {\n        setLock(false);\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 5.2,
+      "llm_calls": 1,
+      "prompt_tokens": 994,
+      "completion_tokens": 1003,
+      "cost_usd": 0.00069958,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "loft_fan_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No rate limit on fan toggles",
+          "category": "other",
+          "description": "The sketch never enforces the 'max 2 state changes per 5000 ms' rule; rapid threshold crossings or boost release can toggle the fan more often than allowed."
+        },
+        {
+          "id": "b2",
+          "title": "Boost release leaves fan stuck ON",
+          "category": "stuck_state_machine",
+          "description": "When boost is released, the hold counters are stale/zero and the fan stays ON until a fresh 4-sample OFF hold completes, but more importantly the forced-ON state isn't re-evaluated against temperature, so fan can remain ON below OFF_C for up to 200 ms and the boost override isn't cleanly cleared."
+        },
+        {
+          "id": "b3",
+          "title": "ADC reference scaling assumes 5 V",
+          "category": "wrong_unit_scaling",
+          "description": "sampleTempC uses 5000 mV full-scale with 1023 divisor; on a 5 V Uno this is approximately correct but the divisor should be 1024 for proper LSB scaling, causing a small systematic temperature error near thresholds."
+        },
+        {
+          "id": "b4",
+          "title": "Boost not debounced",
+          "category": "missing_debounce",
+          "description": "D4 is read directly each 50 ms sample with no debounce; a noisy or bouncing button can momentarily force the fan ON and count as a state change, violating the toggle-rate limit."
+        }
+      ],
+      "patched_sketch": "// Loft cooling fan with hysteresis, boost button, debounce and toggle-rate limit.\nconst int TEMP_PIN = A3;\nconst int FAN_PIN = 5;\nconst int BOOST_PIN = 4;\n\nconst float ON_C = 36.0f;\nconst float OFF_C = 32.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long LOG_MS = 1000;\nconst int HOLD = 4;\nconst unsigned long MIN_TOGGLE_MS = 2500; // 2 changes per 5000 ms\nconst unsigned long DEBOUNCE_MS = 30;\n\nbool fanOn = false;\nint onHold = 0;\nint offHold = 0;\nunsigned long lastSample = 0;\nunsigned long lastLog = 0;\nunsigned long lastToggle = 0;\nfloat tempC = 0.0f;\n\nbool boostRaw = false;\nbool boostStable = false;\nunsigned long boostChangeMs = 0;\n\nfloat sampleTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1024.0f);\n    return mv / MV_PER_C;\n}\n\nvoid driveFan(bool on)\n{\n    if (on == fanOn) return;\n    unsigned long now = millis();\n    if (now - lastToggle < MIN_TOGGLE_MS) return;\n    fanOn = on;\n    lastToggle = now;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid logLine()\n{\n    Serial.print(\"loft: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(BOOST_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastLog = millis();\n    lastToggle = millis() - MIN_TOGGLE_MS;\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        tempC = sampleTempC();\n\n        bool raw = (digitalRead(BOOST_PIN) == LOW);\n        if (raw != boostRaw)\n        {\n            boostRaw = raw;\n            boostChangeMs = now;\n        }\n        if (now - boostChangeMs >= DEBOUNCE_MS && boostStable != boostRaw)\n        {\n            boostStable = boostRaw;\n        }\n\n        if (boostStable)\n        {\n            onHold = 0;\n            offHold = 0;\n            driveFan(true);\n        }\n        else\n        {\n            if (tempC >= ON_C) onHold++; else onHold = 0;\n            if (tempC <= OFF_C) offHold++; else offHold = 0;\n\n            if (onHold >= HOLD) driveFan(true);\n            else if (offHold >= HOLD) driveFan(false);\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        logLine();\n    }\n}\n",
+      "wall_s": 5.36,
+      "llm_calls": 1,
+      "prompt_tokens": 1132,
+      "completion_tokens": 1137,
+      "cost_usd": 0.0007945,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "mist_injector_long",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Pulse length is 2000 ms not 800 ms",
+          "category": "timed_pulse_length",
+          "description": "PULSE_MS is set to 2000, so the injector stays HIGH for 2 s instead of the specified 800 ms."
+        },
+        {
+          "id": "b2",
+          "title": "Debounce timer never initialized",
+          "category": "off_by_one_timing",
+          "description": "trigEdge starts at 0, so on the first loop the 25 ms stability check can pass immediately against a stale edge time, allowing an unsettled trigger to fire; trigEdge should be initialized to millis() in setup."
+        }
+      ],
+      "patched_sketch": "// Greenhouse mist injector timed pulse.\n// Trigger on D4 (pull-up), injector on D9, ready lamp on D12.\n\nconst int TRIG_PIN = 4;\nconst int INJ_PIN = 9;\nconst int READY_PIN = 12;\nconst unsigned long PULSE_MS = 800;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 450;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastTrig = HIGH;\nunsigned long trigEdge = 0;\nunsigned long lastHb = 0;\nunsigned long shots = 0;\n\nvoid injHigh()\n{\n    digitalWrite(INJ_PIN, HIGH);\n}\n\nvoid injLow()\n{\n    digitalWrite(INJ_PIN, LOW);\n}\n\nvoid setReady(bool on)\n{\n    digitalWrite(READY_PIN, on ? HIGH : LOW);\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"mist shots=\");\n    Serial.print(shots);\n    Serial.print(\" busy=\");\n    Serial.println(pulsing ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(INJ_PIN, OUTPUT);\n    pinMode(READY_PIN, OUTPUT);\n    injLow();\n    setReady(true);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastTrig = stableTrig;\n    trigEdge = millis();\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (raw != lastTrig)\n    {\n        trigEdge = now;\n        lastTrig = raw;\n    }\n\n    if ((now - trigEdge) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            shots++;\n            injHigh();\n            setReady(false);\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        injLow();\n        setReady(true);\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 3.5,
+      "llm_calls": 1,
+      "prompt_tokens": 1019,
+      "completion_tokens": 782,
+      "cost_usd": 0.00061376,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "nav_beacon_byte_timer",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Blink timing uses 8-bit millis slice",
+          "category": "wrong_unit_scaling",
+          "description": "The sketch compares (uint8_t)millis() differences against HALF_MS=500, but an 8-bit slice wraps every 256 ms, so the 500 ms threshold is never reached and the beacon never toggles or emits ticks."
+        },
+        {
+          "id": "b2",
+          "title": "Quiet hold does not pause blink schedule",
+          "category": "stuck_state_machine",
+          "description": "While quiet is held, lastSlice is continuously reset to nowSlice, so on release the full 500 ms interval restarts instead of resuming the paused schedule; the behaviour requires pausing, not resetting, the blink phase."
+        },
+        {
+          "id": "b3",
+          "title": "Status telemetry uses blocking millis subtraction without rollover safety",
+          "category": "millis_rollover",
+          "description": "The status interval check uses now - lastStatus >= STATUS_MS with unsigned long, which is rollover-safe, but the blink logic's 8-bit slice makes the overall timing unreliable; additionally, the status print can be delayed by serial blocking, causing jitter beyond the \u00b1120 ms tick tolerance."
+        }
+      ],
+      "patched_sketch": "// Harbor nav beacon: 500 ms on / 500 ms off on D12.\n// Quiet mode switch on D3 (pull-up). Status over UART.\n\nconst int BEACON_PIN = 12;\nconst int QUIET_PIN = 3;\nconst unsigned long HALF_MS = 500;\nconst unsigned long STATUS_MS = 2000;\n\nbool lampOn = false;\nunsigned long lastToggle = 0;\nunsigned long lastStatus = 0;\nunsigned long risingCount = 0;\nbool quietHeld = false;\nbool wasQuiet = false;\n\nvoid setBeacon(bool on)\n{\n    lampOn = on;\n    digitalWrite(BEACON_PIN, on ? HIGH : LOW);\n}\n\nvoid emitTick()\n{\n    Serial.println(\"tick\");\n    risingCount++;\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"nav rises=\");\n    Serial.print(risingCount);\n    Serial.print(\" quiet=\");\n    Serial.println(quietHeld ? 1 : 0);\n}\n\nbool readQuiet()\n{\n    return digitalRead(QUIET_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(BEACON_PIN, OUTPUT);\n    pinMode(QUIET_PIN, INPUT_PULLUP);\n    setBeacon(false);\n    Serial.begin(9600);\n    lastToggle = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    quietHeld = readQuiet();\n\n    if (quietHeld)\n    {\n        if (!wasQuiet)\n        {\n            setBeacon(false);\n        }\n        // Pause: do not advance lastToggle while held\n    }\n    else\n    {\n        if (wasQuiet)\n        {\n            // Resume: restart half-period from release\n            lastToggle = now;\n        }\n        if (now - lastToggle >= HALF_MS)\n        {\n            lastToggle += HALF_MS;\n            bool nextOn = !lampOn;\n            setBeacon(nextOn);\n            if (nextOn)\n            {\n                emitTick();\n            }\n        }\n    }\n    wasQuiet = quietHeld;\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus += STATUS_MS;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 4.32,
+      "llm_calls": 1,
+      "prompt_tokens": 951,
+      "completion_tokens": 907,
+      "cost_usd": 0.00064722,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "panel_dual_debounce_edge",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Toggles on release instead of press",
+          "category": "inverted_pullup",
+          "description": "risingEdge() fires on LOW-to-HIGH, which is the release edge of an active-LOW key, so the LED toggles on release rather than on press."
+        },
+        {
+          "id": "b2",
+          "title": "No debounce/settle window",
+          "category": "missing_debounce",
+          "description": "The sketch reads the key every loop with no 40 ms settle window, so contact bounce on press and release produces multiple toggles."
+        },
+        {
+          "id": "b3",
+          "title": "No hysteresis on key state",
+          "category": "missing_hysteresis",
+          "description": "There is no stable-state tracking, so a noisy or marginal key level can toggle the LED repeatedly instead of requiring a settled edge."
+        }
+      ],
+      "patched_sketch": "// Control-panel key: toggles a status LED for the technician.\n// Key on D2 (pull-up to Vcc, closes to ground), LED on D13.\n\nconst int KEY_PIN = 2;\nconst int LED_PIN = 13;\nconst unsigned long REPORT_MS = 1000;\nconst unsigned long SETTLE_MS = 40;\n\nbool ledLit = false;\nint stableLevel = HIGH;      // debounced key state\nint lastRaw = HIGH;          // last raw sample\nunsigned long lastChangeMs = 0;\nunsigned long lastReport = 0;\nunsigned long edgeCount = 0;\n\nvoid writeLed(bool on)\n{\n    ledLit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLed()\n{\n    writeLed(!ledLit);\n    edgeCount++;\n}\n\nvoid report()\n{\n    Serial.print(\"panel led=\");\n    Serial.print(ledLit ? 1 : 0);\n    Serial.print(\" edges=\");\n    Serial.println(edgeCount);\n}\n\nvoid setup()\n{\n    pinMode(KEY_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    writeLed(false);\n    Serial.begin(9600);\n    lastRaw = digitalRead(KEY_PIN);\n    stableLevel = lastRaw;\n    lastChangeMs = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    unsigned long t = millis();\n    int raw = digitalRead(KEY_PIN);\n\n    // Track raw changes; require the level to be stable for SETTLE_MS.\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        lastChangeMs = t;\n    }\n\n    if ((t - lastChangeMs) >= SETTLE_MS && raw != stableLevel)\n    {\n        int newLevel = raw;\n        // Active-LOW key: press is HIGH-to-LOW after settle.\n        if (stableLevel == HIGH && newLevel == LOW)\n        {\n            flipLed();\n        }\n        stableLevel = newLevel;\n    }\n\n    if (t - lastReport >= REPORT_MS)\n    {\n        lastReport = t;\n        report();\n    }\n}\n",
+      "wall_s": 3.5,
+      "llm_calls": 1,
+      "prompt_tokens": 839,
+      "completion_tokens": 733,
+      "cost_usd": 0.00054278,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "porch_gate_block",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Blocking chime pulse starves heartbeat",
+          "category": "blocking_delay",
+          "description": "pulseChimeBlocking() uses delay(1800), so the loop cannot print the 300 ms heartbeat for 1.8 s, violating the 700 ms silence limit and the requirement to print gate-hb while the chime sounds."
+        },
+        {
+          "id": "b2",
+          "title": "No debounce or settling on gate contact",
+          "category": "missing_debounce",
+          "description": "gateOpened() triggers on a single raw LOW sample, so contact bounce or a brief glitch can start a chime even though the behaviour requires a settled 40 ms open event."
+        },
+        {
+          "id": "b3",
+          "title": "Chime retriggers while already sounding",
+          "category": "stuck_state_machine",
+          "description": "Because the pulse is blocking and there is no active-pulse state, a held-open gate restarts the chime immediately after each pulse instead of ignoring presses while the chime is sounding."
+        },
+        {
+          "id": "b4",
+          "title": "No 150 ms response deadline enforcement",
+          "category": "off_by_one_timing",
+          "description": "The sketch has no non-blocking state machine tracking the open event and pulse start, so it cannot guarantee the chime starts within 150 ms of a settled open event."
+        }
+      ],
+      "patched_sketch": "// Front porch gate chime.\n// Gate contact on D3 (pull-up, active LOW when open), chime coil on D10.\n// Keep a UART heartbeat alive for the monitoring hub.\n\nconst uint8_t GATE_PIN = 3;\nconst uint8_t CHIME_PIN = 10;\nconst unsigned long CHIME_MS = 1800;\nconst unsigned long HB_MS = 300;\nconst unsigned long DEBOUNCE_MS = 40;\n\nunsigned long lastHb = 0;\nunsigned long openCount = 0;\n\nbool lastRawOpen = false;\nbool stableOpen = false;\nunsigned long rawChangeMs = 0;\n\nbool chimeActive = false;\nunsigned long chimeStartMs = 0;\n\nvoid chimeHigh()\n{\n    digitalWrite(CHIME_PIN, HIGH);\n}\n\nvoid chimeLow()\n{\n    digitalWrite(CHIME_PIN, LOW);\n}\n\nvoid sendHb()\n{\n    Serial.println(\"gate-hb\");\n}\n\nbool gateRawOpen()\n{\n    return digitalRead(GATE_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(GATE_PIN, INPUT_PULLUP);\n    pinMode(CHIME_PIN, OUTPUT);\n    chimeLow();\n    Serial.begin(9600);\n    lastHb = millis();\n    rawChangeMs = millis();\n    lastRawOpen = gateRawOpen();\n    stableOpen = lastRawOpen;\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    // Debounce gate contact: require a stable state for DEBOUNCE_MS.\n    bool rawOpen = gateRawOpen();\n    if (rawOpen != lastRawOpen)\n    {\n        lastRawOpen = rawOpen;\n        rawChangeMs = now;\n    }\n    else if ((now - rawChangeMs) >= DEBOUNCE_MS && stableOpen != rawOpen)\n    {\n        stableOpen = rawOpen;\n        if (stableOpen && !chimeActive)\n        {\n            // Settled open event: start non-blocking chime pulse.\n            openCount++;\n            chimeActive = true;\n            chimeStartMs = now;\n            chimeHigh();\n        }\n    }\n\n    // End chime pulse when its full length has elapsed.\n    if (chimeActive && (now - chimeStartMs) >= CHIME_MS)\n    {\n        chimeActive = false;\n        chimeLow();\n    }\n\n    // Heartbeat runs independently of the chime.\n    if ((now - lastHb) >= HB_MS)\n    {\n        lastHb = now;\n        sendHb();\n    }\n}\n",
+      "wall_s": 4.37,
+      "llm_calls": 1,
+      "prompt_tokens": 809,
+      "completion_tokens": 1001,
+      "cost_usd": 0.00064694,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "process_dual_block_scale",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Flow not scaled to L/h",
+          "category": "wrong_unit_scaling",
+          "description": "readFlowLph returns raw ADC counts instead of converting to millivolts (counts * 5000/1023) and dividing by 2 mV/Lph, so printed flow and alarm threshold are wrong by a large factor."
+        },
+        {
+          "id": "b2",
+          "title": "Logging every 2 s instead of 500 ms",
+          "category": "blocking_delay",
+          "description": "loop uses delay(2000) and logs unconditionally, so serial output occurs every ~2 s, violating the 500 ms logging requirement and the 900 ms silence limit."
+        },
+        {
+          "id": "b3",
+          "title": "Alarm threshold uses raw counts",
+          "category": "wrong_unit_scaling",
+          "description": "flowLooksLow compares raw ADC counts against 100 L/h, so the alarm state does not correspond to the actual flow in L/h."
+        },
+        {
+          "id": "b4",
+          "title": "No hysteresis on alarm",
+          "category": "missing_hysteresis",
+          "description": "The alarm turns off immediately when flow rises above 100 L/h (and the HIGH_FLOW_LPH branch is redundant), causing chatter around the threshold; a hysteresis band is needed."
+        }
+      ],
+      "patched_sketch": "// Process-skid flow monitor with low-flow alarm lamp.\n// Flow transducer on A0 (2 mV per L/h), alarm lamp on D8.\n\nconst int FLOW_PIN = A0;\nconst int ALARM_PIN = 8;\nconst float LOW_FLOW_LPH = 100.0f;\nconst float HYST_LPH = 10.0f;\nconst unsigned long LOG_MS = 500;\n\nbool alarmLit = false;\nunsigned long lastLog = 0;\n\nfloat readFlowLph()\n{\n    int counts = analogRead(FLOW_PIN);\n    float mv = (float)counts * 5000.0f / 1023.0f;\n    return mv / 2.0f;\n}\n\nvoid setAlarm(bool on)\n{\n    alarmLit = on;\n    digitalWrite(ALARM_PIN, on ? HIGH : LOW);\n}\n\nvoid setup()\n{\n    pinMode(ALARM_PIN, OUTPUT);\n    digitalWrite(ALARM_PIN, LOW);\n    Serial.begin(9600);\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    float flowLph = readFlowLph();\n\n    if (!alarmLit && flowLph < LOW_FLOW_LPH)\n    {\n        setAlarm(true);\n    }\n    else if (alarmLit && flowLph > (LOW_FLOW_LPH + HYST_LPH))\n    {\n        setAlarm(false);\n    }\n\n    unsigned long now = millis();\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        Serial.print(\"flow: \");\n        Serial.println(flowLph, 1);\n    }\n}\n",
+      "wall_s": 3.9,
+      "llm_calls": 1,
+      "prompt_tokens": 903,
+      "completion_tokens": 751,
+      "cost_usd": 0.00056826,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "rail_limit_invert",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Limit polarity inverted",
+          "category": "inverted_pullup",
+          "description": "limitActiveRaw() and the hit check treat HIGH as active, but with INPUT_PULLUP the switch reads LOW when pressed, so the motor is disabled when the limit is clear and enabled when hit \u2014 exactly backwards."
+        },
+        {
+          "id": "b2",
+          "title": "Motor never disabled when jog released",
+          "category": "stuck_state_machine",
+          "description": "The else branch calls setMotor(true), so the motor stays enabled whenever the limit is clear regardless of jog; the jog input has no effect and the motor is always on when clear."
+        },
+        {
+          "id": "b3",
+          "title": "Debounce edge timer not reset on stable match",
+          "category": "missing_debounce",
+          "description": "limitEdge is only updated on raw change; if raw returns to stableLimit the timer is stale, and the debounce logic can accept a state without a full 25 ms of stability, and hitCount increments on the wrong transition."
+        }
+      ],
+      "patched_sketch": "// Linear rail carriage motor enable with end-stop.\n// Limit switch on D2 (pull-up to GND when hit), motor enable on D13.\n// Jog button on D4 (pull-up) requests motion when clear.\n\nconst int LIMIT_PIN = 2;\nconst int MOTOR_PIN = 13;\nconst int JOG_PIN = 4;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long STATUS_MS = 900;\n\nint stableLimit = HIGH;\nint lastLimit = HIGH;\nunsigned long limitEdge = 0;\nbool motorEnabled = false;\nunsigned long lastStatus = 0;\nunsigned long hitCount = 0;\n\nbool limitActiveRaw()\n{\n    return digitalRead(LIMIT_PIN) == LOW;\n}\n\nvoid setMotor(bool enabled)\n{\n    motorEnabled = enabled;\n    digitalWrite(MOTOR_PIN, enabled ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"rail motor=\");\n    Serial.print(motorEnabled ? 1 : 0);\n    Serial.print(\" hits=\");\n    Serial.println(hitCount);\n}\n\nvoid setup()\n{\n    pinMode(LIMIT_PIN, INPUT_PULLUP);\n    pinMode(JOG_PIN, INPUT_PULLUP);\n    pinMode(MOTOR_PIN, OUTPUT);\n    setMotor(false);\n    Serial.begin(9600);\n    stableLimit = digitalRead(LIMIT_PIN);\n    lastLimit = stableLimit;\n    limitEdge = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(LIMIT_PIN);\n\n    if (raw != lastLimit)\n    {\n        limitEdge = now;\n        lastLimit = raw;\n    }\n\n    if ((now - limitEdge) >= DEBOUNCE_MS && raw != stableLimit)\n    {\n        stableLimit = raw;\n        if (stableLimit == LOW)\n        {\n            hitCount++;\n        }\n    }\n\n    bool hit = (stableLimit == LOW);\n    bool jog = (digitalRead(JOG_PIN) == LOW);\n\n    if (hit)\n    {\n        setMotor(false);\n    }\n    else if (jog)\n    {\n        setMotor(true);\n    }\n    else\n    {\n        setMotor(false);\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 3.69,
+      "llm_calls": 1,
+      "prompt_tokens": 1043,
+      "completion_tokens": 841,
+      "cost_usd": 0.00064526,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "shop_estop_debounce",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No debounce/settle window",
+          "category": "missing_debounce",
+          "description": "The sketch toggles on every raw falling edge with no 50 ms settle window, so a 22 ms bounce burst produces multiple toggles per physical press."
+        },
+        {
+          "id": "b2",
+          "title": "No hysteresis on release",
+          "category": "missing_hysteresis",
+          "description": "priorSample is updated every loop with the raw sample, so bounce on release (HIGH/LOW chatter) can create spurious falling edges and extra toggles."
+        },
+        {
+          "id": "b3",
+          "title": "Unused bootMs variable",
+          "category": "other",
+          "description": "bootMs is assigned but never used; harmless but indicates the intended settle timing was never implemented."
+        }
+      ],
+      "patched_sketch": "// Shop bench run/stop: mushroom estop toggles the \"machine armed\" lamp.\n// Estop contact on D6 (NC to ground via switch, pull-up), armed lamp on D9.\n\nconst uint8_t ESTOP_PIN = 6;\nconst uint8_t ARMED_PIN = 9;\nconst unsigned long BEAT_MS = 1200;\nconst unsigned long SETTLE_MS = 50;\n\nbool armed = false;\nuint8_t stableSample = HIGH;\nuint8_t lastRaw = HIGH;\nunsigned long lastChangeMs = 0;\nunsigned long lastBeat = 0;\nunsigned long pressCount = 0;\n\nvoid writeArmed(bool level)\n{\n    armed = level;\n    digitalWrite(ARMED_PIN, level ? HIGH : LOW);\n}\n\nvoid toggleArmed()\n{\n    writeArmed(!armed);\n    pressCount++;\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"shop armed=\");\n    Serial.print(armed ? 1 : 0);\n    Serial.print(\" presses=\");\n    Serial.println(pressCount);\n}\n\nvoid setup()\n{\n    pinMode(ESTOP_PIN, INPUT_PULLUP);\n    pinMode(ARMED_PIN, OUTPUT);\n    writeArmed(false);\n    Serial.begin(9600);\n    lastRaw = digitalRead(ESTOP_PIN);\n    stableSample = lastRaw;\n    lastChangeMs = millis();\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    uint8_t raw = digitalRead(ESTOP_PIN);\n\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        lastChangeMs = now;\n    }\n\n    if ((now - lastChangeMs) >= SETTLE_MS && raw != stableSample)\n    {\n        uint8_t previous = stableSample;\n        stableSample = raw;\n        if (previous == HIGH && stableSample == LOW)\n        {\n            toggleArmed();\n        }\n    }\n\n    if (now - lastBeat >= BEAT_MS)\n    {\n        lastBeat = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 3.17,
+      "llm_calls": 1,
+      "prompt_tokens": 864,
+      "completion_tokens": 701,
+      "cost_usd": 0.00053634,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "solenoid_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Debounce timer reset on every raw change prevents settling",
+          "category": "missing_debounce",
+          "description": "trigEdge is reset whenever raw differs from lastTrig, so a bouncing contact keeps restarting the 25 ms window; the stable state only updates after 25 ms of no raw changes, which is correct in intent but the edge tracking uses lastTrig rather than the stable value, so a brief glitch that returns to the stable level still resets the timer and can delay or miss a valid 30 ms press.",
+          "category_note": "actually the logic is mostly OK; see b2"
+        },
+        {
+          "id": "b2",
+          "title": "Pulse start latency can exceed 120 ms",
+          "category": "off_by_one_timing",
+          "description": "The press is only accepted after DEBOUNCE_MS of stability plus loop latency, and because trigEdge is set on the first raw change, a 30 ms press that bounces can push detection past the 120 ms requirement; the debounce should latch on the stable LOW and start the pulse immediately when stable.",
+          "category_note": "timing"
+        },
+        {
+          "id": "b3",
+          "title": "millis rollover breaks debounce and heartbeat comparisons",
+          "category": "millis_rollover",
+          "description": "All timing uses unsigned subtraction which is rollover-safe, so this is not a bug; however trigEdge is initialized to 0 and if a press occurs before 25 ms after boot the subtraction is fine. No rollover bug present.",
+          "category_note": "none"
+        }
+      ],
+      "patched_sketch": "// Packaging glue-dot solenoid driver\nconst int TRIG_PIN = 2;\nconst int SOL_PIN = 8;\nconst int ARMED_PIN = 11;\nconst unsigned long PULSE_MS = 2500;\nconst unsigned long DEBOUNCE_MS = 25;\nconst unsigned long HB_MS = 500;\n\nbool pulsing = false;\nunsigned long pulseStart = 0;\nint stableTrig = HIGH;\nint lastRaw = HIGH;\nunsigned long rawChange = 0;\nunsigned long lastHb = 0;\nunsigned long dots = 0;\n\nvoid setup()\n{\n    pinMode(TRIG_PIN, INPUT_PULLUP);\n    pinMode(SOL_PIN, OUTPUT);\n    pinMode(ARMED_PIN, OUTPUT);\n    digitalWrite(SOL_PIN, LOW);\n    digitalWrite(ARMED_PIN, HIGH);\n    Serial.begin(9600);\n    stableTrig = digitalRead(TRIG_PIN);\n    lastRaw = stableTrig;\n    rawChange = millis();\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int raw = digitalRead(TRIG_PIN);\n\n    if (raw != lastRaw)\n    {\n        lastRaw = raw;\n        rawChange = now;\n    }\n\n    if ((now - rawChange) >= DEBOUNCE_MS && raw != stableTrig)\n    {\n        stableTrig = raw;\n        if (stableTrig == LOW && !pulsing)\n        {\n            pulsing = true;\n            pulseStart = now;\n            dots++;\n            digitalWrite(SOL_PIN, HIGH);\n            digitalWrite(ARMED_PIN, LOW);\n        }\n    }\n\n    if (pulsing && (now - pulseStart) >= PULSE_MS)\n    {\n        pulsing = false;\n        digitalWrite(SOL_PIN, LOW);\n        digitalWrite(ARMED_PIN, HIGH);\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        Serial.print(\"glue dots=\");\n        Serial.print(dots);\n        Serial.print(\" busy=\");\n        Serial.println(pulsing ? 1 : 0);\n    }\n}\n",
+      "wall_s": 4.48,
+      "llm_calls": 1,
+      "prompt_tokens": 1029,
+      "completion_tokens": 882,
+      "cost_usd": 0.00065856,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "spindle_rpm_prefix",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "RPM scaling wrong by ~10x",
+          "category": "wrong_unit_scaling",
+          "description": "readRpm returns millivolts (raw*5000/1023) but the spec is 1 mV per rpm, so the printed value is ~10x too high (e.g. 2000 rpm reads ~2000 mV\u2192~9775). Must divide by 1 mV/rpm, i.e. rpm = mV."
+        },
+        {
+          "id": "b2",
+          "title": "Serial format wrong",
+          "category": "serial_format",
+          "description": "Prints 'rpm: <n>' with a space and lowercase, but spec requires 'RPM:<n>' with no space after the colon."
+        },
+        {
+          "id": "b3",
+          "title": "Min/max never reset per second",
+          "category": "other",
+          "description": "rpmMin/rpmMax accumulate over the whole run instead of being reset each second, so the per-second 'spindle min/max' line reports lifetime extremes, not the current second's."
+        },
+        {
+          "id": "b4",
+          "title": "Warn threshold uses unscaled value",
+          "category": "wrong_unit_scaling",
+          "description": "updateWarn compares the millivolt value against WARN_RPM=2000, so the lamp lights at ~200 rpm instead of 2000 rpm."
+        }
+      ],
+      "patched_sketch": "// CNC spindle tach display.\n// Tach voltage on A5 (1 mV/rpm), warn lamp on D9, mute on D3.\n\nconst int TACH_PIN = A5;\nconst int WARN_PIN = 9;\nconst int MUTE_PIN = 3;\nconst float WARN_RPM = 2000.0f;\nconst unsigned long PERIOD_MS = 1000;\nconst unsigned long SAMPLE_MS = 50;\n\nunsigned long lastPrint = 0;\nunsigned long lastSample = 0;\nfloat rpm = 0.0f;\nfloat rpmMin = 99999.0f;\nfloat rpmMax = 0.0f;\nbool warnLit = false;\n\nfloat readRpm()\n{\n    int raw = analogRead(TACH_PIN);\n    // 5 V / 1023 counts -> mV; 1 mV per rpm\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv; // rpm == mV\n}\n\nvoid trackExtremes(float v)\n{\n    if (v < rpmMin)\n    {\n        rpmMin = v;\n    }\n    if (v > rpmMax)\n    {\n        rpmMax = v;\n    }\n}\n\nvoid updateWarn(float v)\n{\n    bool muted = (digitalRead(MUTE_PIN) == LOW);\n    warnLit = (!muted) && (v >= WARN_RPM);\n    digitalWrite(WARN_PIN, warnLit ? HIGH : LOW);\n}\n\nvoid printRpm(float v)\n{\n    Serial.print(\"RPM:\");\n    Serial.println(v, 0);\n}\n\nvoid setup()\n{\n    pinMode(WARN_PIN, OUTPUT);\n    pinMode(MUTE_PIN, INPUT_PULLUP);\n    digitalWrite(WARN_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n    lastSample = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        rpm = readRpm();\n        trackExtremes(rpm);\n        updateWarn(rpm);\n    }\n\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printRpm(rpm);\n        Serial.print(\"spindle min=\");\n        Serial.print(rpmMin, 0);\n        Serial.print(\" max=\");\n        Serial.println(rpmMax, 0);\n        rpmMin = 99999.0f;\n        rpmMax = 0.0f;\n    }\n}\n",
+      "wall_s": 4.3,
+      "llm_calls": 1,
+      "prompt_tokens": 1034,
+      "completion_tokens": 935,
+      "cost_usd": 0.00068222,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "studio_siren_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Debounce timer reset on every loop while bouncing",
+          "category": "missing_debounce",
+          "description": "btnChanged is reset to now on every loop iteration where btn differs from lastBtn, so a noisy/bouncing input that toggles each read keeps pushing the settle deadline forward; a 40 ms press can be missed if the last bounce occurs late, and the press may not be recognized within the 150 ms window.",
+          "description2": ""
+        },
+        {
+          "id": "b2",
+          "title": "Heartbeat can be delayed past 700 ms silence",
+          "category": "off_by_one_timing",
+          "description": "The heartbeat uses 'now - lastHb >= HB_MS' with lastHb set to now, which is fine, but the siren pulse and debounce logic are non-blocking so this is actually OK; however the real issue is that lastHb is only updated when the condition fires, and if loop is delayed the heartbeat drifts \u2014 minor. The genuine bug is the debounce reset above."
+        }
+      ],
+      "patched_sketch": "// Recording-studio panic siren with non-blocking pulse and heartbeat.\n// Panic button on D4 (pull-up), siren driver on D7.\n\nconst int PANIC_PIN = 4;\nconst int SIREN_PIN = 7;\nconst unsigned long PULSE_MS = 2500;\nconst unsigned long HB_MS = 400;\nconst unsigned long DEBOUNCE_MS = 35;\n\nbool sirenOn = false;\nunsigned long sirenStart = 0;\nunsigned long lastHb = 0;\n\nint stableBtn = HIGH;\nint lastBtn = HIGH;\nunsigned long btnChanged = 0;\n\nvoid sirenHigh()\n{\n    digitalWrite(SIREN_PIN, HIGH);\n}\n\nvoid sirenLow()\n{\n    digitalWrite(SIREN_PIN, LOW);\n}\n\nvoid sendHb()\n{\n    Serial.println(\"hb\");\n}\n\nvoid setup()\n{\n    pinMode(PANIC_PIN, INPUT_PULLUP);\n    pinMode(SIREN_PIN, OUTPUT);\n    sirenLow();\n    Serial.begin(9600);\n    stableBtn = digitalRead(PANIC_PIN);\n    lastBtn = stableBtn;\n    btnChanged = millis();\n    lastHb = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    int btn = digitalRead(PANIC_PIN);\n\n    // Only restart the settle timer when the raw reading actually changes.\n    if (btn != lastBtn)\n    {\n        lastBtn = btn;\n        btnChanged = now;\n    }\n\n    if ((now - btnChanged) >= DEBOUNCE_MS && btn != stableBtn)\n    {\n        stableBtn = btn;\n        if (stableBtn == LOW && !sirenOn)\n        {\n            sirenOn = true;\n            sirenStart = now;\n            sirenHigh();\n        }\n    }\n\n    if (sirenOn && (now - sirenStart) >= PULSE_MS)\n    {\n        sirenOn = false;\n        sirenLow();\n    }\n\n    if (now - lastHb >= HB_MS)\n    {\n        lastHb = now;\n        sendHb();\n    }\n}\n",
+      "wall_s": 3.93,
+      "llm_calls": 1,
+      "prompt_tokens": 920,
+      "completion_tokens": 770,
+      "cost_usd": 0.000581,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "vault_lock_stuck",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No unlock on door open",
+          "category": "missing_failsafe",
+          "description": "The sketch never drives D9 LOW when the door opens (D3 HIGH); once locked it stays locked forever, violating the unlock-within-200ms requirement."
+        },
+        {
+          "id": "b2",
+          "title": "Debounce edge timer not initialized",
+          "category": "off_by_one_timing",
+          "description": "reqEdge starts at 0, so on the first loop the debounce window is measured from millis()=0 rather than the actual edge; combined with the missing unlock this can cause a spurious immediate engage or missed engage at startup."
+        }
+      ],
+      "patched_sketch": "// Safe-deposit vault lock latch.\n// Request button on D2, door-closed sense on D3 (both pull-up), lock solenoid on D9.\n\nconst int REQ_PIN = 2;\nconst int DOOR_PIN = 3;\nconst int LOCK_PIN = 9;\nconst unsigned long DEBOUNCE_MS = 35;\nconst unsigned long STATUS_MS = 1000;\n\nbool locked = false;\nint stableReq = HIGH;\nint lastReq = HIGH;\nunsigned long reqEdge = 0;\nunsigned long lastStatus = 0;\nunsigned long engageCount = 0;\n\nvoid setLock(bool on)\n{\n    locked = on;\n    digitalWrite(LOCK_PIN, on ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"vault lock=\");\n    Serial.print(locked ? 1 : 0);\n    Serial.print(\" engages=\");\n    Serial.println(engageCount);\n}\n\nbool doorClosed()\n{\n    return digitalRead(DOOR_PIN) == LOW;\n}\n\nvoid setup()\n{\n    pinMode(REQ_PIN, INPUT_PULLUP);\n    pinMode(DOOR_PIN, INPUT_PULLUP);\n    pinMode(LOCK_PIN, OUTPUT);\n    setLock(false);\n    Serial.begin(9600);\n    stableReq = digitalRead(REQ_PIN);\n    lastReq = stableReq;\n    reqEdge = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    // Unlock immediately when the door opens.\n    if (locked && !doorClosed())\n    {\n        setLock(false);\n    }\n\n    int raw = digitalRead(REQ_PIN);\n\n    if (raw != lastReq)\n    {\n        reqEdge = now;\n        lastReq = raw;\n    }\n\n    if ((now - reqEdge) >= DEBOUNCE_MS && raw != stableReq)\n    {\n        stableReq = raw;\n        if (stableReq == LOW && doorClosed() && !locked)\n        {\n            setLock(true);\n            engageCount++;\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 3.15,
+      "llm_calls": 1,
+      "prompt_tokens": 975,
+      "completion_tokens": 715,
+      "cost_usd": 0.0005733,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "walk_in_cooler_failsafe",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "No sensor fault detection",
+          "category": "missing_failsafe",
+          "description": "The behaviour requires forcing the compressor OFF when the probe is floating or reads below 0 \u00b0C or above 60 \u00b0C, but the sketch never checks for these conditions, so a disconnected probe (raw near 0 or floating) can leave the compressor running or cycling incorrectly."
+        },
+        {
+          "id": "b2",
+          "title": "Floating probe not detected",
+          "category": "missing_failsafe",
+          "description": "A floating A3 input reads an arbitrary value; without a plausibility check the sketch treats it as a valid temperature and may command the compressor ON, violating the failsafe requirement."
+        },
+        {
+          "id": "b3",
+          "title": "ADC reference scaling assumes 5 V",
+          "category": "wrong_unit_scaling",
+          "description": "readTempC uses 5000.0f/1023.0f, which is only correct with a 5 V reference; on the Uno default reference this is approximately right, but the code should use the actual AVcc reference and 1024 divisor for accurate 10 mV/\u00b0C scaling, otherwise temperature is slightly off and band crossings shift."
+        },
+        {
+          "id": "b4",
+          "title": "Failsafe not applied within 500 ms",
+          "category": "missing_failsafe",
+          "description": "Even if a fault check were added, the current loop only acts on temperature every 50 ms with a 3-sample hold; the fault path must bypass the hold and force OFF immediately to meet the 500 ms requirement."
+        }
+      ],
+      "patched_sketch": "// Walk-in cooler compressor controller.\n// Cabinet probe on A3 (10 mV/\u00b0C), compressor on D7, service switch on D4.\n\nconst int TEMP_PIN = A3;\nconst int COMP_PIN = 7;\nconst int SERVICE_PIN = 4;\nconst float COOL_ON_C = 8.0f;\nconst float COOL_OFF_C = 4.0f;\nconst float MV_PER_C = 10.0f;\nconst float MIN_VALID_C = 0.0f;\nconst float MAX_VALID_C = 60.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst int HOLD_N = 3;\n\nbool cooling = false;\nint onHold = 0;\nint offHold = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nfloat tempC = 0.0f;\nbool sensorFault = false;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1024.0f);\n    return mv / MV_PER_C;\n}\n\nbool sensorValid(float t)\n{\n    // Reject floating/disconnected probe and out-of-range readings.\n    if (t < MIN_VALID_C || t > MAX_VALID_C)\n    {\n        return false;\n    }\n    return true;\n}\n\nvoid setCompressor(bool on)\n{\n    cooling = on;\n    digitalWrite(COMP_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"cooler: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C comp=\");\n    Serial.println(cooling ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(COMP_PIN, OUTPUT);\n    pinMode(SERVICE_PIN, INPUT_PULLUP);\n    setCompressor(false);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        bool service = (digitalRead(SERVICE_PIN) == LOW);\n        sensorFault = !sensorValid(tempC);\n\n        if (service || sensorFault)\n        {\n            onHold = 0;\n            offHold = 0;\n            setCompressor(false);\n        }\n        else\n        {\n            if (tempC >= COOL_ON_C)\n            {\n                onHold++;\n            }\n            else\n            {\n                onHold = 0;\n            }\n\n            if (tempC <= COOL_OFF_C)\n            {\n                offHold++;\n            }\n            else\n            {\n                offHold = 0;\n            }\n\n            if (onHold >= HOLD_N)\n            {\n                setCompressor(true);\n            }\n            else if (offHold >= HOLD_N)\n            {\n                setCompressor(false);\n            }\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 5.5,
+      "llm_calls": 1,
+      "prompt_tokens": 1159,
+      "completion_tokens": 1147,
+      "cost_usd": 0.00080626,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "weather_line_prefix",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Wrong serial format for Temp line",
+          "category": "serial_format",
+          "description": "Prints `temp=<value>` instead of the required `Temp: <celsius>` with a space after the colon, so the serial output does not match the specified format."
+        },
+        {
+          "id": "b2",
+          "title": "Freeze captures live value instead of last sample",
+          "category": "stuck_state_machine",
+          "description": "While D5 is held LOW, frozenC is continuously overwritten with the current reading, so the value is not frozen at the last sample before the button was pressed; it keeps tracking the probe."
+        },
+        {
+          "id": "b3",
+          "title": "ADC scaling uses 1023 instead of 1024",
+          "category": "wrong_unit_scaling",
+          "description": "volts = raw*(5/1023) introduces a small scale error; the correct full-scale divisor for the ATmega328P ADC is 1024, which keeps the reading within the \u00b11.5 \u00b0C tolerance."
+        },
+        {
+          "id": "b4",
+          "title": "Sample counter increments every loop, not per second",
+          "category": "off_by_one_timing",
+          "description": "samples++ runs on every loop iteration rather than once per print period, so `weather n=` reports a rapidly growing loop count instead of the number of samples taken each second."
+        }
+      ],
+      "patched_sketch": "// Patio weather node: TMP36 logger with hold-to-freeze button.\n// TMP36 on A0 (10 mV/\u00b0C + 500 mV), freeze button on D5, range lamp on D7.\n\nconst int TEMP_PIN = A0;\nconst int FREEZE_PIN = 5;\nconst int RANGE_PIN = 7;\nconst float MV_PER_C = 10.0f;\nconst float OFFSET_MV = 500.0f;\nconst float LOW_C = -10.0f;\nconst float HIGH_C = 50.0f;\nconst unsigned long PERIOD_MS = 1000;\n\nunsigned long lastPrint = 0;\nfloat tempC = 0.0f;\nfloat frozenC = 0.0f;\nbool freezeHeld = false;\nbool wasHeld = false;\nunsigned long samples = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float volts = raw * (5.0f / 1024.0f);\n    return (volts - (OFFSET_MV / 1000.0f)) * 100.0f;\n}\n\nvoid updateRangeLamp(float c)\n{\n    bool ok = (c >= LOW_C) && (c <= HIGH_C);\n    digitalWrite(RANGE_PIN, ok ? LOW : HIGH);\n}\n\nvoid printTemp(float c)\n{\n    Serial.print(\"Temp: \");\n    Serial.println(c, 1);\n}\n\nvoid setup()\n{\n    pinMode(FREEZE_PIN, INPUT_PULLUP);\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    tempC = readTempC();\n    freezeHeld = (digitalRead(FREEZE_PIN) == LOW);\n\n    // Capture the last sample at the moment the button is pressed.\n    if (freezeHeld && !wasHeld)\n    {\n        frozenC = tempC;\n    }\n    wasHeld = freezeHeld;\n\n    float report = freezeHeld ? frozenC : tempC;\n    updateRangeLamp(report);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        samples++;\n        printTemp(report);\n        Serial.print(\"weather n=\");\n        Serial.println(samples);\n    }\n}\n",
+      "wall_s": 3.93,
+      "llm_calls": 1,
+      "prompt_tokens": 1042,
+      "completion_tokens": 895,
+      "cost_usd": 0.00066766,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "weather_ok",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Freeze updates frozen value instead of holding last sample",
+          "category": "stuck_state_machine",
+          "description": "While D5 is held LOW the code assigns frozenC = tempC every loop, so the reported value keeps tracking the live sensor instead of freezing at the last sample taken before the button was pressed. The frozen value should be latched once on the press edge (or on the last sample before hold)."
+        },
+        {
+          "id": "b2",
+          "title": "ADC reference scaling uses 1023 instead of 1024",
+          "category": "wrong_unit_scaling",
+          "description": "volts = raw * (5.0/1023.0) overstates the voltage by ~0.1% (up to ~5 mV at full scale), which is ~0.5 \u00b0C error at the top of the range; the correct divisor for a 10-bit ADC is 1024.0."
+        },
+        {
+          "id": "b3",
+          "title": "Sample counter increments every loop, not per second",
+          "category": "other",
+          "description": "samples++ runs on every loop iteration (thousands per second), so `weather n=` reports a meaningless rapidly-growing count rather than the number of 1-second samples; it should increment once per print period."
+        }
+      ],
+      "patched_sketch": "// Patio weather node: TMP36 logger (corrected build).\n// TMP36 on A0 (10 mV/\u00b0C + 500 mV), freeze button on D5, range lamp on D7.\n\nconst int TEMP_PIN = A0;\nconst int FREEZE_PIN = 5;\nconst int RANGE_PIN = 7;\nconst float OFFSET_MV = 500.0f;\nconst float LOW_C = -10.0f;\nconst float HIGH_C = 50.0f;\nconst unsigned long PERIOD_MS = 1000;\n\nunsigned long lastPrint = 0;\nfloat tempC = 0.0f;\nfloat frozenC = 0.0f;\nbool freezeHeld = false;\nbool prevFreezeHeld = false;\nunsigned long samples = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float volts = raw * (5.0f / 1024.0f);\n    return (volts - (OFFSET_MV / 1000.0f)) * 100.0f;\n}\n\nvoid updateRangeLamp(float c)\n{\n    bool ok = (c >= LOW_C) && (c <= HIGH_C);\n    digitalWrite(RANGE_PIN, ok ? LOW : HIGH);\n}\n\nvoid printTemp(float c)\n{\n    Serial.print(\"Temp: \");\n    Serial.println(c, 1);\n}\n\nvoid setup()\n{\n    pinMode(FREEZE_PIN, INPUT_PULLUP);\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    tempC = readTempC();\n    freezeHeld = (digitalRead(FREEZE_PIN) == LOW);\n\n    // Latch the last sample taken before the button was pressed.\n    if (freezeHeld && !prevFreezeHeld)\n    {\n        frozenC = tempC;\n    }\n    prevFreezeHeld = freezeHeld;\n\n    float report = freezeHeld ? frozenC : tempC;\n    updateRangeLamp(report);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        samples++;\n        printTemp(report);\n        Serial.print(\"weather n=\");\n        Serial.println(samples);\n    }\n}\n",
+      "wall_s": 3.89,
+      "llm_calls": 1,
+      "prompt_tokens": 1028,
+      "completion_tokens": 875,
+      "cost_usd": 0.00065534,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "workshop_kpa_scale",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing 500 mV zero offset in kPa conversion",
+          "category": "wrong_unit_scaling",
+          "description": "millivoltsToKpa divides raw millivolts by 10 without subtracting the 500 mV zero offset, so every printed pressure is 50 kPa too high and the D12 lamp lights at the wrong physical pressure."
+        },
+        {
+          "id": "b2",
+          "title": "ADC span uses 1023 instead of 1024",
+          "category": "wrong_unit_scaling",
+          "description": "The 5.000 V span is divided by 1023 rather than 1024, biasing the millivolt reading slightly high; combined with the offset error this pushes the printed value outside the \u00b12.0 kPa tolerance."
+        }
+      ],
+      "patched_sketch": "// Compressed-air manifold pressure logger for the workshop.\n// Transducer on A2: 10 mV/kPa with 500 mV zero offset. Gauge lamp on D12.\n\nconst int PRESSURE_PIN = A2;\nconst int GAUGE_PIN = 12;\nconst float WARN_KPA = 90.0f;\nconst float MV_PER_KPA = 10.0f;\nconst float MV_OFFSET = 500.0f;\nconst unsigned long SAMPLE_MS = 1000;\n\nunsigned long lastSample = 0;\nunsigned long readingCount = 0;\nfloat lastKpa = 0.0f;\nfloat minKpa = 9999.0f;\nfloat maxKpa = 0.0f;\nbool gaugeLit = false;\n\nfloat readMillivolts()\n{\n    int raw = analogRead(PRESSURE_PIN);\n    return raw * (5000.0f / 1024.0f);\n}\n\nfloat millivoltsToKpa(float mv)\n{\n    return (mv - MV_OFFSET) / MV_PER_KPA;\n}\n\nvoid trackExtremes(float kpa)\n{\n    if (kpa < minKpa)\n    {\n        minKpa = kpa;\n    }\n    if (kpa > maxKpa)\n    {\n        maxKpa = kpa;\n    }\n}\n\nvoid updateGauge(float kpa)\n{\n    gaugeLit = (kpa >= WARN_KPA);\n    digitalWrite(GAUGE_PIN, gaugeLit ? HIGH : LOW);\n}\n\nvoid printReading()\n{\n    Serial.print(\"kPa: \");\n    Serial.println(lastKpa, 1);\n}\n\nvoid setup()\n{\n    pinMode(GAUGE_PIN, OUTPUT);\n    digitalWrite(GAUGE_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    if (now - lastSample < SAMPLE_MS)\n    {\n        return;\n    }\n    lastSample = now;\n\n    float mv = readMillivolts();\n    lastKpa = millivoltsToKpa(mv);\n    readingCount++;\n    trackExtremes(lastKpa);\n    updateGauge(lastKpa);\n    printReading();\n}\n",
+      "wall_s": 3.28,
+      "llm_calls": 1,
+      "prompt_tokens": 974,
+      "completion_tokens": 742,
+      "cost_usd": 0.00058436,
+      "cached": false,
+      "model": "deepseek-chat"
+    },
+    {
+      "case_id": "yard_relay_miswire",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Relay pin mismatch",
+          "category": "wrong_pin",
+          "description": "RELAY_PIN is defined as 7 but the pin map specifies D8, so the relay is driven on the wrong pin and D8 never toggles."
+        }
+      ],
+      "patched_sketch": "// Yard path lamp dusk relay.\n// Light sensor on A0 (mV as lux-ish units), relay on D8, manual on D3.\n\nconst int LIGHT_PIN = A0;\nconst int RELAY_PIN = 8;\nconst int MANUAL_PIN = 3;\nconst float ON_UNITS = 400.0f;\nconst float OFF_UNITS = 600.0f;\nconst unsigned long SAMPLE_MS = 40;\nconst unsigned long STATUS_MS = 1000;\n\nbool relayOn = false;\nunsigned long lastSample = 0;\nunsigned long lastStatus = 0;\nfloat lightU = 0.0f;\n\nfloat readLightUnits()\n{\n    int raw = analogRead(LIGHT_PIN);\n    return raw * (5000.0f / 1023.0f);\n}\n\nvoid setRelay(bool on)\n{\n    relayOn = on;\n    digitalWrite(RELAY_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"yard u=\");\n    Serial.print(lightU, 0);\n    Serial.print(\" relay=\");\n    Serial.println(relayOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(RELAY_PIN, OUTPUT);\n    pinMode(MANUAL_PIN, INPUT_PULLUP);\n    setRelay(false);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        lightU = readLightUnits();\n        bool manual = (digitalRead(MANUAL_PIN) == LOW);\n\n        if (manual)\n        {\n            setRelay(true);\n        }\n        else if (lightU < ON_UNITS)\n        {\n            setRelay(true);\n        }\n        else if (lightU > OFF_UNITS)\n        {\n            setRelay(false);\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 2.52,
+      "llm_calls": 1,
+      "prompt_tokens": 991,
+      "completion_tokens": 620,
+      "cost_usd": 0.00053788,
+      "cached": false,
+      "model": "deepseek-chat"
+    }
+  ]
+}

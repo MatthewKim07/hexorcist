@@ -1,0 +1,57 @@
+{
+  "run_id": "v2_full_20261115T003855Z_hexorcist_cases/weather_line_prefix",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "cases": [
+    {
+      "case_id": "weather_line_prefix",
+      "run_id": "1e50c308c3b6",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Wrong serial prefix and format for temperature line",
+          "description": "Line 34 prints \"temp=\" instead of the required \"Temp: \" prefix, so no line ever matches the required pattern. The measured evidence confirms no serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s across all scenarios, including the nominal ramp. No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+          "assertion_type": "serial_period",
+          "verified": false,
+          "evidence": "No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+          "root_cause": "Line 34 prints \"temp=\" instead of the required \"Temp: \" prefix, so no line ever matches the required pattern. The measured evidence confirms no serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s across all scenarios, including the nominal ramp."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Temperature value unparsable due to wrong prefix",
+          "description": "Because line 34 emits \"temp=\" rather than \"Temp: \", the value regex /Temp: (-?[0-9.]+)/ never matches, so the printed value cannot be compared with A0. The measurement reports no parsable serial value in every scenario. No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+          "assertion_type": "serial_value_matches",
+          "verified": false,
+          "evidence": "No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+          "root_cause": "Because line 34 emits \"temp=\" rather than \"Temp: \", the value regex /Temp: (-?[0-9.]+)/ never matches, so the printed value cannot be compared with A0. The measurement reports no parsable serial value in every scenario."
+        },
+        {
+          "id": "bug-a4",
+          "title": "Range lamp chatters at threshold with no hysteresis",
+          "description": "Line 28 compares the reported value against the bounds with a bare >=/<= test and no hysteresis, so analogRead noise and quantization around the threshold toggle D7 every loop. The measured evidence shows D7 in the wrong state for 3860 ms across 1571 intervals at the -10 C hover and 3564 ms across 1346 intervals with noise. D7 was in the wrong state for 3860 ms across 1571 interval(s), first at 501 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 3860 ms across 1571 interval(s), first at 501 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+          "root_cause": "Line 28 compares the reported value against the bounds with a bare >=/<= test and no hysteresis, so analogRead noise and quantization around the threshold toggle D7 every loop. The measured evidence shows D7 in the wrong state for 3860 ms across 1571 intervals at the -10 C hover and 3564 ms across 1346 intervals with noise."
+        },
+        {
+          "id": "bug-a5",
+          "title": "Lamp follows live value during freeze and chatters at bounds",
+          "description": "Lines 52-55 re-latch frozenC from the live sample on every loop while D5 is LOW, so the hold does not freeze at the last pre-press value, and line 58 drives the lamp from that drifting value. Combined with the hysteresis-free comparison on line 28, the measured evidence shows D7 wrong for 3549 ms across 29 intervals during a long hold and 2941 ms across 1177 intervals at the 50 C hover. D7 was in the wrong state for 2941 ms across 1177 interval(s), first at 504 ms: D7 was not LOW for 1 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "verified": false,
+          "evidence": "D7 was in the wrong state for 2941 ms across 1177 interval(s), first at 504 ms: D7 was not LOW for 1 ms while required (grace 500 ms).",
+          "root_cause": "Lines 52-55 re-latch frozenC from the live sample on every loop while D5 is LOW, so the hold does not freeze at the last pre-press value, and line 58 drives the lamp from that drifting value. Combined with the hysteresis-free comparison on line 28, the measured evidence shows D7 wrong for 3549 ms across 29 intervals during a long hold and 2941 ms across 1177 intervals at the 50 C hover."
+        }
+      ],
+      "patched_sketch": "// Patio weather node: TMP36 logger with hold-to-freeze button.\n// TMP36 on A0 (10 mV/\u00b0C + 500 mV), freeze button on D5, range lamp on D7.\n\nconst int TEMP_PIN = A0;\nconst int FREEZE_PIN = 5;\nconst int RANGE_PIN = 7;\nconst float MV_PER_C = 10.0f;\nconst float OFFSET_MV = 500.0f;\nconst float LOW_C = -10.0f;\nconst float HIGH_C = 50.0f;\nconst float HYST_C = 0.5f;\nconst unsigned long PERIOD_MS = 1000;\nconst unsigned long LAMP_CONFIRM_MS = 100;\n\nunsigned long lastPrint = 0;\nfloat tempC = 0.0f;\nfloat frozenC = 0.0f;\nbool freezeHeld = false;\nbool wasFrozen = false;\nbool lampOn = false;\nbool lampPending = false;\nbool lampPendingState = false;\nunsigned long lampPendingSince = 0;\nunsigned long samples = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float volts = raw * (5.0f / 1023.0f);\n    return (volts - (OFFSET_MV / 1000.0f)) * 100.0f;\n}\n\nvoid updateRangeLamp(float c)\n{\n    bool want = lampOn;\n    if (lampOn)\n    {\n        if ((c <= HIGH_C) && (c >= LOW_C))\n        {\n            want = false;\n        }\n    }\n    else\n    {\n        if ((c > HIGH_C + HYST_C) || (c < LOW_C - HYST_C))\n        {\n            want = true;\n        }\n    }\n\n    unsigned long now = millis();\n    if (want == lampOn)\n    {\n        lampPending = false;\n    }\n    else if (!lampPending || (lampPendingState != want))\n    {\n        lampPending = true;\n        lampPendingState = want;\n        lampPendingSince = now;\n    }\n    else if (now - lampPendingSince >= LAMP_CONFIRM_MS)\n    {\n        lampOn = want;\n        lampPending = false;\n    }\n\n    digitalWrite(RANGE_PIN, lampOn ? HIGH : LOW);\n}\n\nvoid printTemp(float c)\n{\n    Serial.print(\"Temp: \");\n    Serial.println(c, 1);\n}\n\nvoid setup()\n{\n    pinMode(FREEZE_PIN, INPUT_PULLUP);\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    tempC = readTempC();\n    samples++;\n    freezeHeld = (digitalRead(FREEZE_PIN) == LOW);\n    if (freezeHeld && !wasFrozen)\n    {\n        frozenC = tempC;\n    }\n    wasFrozen = freezeHeld;\n\n    float report = freezeHeld ? frozenC : tempC;\n    updateRangeLamp(report);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printTemp(report);\n        Serial.print(\"weather n=\");\n        Serial.println(samples);\n    }\n}\n",
+      "wall_s": 164.52,
+      "llm_calls": 7,
+      "prompt_tokens": 27618,
+      "completion_tokens": 5694,
+      "cost_usd": 0.01012452,
+      "model": "deepseek-chat"
+    }
+  ]
+}

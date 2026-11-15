@@ -1,0 +1,67 @@
+{
+  "case_id": "laundry_ok",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect Level Measurement Scaling",
+      "description": "The level measurement is incorrectly scaled; the conversion from raw analog value to centimeters uses a constant of 5000.0f, which does not match the 10 mV/cm scaling. It should be adjusted to reflect the correct scaling based on the 10 mV/cm specification.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Missing Timing for Motor Shutdown",
+      "description": "The motor D10 may not turn off within 600 ms after the level drops below 20.0 cm, as there is no timing mechanism implemented to enforce this requirement.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "laundry_ok",
+    "spec": "- Level probe on A0 at 10 mV/cm; fill valve on D9; drum motor on D10; reset on D4 (pull-up).\n- States: IDLE (both outputs OFF), FILL (valve D9 HIGH until level >= 25.0 cm), RUN (motor D10 HIGH while level stays >= 20.0 cm), then IDLE.\n- Leave RUN and return to IDLE when level drops below 20.0 cm; motor D10 must go LOW within 600 ms.\n- Enter FILL from IDLE when level is below 10.0 cm.\n- Holding D4 LOW forces IDLE immediately.\n- Print `laundry st=<0|1|2> cm=<n>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect Level Measurement Scaling",
+        "description": "The level measurement is incorrectly scaled; the conversion from raw analog value to centimeters uses a constant of 5000.0f, which does not match the 10 mV/cm scaling. It should be adjusted to reflect the correct scaling based on the 10 mV/cm specification.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Missing Timing for Motor Shutdown",
+        "description": "The motor D10 may not turn off within 600 ms after the level drops below 20.0 cm, as there is no timing mechanism implemented to enforce this requirement.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 764,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001698,
+    "cached": true
+  }
+}
