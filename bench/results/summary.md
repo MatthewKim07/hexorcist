@@ -2,7 +2,7 @@
 
 40 frozen cases (29 with planted bugs holding 32 bugs, 11 correct), one run per case, serial. Baselines: one plain-LLM review per case (DeepSeek `deepseek-chat`, OpenAI `gpt-4o-mini`). Hexorcist: Find-bugs mode over the live API with `deepseek-chat`. Every patch is checked against the frozen checks. Match judge: `gpt-4o-mini`, current rubric (symptom match, duplicates merged). The case files were unchanged from freeze commit `6a92c57` (verified with `git diff` and `git status`). All runs finished with no errors and no budget stop.
 
-Strict scoring counts every unmatched report as a false alarm. Adjudicated scoring removes reports that adjudication showed to be valid findings or duplicates of a true bug (see `bench/adjudication.md`). Adjudicated recall equals strict recall.
+Strict scoring counts every unmatched report as a false alarm. Adjudicated scoring removes reports that adjudication showed to be valid findings or duplicates of a true bug (see `bench/adjudication.md`). Adjudicated recall equals strict recall. All false-alarm counts use the scorer after a post-run filter on out-of-range judge indices; the counts before the filter are in "Scoring changes after the run".
 
 ## Overall
 
@@ -22,6 +22,48 @@ Strict scoring counts every unmatched report as a false alarm. Adjudicated scori
 | Cost of the run | $0.027 | $0.024 | $0.241 |
 
 Judge cost: about $0.023 (gpt-4o-mini, first scoring; re-scores used the cache). Total spend for the run: $0.315. Baselines give no verified-fix claim of their own, so their 'verified fix' is the frozen-check result of the patch they wrote. Hexorcist's own verdict was `fixed` on 14 of 29 buggy cases; the frozen checks passed on 27 of 29 (statuses: clean 3, fixed 15, partial 22).
+
+## Scoring changes after the run
+
+The numbers in this document use a one-line filter that I added to `bench/score.py` after the run, when the first scoring pass showed a problem. Both versions of every affected number are below.
+
+**What the filter does.** The judge returns `unique_false_alarm_indices`, the list of reported bugs it considers false alarms, as 0-based positions in the reported list. The scorer used to count every index in that list. It now keeps only indices with `0 <= i < len(reported)`:
+
+```python
+uniq = judgement.get("unique_false_alarm_indices")
+if isinstance(uniq, list) and all(isinstance(i, int) for i in uniq):
+    uniq = [i for i in uniq if 0 <= i < len(reported)]   # added
+    false_alarms = sorted(set(uniq))
+```
+
+**Why.** In 6 judgements the judge listed an index equal to the number of reports, a position that does not exist. Example: `cellar_pump_hyst` (Hexorcist) has 3 reports (positions 0 to 2) and the judge returned `[2, 3]`. Position 3 named no report, but the scorer counted it as a false alarm. I checked each of the 6 cases: in every one, each real report was already matched to a true bug, marked as a duplicate, or listed as a false alarm, so the extra index did not stand for a report that was otherwise uncounted. The filter therefore removes phantom counts only. It does not change which reports are matched, and it does not alter the judge prompt or its cached answers (no new judge calls).
+
+**What it does not touch.** Detection recall, compile rate, verified-fix rate, time and cost are identical before and after. Only false-alarm counts change, and only in buggy cases: none of the 11 correct cases was affected.
+
+**The change was made after seeing the first results.** It removed 4 of 31 Hexorcist false alarms (13%) and 2 of 83 DeepSeek-baseline ones (2%), and none for gpt-4o-mini, so it favours Hexorcist. Each removed count was an out-of-range index, not a judgement call, and both versions are shown so a reader can use either.
+
+### Counts before (as first scored) and after the filter
+
+| System | Strict false alarms | Buggy cases | Correct cases | Per buggy case | Per correct case | Adjudicated false alarms |
+| --- | --- | --- | --- | --- | --- | --- |
+| Baseline DeepSeek | 83 → **81** | 52 → **50** | 31 | 1.79 → **1.72** | 2.82 | 76 → **74** |
+| Baseline gpt-4o-mini | 53 | 30 | 23 | 1.03 | 2.09 | 51 |
+| Hexorcist (DeepSeek) | 31 → **27** | 18 → **14** | 13 | 0.62 → **0.48** | 1.18 | 27 → **23** |
+
+Unchanged by the filter (same before and after): detection recall (DeepSeek 32/32, gpt-4o-mini 28/32, Hexorcist 31/32), verified-fix rate, compile rate, time and cost. gpt-4o-mini had no out-of-range indices, so its numbers are identical in both versions. Adjudicated counts subtract the same valid findings and duplicates in both versions. The Hexorcist cause split (A 2, B 22, C 1, D 2) is of the 27 after-filter false alarms; before the filter the 4 phantom counts were additional unexplained false alarms.
+
+### Cases whose false-alarm count changed
+
+| System | Case | Reports | Judge's false-alarm list | Dropped | False alarms before → after |
+| --- | --- | ---: | --- | --- | --- |
+| Baseline DeepSeek | blend_tank_sum_ovf | 6 (positions 0 to 5) | [0, 1, 2, 3, 4, 6] | [6] | 6 → 5 |
+| Baseline DeepSeek | cellar_pump_hyst | 4 (positions 0 to 3) | [1, 2, 3, 4] | [4] | 4 → 3 |
+| Hexorcist (DeepSeek) | boiler_valve_failsafe | 3 (positions 0 to 2) | [0, 2, 3] | [3] | 3 → 2 |
+| Hexorcist (DeepSeek) | cellar_pump_hyst | 3 (positions 0 to 2) | [2, 3] | [3] | 2 → 1 |
+| Hexorcist (DeepSeek) | spindle_rpm_prefix | 4 (positions 0 to 3) | [2, 3, 4] | [4] | 3 → 2 |
+| Hexorcist (DeepSeek) | weather_line_prefix | 4 (positions 0 to 3) | [2, 3, 4] | [4] | 3 → 2 |
+
+The as-scored files are kept in `bench/results/asscored/`. To reproduce the before numbers, revert the one filter line in `bench/score.py` and re-score from the judge cache.
 
 ## Hexorcist false alarms by cause
 

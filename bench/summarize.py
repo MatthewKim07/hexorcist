@@ -247,7 +247,119 @@ def adjudication_md(run: str, adj: dict, replay: dict, out: dict) -> str:
     return "\n".join(L)
 
 
-def summary_md(run: str, out: dict, adj: dict, replay: dict, scored, raw, cat_rows, weak, detected_total) -> str:
+def scoring_changes_md(run: str, scored, rem, out) -> str:
+    """Section describing the score.py filter, with before (as-scored) and after counts per system."""
+    before_files = {
+        "score_deepseek": json.loads((RESULTS_DIR / "asscored" / f"{run}_score_deepseek.json").read_text()),
+        "score_openai": json.loads((RESULTS_DIR / "asscored" / f"{run}_score_openai.json").read_text()),
+    }
+    pick = lambda d, name: next(x for x in d["systems"] if x["system"] == name)  # noqa: E731
+    before = {
+        "baseline_deepseek": pick(before_files["score_deepseek"], "baseline"),
+        "baseline_openai": pick(before_files["score_openai"], "baseline"),
+        "hexorcist": pick(before_files["score_deepseek"], "hexorcist"),
+    }
+    tag = {"baseline_deepseek": "score_deepseek", "baseline_openai": "score_openai", "hexorcist": "score_deepseek"}
+    jname = {"baseline_deepseek": "baseline", "baseline_openai": "baseline", "hexorcist": "hexorcist"}
+
+    changed = []
+    for sname in SYSTEMS:
+        after_rows = {r["case_id"]: r for r in scored[sname]["rows"]}
+        for rb in before[sname]["rows"]:
+            ra = after_rows[rb["case_id"]]
+            if rb["false_alarms"] == ra["false_alarms"]:
+                continue
+            j = json.loads((JUDGEMENTS_DIR / f"{run}_{tag[sname]}_{jname[sname]}_{rb['case_id']}.json").read_text())["judgement"]
+            n = rb["reported"]
+            listed = list(j.get("unique_false_alarm_indices") or [])
+            dropped = [i for i in listed if not 0 <= i < n]
+            accounted = {m["reported_index"] for m in j.get("matches") or [] if m.get("matched")}
+            accounted |= {d["reported_index"] for d in j.get("duplicate_of_truth") or []}
+            accounted |= {i for i in listed if 0 <= i < n}
+            changed.append({
+                "system": sname, "case": rb["case_id"], "truth": rb["truth_bugs"], "reported": n,
+                "listed": listed, "dropped": dropped, "all_reports_accounted": accounted >= set(range(n)),
+                "before": rb["false_alarms"], "after": ra["false_alarms"],
+            })
+
+    def agg(rows_, sname, adj_removal):
+        b = [r for r in rows_ if r["truth_bugs"]]
+        c = [r for r in rows_ if not r["truth_bugs"]]
+        fb, fc = sum(r["false_alarms"] for r in b), sum(r["false_alarms"] for r in c)
+        rb_ = sum(adj_removal[r["case_id"]] for r in b)
+        rc_ = sum(adj_removal[r["case_id"]] for r in c)
+        return {"total": fb + fc, "buggy": fb, "correct": fc, "n_b": len(b), "n_c": len(c), "adj": fb + fc - rb_ - rc_,
+                "adj_b": fb - rb_, "adj_c": fc - rc_}
+
+    L = ["## Scoring changes after the run", ""]
+    L += [
+        "The numbers in this document use a one-line filter that I added to `bench/score.py` after the run, when the first scoring pass showed a problem. "
+        "Both versions of every affected number are below.",
+        "",
+        "**What the filter does.** The judge returns `unique_false_alarm_indices`, the list of reported bugs it considers false alarms, as 0-based positions in the reported list. "
+        "The scorer used to count every index in that list. It now keeps only indices with `0 <= i < len(reported)`:",
+        "",
+        "```python",
+        "uniq = judgement.get(\"unique_false_alarm_indices\")",
+        "if isinstance(uniq, list) and all(isinstance(i, int) for i in uniq):",
+        "    uniq = [i for i in uniq if 0 <= i < len(reported)]   # added",
+        "    false_alarms = sorted(set(uniq))",
+        "```",
+        "",
+        "**Why.** In 6 judgements the judge listed an index equal to the number of reports, a position that does not exist. "
+        "Example: `cellar_pump_hyst` (Hexorcist) has 3 reports (positions 0 to 2) and the judge returned `[2, 3]`. "
+        "Position 3 named no report, but the scorer counted it as a false alarm. "
+        "I checked each of the 6 cases: " + (
+            "in every one, each real report was already matched to a true bug, marked as a duplicate, or listed as a false alarm, so the extra index did not stand for a report that was otherwise uncounted."
+            if all(c["all_reports_accounted"] for c in changed) else
+            "in " + str(sum(c["all_reports_accounted"] for c in changed)) + " of " + str(len(changed)) + " the real reports were all accounted for; the others need a manual look."
+        ) + " The filter therefore removes phantom counts only. It does not change which reports are matched, and it does not alter the judge prompt or its cached answers (no new judge calls).",
+        "",
+        "**What it does not touch.** Detection recall, compile rate, verified-fix rate, time and cost are identical before and after. "
+        "Only false-alarm counts change, and only in buggy cases: none of the 11 correct cases was affected.",
+        "",
+        "**The change was made after seeing the first results.** It removed 4 of 31 Hexorcist false alarms (13%) and 2 of 83 DeepSeek-baseline ones (2%), and none for gpt-4o-mini, so it favours Hexorcist. "
+        "Each removed count was an out-of-range index, not a judgement call, and both versions are shown so a reader can use either.",
+        "",
+        "### Counts before (as first scored) and after the filter",
+        "",
+        "| System | Strict false alarms | Buggy cases | Correct cases | Per buggy case | Per correct case | Adjudicated false alarms |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for sname in SYSTEMS:
+        a = agg(before[sname]["rows"], sname, rem[sname])
+        z = agg(scored[sname]["rows"], sname, rem[sname])
+        cell = lambda x, y: f"{x}" if x == y else f"{x} → **{y}**"  # noqa: E731
+        L.append(
+            f"| {LABEL[sname]} | {cell(a['total'], z['total'])} | {cell(a['buggy'], z['buggy'])} | {cell(a['correct'], z['correct'])} | "
+            f"{a['buggy'] / a['n_b']:.2f}" + ("" if a["buggy"] == z["buggy"] else f" → **{z['buggy'] / z['n_b']:.2f}**") + " | "
+            f"{a['correct'] / a['n_c']:.2f}" + ("" if a["correct"] == z["correct"] else f" → **{z['correct'] / z['n_c']:.2f}**") + " | "
+            f"{cell(a['adj'], z['adj'])} |"
+        )
+    L += [
+        "",
+        "Unchanged by the filter (same before and after): detection recall (DeepSeek 32/32, gpt-4o-mini 28/32, Hexorcist 31/32), "
+        "verified-fix rate, compile rate, time and cost. "
+        "gpt-4o-mini had no out-of-range indices, so its numbers are identical in both versions. "
+        "Adjudicated counts subtract the same valid findings and duplicates in both versions. The Hexorcist cause split (A 2, B 22, C 1, D 2) is of the 27 after-filter false alarms; before the filter the 4 phantom counts were additional unexplained false alarms.",
+        "",
+        "### Cases whose false-alarm count changed",
+        "",
+        "| System | Case | Reports | Judge's false-alarm list | Dropped | False alarms before → after |",
+        "| --- | --- | ---: | --- | --- | --- |",
+    ]
+    for c in changed:
+        L.append(f"| {LABEL[c['system']]} | {c['case']} | {c['reported']} (positions 0 to {c['reported'] - 1}) | {c['listed']} | {c['dropped']} | {c['before']} → {c['after']} |")
+    L += [
+        "",
+        "The as-scored files are kept in `bench/results/asscored/`. To reproduce the before numbers, revert the one filter line in `bench/score.py` and re-score from the judge cache.",
+        "",
+    ]
+    return "\n".join(L)
+
+
+
+def summary_md(run: str, out: dict, adj: dict, replay: dict, scored, raw, cat_rows, weak, detected_total, scoring_md: str = "") -> str:
     H = adj["hexorcist"]
     hx, d4, o4 = out["hexorcist"], out["baseline_deepseek"], out["baseline_openai"]
     cnt = lambda c, ok=None: sum(1 for e in H if e["class"] == c and (ok is None or e["case"].endswith("_ok") == ok))  # noqa: E731
@@ -271,7 +383,8 @@ def summary_md(run: str, out: dict, adj: dict, replay: dict, scored, raw, cat_ro
         "The case files were unchanged from freeze commit `6a92c57` (verified with `git diff` and `git status`). All runs finished with no errors and no budget stop.",
         "",
         "Strict scoring counts every unmatched report as a false alarm. Adjudicated scoring removes reports that adjudication showed to be valid findings or duplicates of a true bug "
-        "(see `bench/adjudication.md`). Adjudicated recall equals strict recall.",
+        "(see `bench/adjudication.md`). Adjudicated recall equals strict recall. "
+        "All false-alarm counts use the scorer after a post-run filter on out-of-range judge indices; the counts before the filter are in \"Scoring changes after the run\".",
         "",
         "## Overall",
         "",
@@ -295,6 +408,7 @@ def summary_md(run: str, out: dict, adj: dict, replay: dict, scored, raw, cat_ro
         f"Hexorcist's own verdict was `fixed` on {hx['self_fixed_buggy']} of 29 buggy cases; the frozen checks passed on {hx['fixed_buggy']} of 29 (statuses: "
         + ", ".join(f"{k} {v}" for k, v in sorted(hx["statuses"].items())) + ").",
         "",
+        scoring_md,
         "## Hexorcist false alarms by cause",
         "",
         "| Cause | Correct cases | Buggy cases | Total |",
@@ -392,7 +506,7 @@ def main() -> None:
     cat_rows = category_table(scored, cases, rem)
     detected_total, weak = evidence_check(scored, replay)
     (ROOT / "bench/adjudication.md").write_text(adjudication_md(run, adj, replay, out))
-    (RESULTS_DIR / "summary.md").write_text(summary_md(run, out, adj, replay, scored, raw, cat_rows, weak, detected_total))
+    (RESULTS_DIR / "summary.md").write_text(summary_md(run, out, adj, replay, scored, raw, cat_rows, weak, detected_total, scoring_changes_md(run, scored, rem, out)))
     print("wrote bench/adjudication.md and bench/results/summary.md")
     for s in SYSTEMS:
         m = out[s]
