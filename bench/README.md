@@ -64,6 +64,17 @@ LLM responses are cached under `bench/cache/` keyed by `(model, prompt hash)`. B
 
 The match judge prefers `OPENAI_*` (`gpt-4o-mini`). If those are unset, `score.py` falls back to `LLM_*`.
 
+## Strong-model baseline (optional, not run yet)
+
+A third plain-review baseline with a stronger OpenAI model, same prompt and same scoring as the other two. Set `BASELINE_STRONG_MODEL` (empty in `.env.example`, so it is off by default) and run:
+
+```bash
+backend/.venv/bin/python -m bench.run_baseline --endpoint strong --max-cost-strong 2.00 --run-id RUN_baseline_strong
+backend/.venv/bin/python -m bench.score --run-id RUN_score_strong --baseline bench/results/RUN_baseline_strong.json
+```
+
+It uses the `OPENAI_*` account and has its own cost cap (`--max-cost-strong`, default $2.00), tallied apart from the gpt-4o-mini baseline and the judge. A model missing from the price table in `bench/llm_budget.py` is priced as `gpt-4o`, so the cap still bites. A reasoning model (`o3`, `gpt-5`) needs `--max-tokens 16000`, because it spends part of the completion budget thinking.
+
 ## Env
 
 Uses the app’s `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`. Optional `OPENAI_API_KEY` / `OPENAI_MODEL` / `OPENAI_BASE_URL` for a second baseline and for the match judge. See `.env.example`. Never commit real keys.

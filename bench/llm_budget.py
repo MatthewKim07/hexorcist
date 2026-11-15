@@ -24,7 +24,20 @@ PRICE_PER_MTOK: dict[str, dict[str, float]] = {
     "gpt-4o-mini": {"input": 0.15, "output": 0.60},
     "gpt-4o": {"input": 2.50, "output": 10.00},
     "o4-mini": {"input": 1.10, "output": 4.40},
+    "gpt-4.1": {"input": 2.00, "output": 8.00},
+    "gpt-4.1-mini": {"input": 0.40, "output": 1.60},
+    "o3": {"input": 2.00, "output": 8.00},
+    "gpt-5": {"input": 1.25, "output": 10.00},
+    "gpt-5-mini": {"input": 0.25, "output": 2.00},
 }
+
+# A model missing from the table is priced at these rates, so the cap still bites. The strong baseline assumes a
+# strong model's price, the others assume a small one.
+FALLBACK_MODEL = "gpt-4o-mini"
+FALLBACK_MODEL_STRONG = "gpt-4o"
+
+# Reasoning models reject `temperature` and `max_tokens`, and spend part of the completion budget on hidden reasoning.
+REASONING_PREFIXES = ("o1", "o3", "o4", "gpt-5")
 
 DEFAULT_JUDGE_MODEL = "gpt-4o-mini"
 
@@ -33,11 +46,10 @@ def _redact(text: str) -> str:
     return re.sub(r"(sk-[A-Za-z0-9_\-]{8,})", "sk-***", text)
 
 
-def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+def estimate_cost(model: str, prompt_tokens: int, completion_tokens: int, fallback: str = FALLBACK_MODEL) -> float:
     prices = PRICE_PER_MTOK.get(model) or PRICE_PER_MTOK.get(model.split("/")[-1])
     if not prices:
-        # Unknown model: assume gpt-4o-mini rates so caps still bite.
-        prices = PRICE_PER_MTOK["gpt-4o-mini"]
+        prices = PRICE_PER_MTOK[fallback]
     return (prompt_tokens * prices["input"] + completion_tokens * prices["output"]) / 1_000_000.0
 
 
@@ -55,16 +67,19 @@ def provider_bucket(model: str, base_url: str) -> str:
 class Budget:
     max_cost_deepseek: float = 0.80
     max_cost_openai: float = 3.00
+    # The strong-model baseline has its own cap and its own tally, apart from the gpt-4o-mini baseline and judge.
+    max_cost_strong: float = 2.00
     spent_deepseek: float = 0.0
     spent_openai: float = 0.0
+    spent_strong: float = 0.0
     spent_other: float = 0.0
     calls: list[dict[str, Any]] = field(default_factory=list)
 
     def spent(self, bucket: str) -> float:
-        return {"deepseek": self.spent_deepseek, "openai": self.spent_openai}.get(bucket, self.spent_other)
+        return {"deepseek": self.spent_deepseek, "openai": self.spent_openai, "strong": self.spent_strong}.get(bucket, self.spent_other)
 
     def cap(self, bucket: str) -> float:
-        return {"deepseek": self.max_cost_deepseek, "openai": self.max_cost_openai}.get(bucket, 1e9)
+        return {"deepseek": self.max_cost_deepseek, "openai": self.max_cost_openai, "strong": self.max_cost_strong}.get(bucket, 1e9)
 
     def would_exceed(self, bucket: str, extra: float) -> bool:
         return self.spent(bucket) + extra > self.cap(bucket) + 1e-12
@@ -74,6 +89,8 @@ class Budget:
             self.spent_deepseek += cost
         elif bucket == "openai":
             self.spent_openai += cost
+        elif bucket == "strong":
+            self.spent_strong += cost
         else:
             self.spent_other += cost
         self.calls.append(record)
@@ -82,9 +99,11 @@ class Budget:
         return {
             "spent_deepseek": round(self.spent_deepseek, 6),
             "spent_openai": round(self.spent_openai, 6),
+            "spent_strong": round(self.spent_strong, 6),
             "spent_other": round(self.spent_other, 6),
             "cap_deepseek": self.max_cost_deepseek,
             "cap_openai": self.max_cost_openai,
+            "cap_strong": self.max_cost_strong,
             "calls": len(self.calls),
         }
 
@@ -99,6 +118,8 @@ class LLMEndpoint:
     base_url: str
     api_key: str
     model: str
+    # Which cost cap this endpoint draws on. Empty means decide from the model and URL.
+    bucket: str = ""
 
     @property
     def configured(self) -> bool:
@@ -106,7 +127,16 @@ class LLMEndpoint:
 
 
 def endpoint_from_env(prefix: str = "LLM") -> LLMEndpoint:
-    """prefix LLM → LLM_BASE_URL/API_KEY/MODEL; OPENAI → OPENAI_* with OpenAI default URL."""
+    """prefix LLM → LLM_BASE_URL/API_KEY/MODEL; OPENAI → OPENAI_* with OpenAI default URL;
+    STRONG → the OPENAI_* account with the model named by BASELINE_STRONG_MODEL (empty means not configured)."""
+    if prefix == "STRONG":
+        return LLMEndpoint(
+            name="strong",
+            base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip(),
+            api_key=os.environ.get("OPENAI_API_KEY", "").strip(),
+            model=os.environ.get("BASELINE_STRONG_MODEL", "").strip(),
+            bucket="strong",
+        )
     if prefix == "OPENAI":
         return LLMEndpoint(
             name="openai",
@@ -161,21 +191,22 @@ class BudgetLLM:
             cached["cached"] = True
             return cached
 
-        bucket = provider_bucket(model, self.endpoint.base_url)
+        bucket = self.endpoint.bucket or provider_bucket(model, self.endpoint.base_url)
+        fallback = FALLBACK_MODEL_STRONG if bucket == "strong" else FALLBACK_MODEL
         # Pre-flight: assume worst-case full max_tokens at model rates (conservative).
-        projected = estimate_cost(model, 4000, max_tokens)
+        projected = estimate_cost(model, 4000, max_tokens, fallback)
         if self.budget.would_exceed(bucket, projected):
             raise BudgetExceeded(
                 f"{bucket} budget would exceed cap ${self.budget.cap(bucket):.2f} "
                 f"(spent ${self.budget.spent(bucket):.4f}, projected +${projected:.4f})"
             )
 
-        kwargs: dict[str, Any] = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
+        kwargs: dict[str, Any] = {"model": model, "messages": messages}
+        if model.lower().startswith(REASONING_PREFIXES):
+            kwargs["max_completion_tokens"] = max_tokens  # no temperature: these models only take the default
+        else:
+            kwargs["max_tokens"] = max_tokens
+            kwargs["temperature"] = temperature
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
 
@@ -190,7 +221,7 @@ class BudgetLLM:
                 pt = int(getattr(usage, "prompt_tokens", 0) or 0)
                 ct = int(getattr(usage, "completion_tokens", 0) or 0)
                 text = (resp.choices[0].message.content or "") if resp.choices else ""
-                cost = estimate_cost(model, pt, ct)
+                cost = estimate_cost(model, pt, ct, fallback)
                 if self.budget.would_exceed(bucket, cost):
                     # Record and stop — do not keep calling.
                     raise BudgetExceeded(

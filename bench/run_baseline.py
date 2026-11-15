@@ -37,20 +37,24 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("cases", nargs="*")
     ap.add_argument("--model", default="", help="Override LLM_MODEL / endpoint model")
-    ap.add_argument("--endpoint", choices=["llm", "openai"], default="llm", help="llm=LLM_* env; openai=OPENAI_* env")
+    ap.add_argument("--endpoint", choices=["llm", "openai", "strong"], default="llm", help="llm=LLM_* env; openai=OPENAI_* env; strong=OPENAI_* account with the model in BASELINE_STRONG_MODEL")
     ap.add_argument("--max-cost-deepseek", type=float, default=0.80)
     ap.add_argument("--max-cost-openai", type=float, default=3.00)
+    ap.add_argument("--max-cost-strong", type=float, default=2.00, help="USD cap for --endpoint strong, kept apart from the other caps")
+    ap.add_argument("--max-tokens", type=int, default=4000, help="Completion budget per call. A reasoning model needs far more, such as 16000, since it spends part of it thinking")
     ap.add_argument("--run-id", default="")
     args = ap.parse_args()
 
     run_id = args.run_id or f"baseline_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
-    ep = endpoint_from_env("OPENAI" if args.endpoint == "openai" else "LLM")
+    ep = endpoint_from_env({"openai": "OPENAI", "strong": "STRONG"}.get(args.endpoint, "LLM"))
     if args.model:
         ep.model = args.model
+    if args.endpoint == "strong" and not ep.model:
+        raise SystemExit("BASELINE_STRONG_MODEL is empty. Set it (or pass --model) to the OpenAI model for the strong baseline, for example gpt-4.1.")
     if not ep.configured:
         raise SystemExit(f"endpoint {args.endpoint} is not configured (need base URL, key, model)")
 
-    budget = Budget(max_cost_deepseek=args.max_cost_deepseek, max_cost_openai=args.max_cost_openai)
+    budget = Budget(max_cost_deepseek=args.max_cost_deepseek, max_cost_openai=args.max_cost_openai, max_cost_strong=args.max_cost_strong)
     llm = BudgetLLM(ep, budget)
     system = (PROMPTS_DIR / "baseline_review.txt").read_text()
     ids = args.cases or list_case_ids()
@@ -67,7 +71,7 @@ def main() -> None:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
         t0 = time.monotonic()
         try:
-            raw = llm.chat(messages, step=f"baseline:{cid}", max_tokens=4000, temperature=0.0, json_mode=True)
+            raw = llm.chat(messages, step=f"baseline:{cid}", max_tokens=args.max_tokens, temperature=0.0, json_mode=True)
             try:
                 parsed = parse_review(raw["text"])
             except Exception:
@@ -76,7 +80,7 @@ def main() -> None:
                     {"role": "assistant", "content": raw["text"][:2000]},
                     {"role": "user", "content": "Your previous reply was not valid JSON of the required shape. Reply again with only the JSON object."},
                 ]
-                raw = llm.chat(repair, step=f"baseline_retry:{cid}", max_tokens=4000, temperature=0.0, json_mode=True, allow_retry=False)
+                raw = llm.chat(repair, step=f"baseline_retry:{cid}", max_tokens=args.max_tokens, temperature=0.0, json_mode=True, allow_retry=False)
                 parsed = parse_review(raw["text"])
         except BudgetExceeded as exc:
             stopped = str(exc)
