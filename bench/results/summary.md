@@ -23,6 +23,30 @@ Strict scoring counts every unmatched report as a false alarm. Adjudicated scori
 
 Judge cost: about $0.023 (gpt-4o-mini, first scoring; re-scores used the cache). Total spend for the run: $0.315. Baselines give no verified-fix claim of their own, so their 'verified fix' is the frozen-check result of the patch they wrote. Hexorcist's own verdict was `fixed` on 14 of 29 buggy cases; the frozen checks passed on 27 of 29 (statuses: clean 3, fixed 15, partial 22).
 
+## Fixed-claim precision
+
+Hexorcist reported its own final status `fixed` on **15 of 40 cases**: 14 buggy cases and 1 correct sketch (`laundry_ok`, where it patched something that needed no change). The frozen checks passed on the patch for **all 15 of those**. Claimed fixed on 15 cases; frozen checks passed on 15 of them. No claim was wrong, so the claim is trustworthy. It is also conservative: on the other 25 cases Hexorcist did not claim a fix, and on 13 of the 15 buggy `partial` runs the patch still passed the frozen checks (27 of 29 buggy cases in total, against 14 claimed).
+
+| Case | Truth bugs | Patch compiles | Frozen checks pass |
+| --- | ---: | --- | --- |
+| aquarium_ph_scale | 1 | yes | yes |
+| blend_tank_sum_ovf | 1 | yes | yes |
+| foyer_lamp_debounce | 1 | yes | yes |
+| greenhouse_dual | 2 | yes | yes |
+| hoist_estop_invert | 1 | yes | yes |
+| inject_pulse_short | 1 | yes | yes |
+| kiln_door_block | 1 | yes | yes |
+| laundry_cycle_stuck | 1 | yes | yes |
+| laundry_ok (correct sketch) | 0 | yes | yes |
+| panel_dual_debounce_edge | 2 | yes | yes |
+| porch_gate_block | 1 | yes | yes |
+| process_dual_block_scale | 2 | yes | yes |
+| rail_limit_invert | 1 | yes | yes |
+| shop_estop_debounce | 1 | yes | yes |
+| workshop_kpa_scale | 1 | yes | yes |
+
+Two caveats. The frozen checks use the same `evaluate_all` as Hexorcist, so a shared evaluator weakness would pass both (see Limitations). And `panel_dual_debounce_edge` was claimed fixed although one of its two bugs was never reported; the frozen checks cover both bugs and passed.
+
 ## Scoring changes after the run
 
 The numbers in this document use a one-line filter that I added to `bench/score.py` after the run, when the first scoring pass showed a problem. Both versions of every affected number are below.
