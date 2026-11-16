@@ -17,7 +17,7 @@ sys.path[:0] = [str(_ROOT)]
 load_dotenv(_ROOT / ".env", override=False)
 
 from bench.case_io import RESULTS_DIR, list_case_ids, load_case, write_json
-from bench.llm_budget import estimate_cost
+from bench.llm_budget import cost_by_bucket, estimate_cost
 
 
 def wait_done(client: httpx.Client, run_id: str, timeout_s: float = 900) -> dict:
@@ -117,8 +117,11 @@ def main() -> None:
             prompt_tokens = int(llm.get("prompt_tokens") or run.get("prompt_tokens") or 0)
             completion_tokens = int(llm.get("completion_tokens") or run.get("completion_tokens") or 0)
             cost = llm.get("cost_usd")
-            if cost is None and (prompt_tokens or completion_tokens):
-                cost = round(estimate_cost(model, prompt_tokens, completion_tokens), 8)
+            # Each endpoint is priced on its own tokens: the agent's model (DeepSeek) and clean room 2's (OpenAI).
+            providers = llm.get("providers") or []
+            by_bucket = cost_by_bucket(providers, model, prompt_tokens, completion_tokens)
+            if cost is None and by_bucket:
+                cost = round(sum(by_bucket.values()), 8)
             rows.append(
                 {
                     "case_id": cid,
@@ -131,6 +134,10 @@ def main() -> None:
                     "prompt_tokens": prompt_tokens or None,
                     "completion_tokens": completion_tokens or None,
                     "cost_usd": cost,
+                    "cost_deepseek_usd": round(by_bucket.get("deepseek", 0.0), 8),
+                    "cost_openai_usd": round(by_bucket.get("openai", 0.0), 8),
+                    "cost_other_usd": round(by_bucket.get("other", 0.0), 8),
+                    "providers": providers,
                     "model": model or None,
                     # What the cross-check, the spec grounding and the stimulus search did on this case.
                     "claimed_fixed": run.get("status") == "fixed",
@@ -138,7 +145,11 @@ def main() -> None:
                         {"assertion_id": u.get("assertion_id"), "type": u.get("assertion_type"), "requirement": u.get("requirement"), "your_firmware": u.get("your_firmware"), "clean_room": u.get("clean_room"), "failing_scenarios": u.get("failing_scenarios"), "shared_scenarios": u.get("shared_scenarios")}
                         for u in (report.get("cross_check") or {}).get("unconfirmed", [])
                     ],
-                    "cross_check": {k: v for k, v in (report.get("cross_check") or {}).items() if k in ("status", "reason", "usage")},
+                    "cross_check": {
+                        **{k: v for k, v in (report.get("cross_check") or {}).items() if k in ("status", "reason", "rule", "usage", "model_diversity")},
+                        # Per room, without the sketch itself: which model wrote it, whether it built, what it cost.
+                        "rooms": [{k: r.get(k) for k in ("index", "model", "host", "status", "reason", "repaired", "llm_calls", "prompt_tokens", "completion_tokens")} for r in (report.get("cross_check") or {}).get("rooms", [])],
+                    },
                     "search": {k: v for k, v in (report.get("search") or {}).items() if k != "mutations"},
                     "found_by_search": [b.get("assertion_id") for b in report.get("bugs") or [] if b.get("found_by_search")],
                     "grounding": {"checked": (report.get("grounding") or {}).get("checked"), "dropped": (report.get("grounding") or {}).get("dropped", [])},

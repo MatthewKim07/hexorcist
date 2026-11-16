@@ -63,6 +63,19 @@ def provider_bucket(model: str, base_url: str) -> str:
     return "other"
 
 
+def cost_by_bucket(providers: list[dict], model: str = "", prompt_tokens: int = 0, completion_tokens: int = 0) -> dict[str, float]:
+    """USD per provider bucket for one Hexorcist run. `providers` is report.llm.providers (model, host, tokens per
+    endpoint); an older report without it is priced as one model."""
+    out: dict[str, float] = {}
+    for p in providers:
+        model_name = p.get("model") or ""
+        bucket = provider_bucket(model_name, p.get("host") or "")
+        out[bucket] = out.get(bucket, 0.0) + estimate_cost(model_name, int(p.get("prompt_tokens") or 0), int(p.get("completion_tokens") or 0))
+    if not providers and (prompt_tokens or completion_tokens):
+        out[provider_bucket(model, "")] = estimate_cost(model, prompt_tokens, completion_tokens)
+    return out
+
+
 @dataclass
 class Budget:
     max_cost_deepseek: float = 0.80

@@ -78,3 +78,23 @@ def test_an_ordinary_model_keeps_temperature_zero(tmp_path):
     llm.chat([{"role": "user", "content": "x"}], step="t", max_tokens=4000)
     sent = llm._client.kwargs[0]
     assert sent["temperature"] == 0.0 and sent["max_tokens"] == 4000
+
+
+def test_a_mixed_run_is_priced_per_provider_on_its_own_tokens():
+    from bench.llm_budget import cost_by_bucket
+
+    providers = [
+        {"role": "agent", "model": "deepseek-chat", "host": "api.deepseek.com", "prompt_tokens": 100_000, "completion_tokens": 20_000},
+        {"role": "cleanroom2", "model": "gpt-4o-mini", "host": "api.openai.com", "prompt_tokens": 10_000, "completion_tokens": 4_000},
+    ]
+    cost = cost_by_bucket(providers)
+    assert cost["deepseek"] == pytest.approx(estimate_cost("deepseek-chat", 100_000, 20_000))
+    assert cost["openai"] == pytest.approx(estimate_cost("gpt-4o-mini", 10_000, 4_000))
+    assert set(cost) == {"deepseek", "openai"}
+
+
+def test_a_run_without_providers_is_priced_as_one_model():
+    from bench.llm_budget import cost_by_bucket
+
+    assert cost_by_bucket([], "deepseek-chat", 1000, 500) == {"deepseek": pytest.approx(estimate_cost("deepseek-chat", 1000, 500))}
+    assert cost_by_bucket([], "", 0, 0) == {}
