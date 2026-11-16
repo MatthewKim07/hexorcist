@@ -52,8 +52,9 @@ class Settings:
     room2_base_url: str = ""
     room2_api_key: str = ""
     room2_model: str = ""
-    # Stimulus search: bounded variants of each scenario, run on the uploaded firmware. 0 turns it off.
-    search_variants: int = 30
+    # Stimulus search: bounded variants of each scenario, run on the uploaded firmware. 0 (the default) turns it off.
+    # It only keeps a finding that passes the acceptance gates in search_gates.py.
+    search_variants: int = 0
     search_seed: int = 1337
     search_budget_s: int = 90
 
@@ -89,7 +90,7 @@ def load_settings() -> Settings:
         room2_base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip(),
         room2_api_key=os.environ.get("OPENAI_API_KEY", "").strip(),
         room2_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip(),
-        search_variants=max(0, _int("SEARCH_VARIANTS", 30)),
+        search_variants=max(0, _int("SEARCH_VARIANTS", 0)),
         search_seed=_int("SEARCH_SEED", 1337),
         search_budget_s=max(0, _int("SEARCH_BUDGET_S", 90)),
     )

@@ -150,3 +150,9 @@ def test_health_names_the_second_clean_room_model_and_never_a_key():
     assert response.json()["agent"]["cleanroom2"] == {"mixed": True, "model": "gpt-4o-mini", "host": "api.openai.com"}
     assert "sk-secret-room2" not in response.text
 
+
+def test_the_search_is_off_unless_a_variant_count_is_set():
+    from app.config import Settings, load_settings
+
+    assert Settings.__dataclass_fields__["search_variants"].default == 0
+    assert load_settings().search_variants == 0
