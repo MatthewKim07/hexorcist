@@ -105,6 +105,57 @@ Class B: the check also fails on the known-good reference in at least half of th
 
 Eleven of the 14 are on checks that fail on the reference, so a stricter cross-check or an evaluator fix for threshold chatter (`weather_*`, `lab_ph_ok`) would remove most of them.
 
+## Why the class B false alarms fail on the reference (dev_full, dev_full2, dev_full3)
+
+All 22 class B false alarms of the three dev runs, with the check behind each report. The reference replay says the reference fails them in at least half of the scenarios where the uploaded sketch does. The report title ("chatters", "no hysteresis") is the diagnosis step's wording of the failing evidence. The check itself is something else, as the table shows.
+
+**None of the 22 checks invents a hysteresis, debounce or rate-limit requirement.** In all 22 the check's `spec_quote` is a verbatim spec bullet (word overlap 1.0 with the bullet it names, found by `grounding.find_quote`), and every threshold and limit in the check is in the spec text (21 of 22 in the quoted bullet itself; the 120 ms tolerance of `drip_scheduler_u8` a3 comes from the adjacent period bullet). Hysteresis, chatter and debounce appear in the titles only. So a gate that asks "does the spec ask for hysteresis, debounce or a toggle limit" would have removed none of them. What the 22 do share is that the check says more, or something different, than its bullet. Groups:
+
+| Group | Root cause | Rows | Assertion types |
+| --- | --- | ---: | --- |
+| G1 | Half of a two-sided range, with an invented "otherwise" on the far side | 8 | output_follows |
+| G2 | Invented converse, or a dropped condition | 3 | output_follows |
+| G3 | Spec-stated rate limit that fast inputs force every firmware to break | 4 | max_toggles |
+| G4 | Spec-stated print period that the reference itself misses under button activity | 4 | serial_period |
+| G5 | Threshold edge timing | 2 | output_follows |
+| G6 | Two bullets drive one output, the check ignores the other | 1 | output_follows |
+
+- **G1.** The quote says "outside A to B". The assertion keeps one bound and says the output is LOW on the whole far side (`A0 >= -10` must be LOW), which is wrong above B. The reference fails it as soon as the input passes the other bound (ramp, extremes). Number of bounds in the quote: 2, in the assertion: 1.
+- **G2.** The quote states one direction only ("force the fan ON", "force the heater ON regardless", "while D2 is pressed and D4 is released"). The assertion adds the opposite state (`D4 released -> OFF`) or drops the second input (`D4`), so it contradicts another bullet. Reference fails in every scenario where the other bullet applies.
+- **G3.** The limit (2 changes in 5000 ms) is in the spec, word for word, and the assertion matches it. It fails on the reference in scenarios where the button or the temperature itself demands more changes (bounce, rapid presses, rapid oscillation).
+- **G4.** Period and tolerance are in the spec and match. The reference prints late while the button is bounced, held or floating (worst gap 1.2 to 2.5 s) or, for `drip_scheduler_u8`, in a 1.6 s search scenario that cannot hold a 1600 ms line.
+- **G5.** Threshold and polarity match the spec. The reference differs from the injected value by up to a few hundred ms right at 90 kPa (ramp, spike, crossing). I did not trace the exact mechanism (ADC rounding or sampling instant).
+- **G6.** Hysteresis thresholds 36/32 match the spec exactly. The reference fails only in the 3 scenarios where the D4 boost bullet is active, because the check is not suspended while the boost forces the fan ON.
+
+Rows (the quote equals the bullet in every row; reference share is the share of the sketch-failing scenarios where the reference also fails):
+
+| Group | Run | Case | Check | Type | Spec bullet = `spec_quote` | Thresholds and limits in the check | Ref. share |
+| --- | --- | --- | --- | --- | --- | --- | ---: |
+| G1 | dev_full2 | weather_line_prefix | a4 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0<-10, low A0>=-10, within_ms=500 | 100% |
+| G1 | dev_full2 | weather_ok (correct) | a4 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0<-10, low A0>=-10, within_ms=500 | 100% |
+| G1 | dev_full3 | lab_ph_ok (correct) | a3 | output_follows | Drive D10 HIGH when pH is outside 6.50–8.50 inclusive; otherwise LOW. | high A1<6.5, low A1>=6.5, within_ms=500 | 100% |
+| G1 | dev_full3 | lab_ph_ok (correct) | a4 | output_follows | Drive D10 HIGH when pH is outside 6.50–8.50 inclusive; otherwise LOW. | high A1>8.5, low A1<=8.5, within_ms=500 | 100% |
+| G1 | dev_full3 | weather_line_prefix | a4 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0>50, low A0<=50, within_ms=500 | 100% |
+| G1 | dev_full3 | weather_line_prefix | a5 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0<-10, low A0>=-10, within_ms=500 | 100% |
+| G1 | dev_full3 | weather_ok (correct) | a3 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0<-10, low A0>=-10, within_ms=500 | 100% |
+| G1 | dev_full3 | weather_ok (correct) | a4 | output_follows | Light D7 when the reported temperature is outside -10.0 to 50.0 °C. | high A0>50, low A0<=50, within_ms=500 | 100% |
+| G2 | dev_full2 | loft_fan_ok (correct) | a2 | output_follows | While D4 is held LOW, force the fan ON. | high D4==0, low D4==1, within_ms=500 | 100% |
+| G2 | dev_full3 | bench_led_miswire | a1 | output_follows | While D2 is pressed and D4 is released, light D13 HIGH; release turns D13 LOW. | high D2==0, low D2==1, within_ms=100 | 64% |
+| G2 | dev_full3 | cabin_heater_mul_ovf | a2 | output_follows | While D2 is held LOW, force the heater ON regardless of temperature. | high D2==0, low D2==1, within_ms=600 | 100% |
+| G3 | dev_full_ | loft_fan_ok (correct) | a3 | max_toggles | Fan must not change state more than 2 times in any 5000 ms window. | max_toggles=2, window_ms=5000 | 100% |
+| G3 | dev_full2 | greenhouse_ok (correct) | a2 | max_toggles | Fan must not change state more than 2 times in any 5000 ms window. | max_toggles=2, window_ms=5000 | 100% |
+| G3 | dev_full2 | loft_fan_ok (correct) | a3 | max_toggles | Fan must not change state more than 2 times in any 5000 ms window. | max_toggles=2, window_ms=5000 | 100% |
+| G3 | dev_full3 | loft_fan_ok (correct) | a3 | max_toggles | Fan must not change state more than 2 times in any 5000 ms window. | max_toggles=2, window_ms=5000 | 100% |
+| G4 | dev_full_ | blend_tank_sum_ovf | a2 | serial_period | Lines matching `pct: ` must appear every 1000 ms ±150 ms. | period_ms=1000, tolerance_ms=150 | 100% |
+| G4 | dev_full2 | blend_tank_sum_ovf | a2 | serial_period | Lines matching `pct: ` must appear every 1000 ms ±150 ms. | period_ms=1000, tolerance_ms=150 | 100% |
+| G4 | dev_full2 | drip_scheduler_u8 | a3 | serial_period | Every 1600 ms print `drip n=<count> pause=<0\|1>`. | period_ms=1600, tolerance_ms=120 | 100% |
+| G4 | dev_full3 | blend_tank_sum_ovf | a2 | serial_period | Lines matching `pct: ` must appear every 1000 ms ±150 ms. | period_ms=1000, tolerance_ms=150 | 100% |
+| G5 | dev_full_ | workshop_kpa_scale | a3 | output_follows | Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW. | high A2>=90, low A2<90, within_ms=500 | 62% |
+| G5 | dev_full3 | workshop_kpa_scale | a3 | output_follows | Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW. | high A2>=90, low A2<90, within_ms=500 | 60% |
+| G6 | dev_full2 | loft_fan_ok (correct) | a1 | output_follows | Turn the fan ON at 36.0 °C or above; turn it OFF at 32.0 °C or below. | high A3>=36, low A3<=32, within_ms=500 | 100% |
+
+What this means for a gate: G1 and G2 (11 rows) are checks whose structure goes beyond the bullet, and a deterministic comparison of the quote with the assertion can catch them (bounds in the quote versus bounds in the check, an opposite state the quote never states, an input named in the quote and absent from the check). G3 to G6 (11 rows) are faithful to the spec and fail on the reference for evaluator or scenario reasons, so no text gate can touch them.
+
 ## Two-room run: what the 80% rule did
 Recovered as honest detections: `bench_led_miswire` and `cabin_heater_mul_ovf` (their checks fail on the uploaded sketch in scenarios where at least one clean room passes). `attic_vent_hyst` also became an honest detection. `drip_scheduler_u8` is detected again, but only through checks that fail on the reference too, so it is not an honest one.
 
