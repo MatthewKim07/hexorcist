@@ -1,0 +1,90 @@
+{
+  "case_id": "cabin_heater_mul_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Heater stays ON above 22 \u00b0C (no OFF transition)",
+      "description": "The control logic at lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the measured evidence shows D9 was not LOW for 5030 ms starting at 1.79 s in the nominal ramp, meaning the heater remained ON while the cabin was above 22 \u00b0C. The band comparison itself is present, but the failure indicates the OFF branch is not being reached or the temperature reading never exceeds the threshold as computed, so the heater is never commanded OFF within the 600 ms grace. D9 was in the wrong state for 5030 ms across 1 interval(s), first at 1.79 s: D9 was not LOW for 5030 ms while required (grace 600 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cabin_heater_mul_ovf",
+    "spec": "- Cabin LM35 on A0 at 10 mV/\u00b0C; heater enable on D9; frost override on D2 (pull-up, active LOW).\n- Turn the heater ON when temperature is below 18.0 \u00b0C and OFF when temperature is above 22.0 \u00b0C.\n- While D2 is held LOW, force the heater ON regardless of temperature.\n- Reach the commanded heater state within 600 ms of a sustained band crossing.\n- Print `cabin: <temp> C heat=ON` or `cabin: <temp> C heat=OFF` every 1000 ms with one decimal place.\n- Temperature in the status line is informational; control decisions use the comfort band above.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "analogRead*5000 overflows 16-bit int before /1023",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Heater stays ON above 22 \u00b0C (no OFF transition)",
+        "description": "The control logic at lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the measured evidence shows D9 was not LOW for 5030 ms starting at 1.79 s in the nominal ramp, meaning the heater remained ON while the cabin was above 22 \u00b0C. The band comparison itself is present, but the failure indicates the OFF branch is not being reached or the temperature reading never exceeds the threshold as computed, so the heater is never commanded OFF within the 600 ms grace. D9 was in the wrong state for 5030 ms across 1 interval(s), first at 1.79 s: D9 was not LOW for 5030 ms while required (grace 600 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported behavior describes the failure of D9 to follow the expected output based on temperature readings.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"No false alarms; the reported bug matches the true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported behavior describes the failure of D9 to follow the expected output based on temperature readings."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "No false alarms; the reported bug matches the true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 944,
+    "completion_tokens": 93,
+    "cost_usd": 0.0001974,
+    "cached": false
+  }
+}

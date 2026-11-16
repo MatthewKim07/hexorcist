@@ -1,0 +1,123 @@
+{
+  "case_id": "drip_scheduler_u8",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Pulse scheduler uses 8-bit millis truncation, missing triggers",
+      "description": "Line 63 truncates millis() to a uint8_t and line 71 compares now8 against nextDue with a fragile `(uint8_t)(now8 - nextDue) < 128 && now8 >= nextDue` test, so the due check only fires in a narrow window and can be skipped entirely. Measured evidence: 'D8 missed 1 of 1 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.' The 8-bit wrap logic at lines 56 and 73 cannot reliably schedule an 800 ms period. D8 missed 1 of 1 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.",
+      "category": "timed_pulse"
+    },
+    {
+      "id": "bug-a2",
+      "title": "'drip' printed at wrong cadence due to broken 8-bit period tracking",
+      "description": "The period is tracked in a uint8_t (line 10) and advanced with `nextDue = (uint8_t)(now8 + PERIOD_MS)` at line 73, where 800 does not fit in a byte, so the schedule wraps incorrectly and pulses fire far too often. Measured evidence: '127 of 128 intervals were out of tolerance, worst gap 358 ms' with gaps of ~50 ms instead of 800 ms. The `now8 >= nextDue` guard at line 71 further distorts timing. Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Status log line never emitted in some runs",
+      "description": "The log is gated on `now - lastLog >= LOG_MS` at line 82, but the same loop's broken pulse scheduling and pause handling at lines 71-80 can starve or misalign the log path; in the searched scenario no matching line appeared at all. Measured evidence: 'No serial line matched /^drip n=[0-9]+ pause=[01]$/ in 1.60 s; expected one every 1600 ms.' The log interval is not independently robust to the scheduling faults. No serial line matched /^drip n=[0-9]+ pause=[01]$/ in 1.60 s; expected one every 1600 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "drip_scheduler_u8",
+    "spec": "- Drip solenoid driver on D8; pause button on D4 to ground with internal pull-up (active LOW).\n- Emit a 50 ms HIGH pulse on D8 every 800 ms while pause is released.\n- Print the exact line `drip` at the start of each pulse; period must stay 800 ms \u00b1120 ms.\n- While D4 is held LOW, suppress new pulses and keep D8 LOW.\n- Every 1600 ms print `drip n=<count> pause=<0|1>`.\n- Stay responsive: complete each pulse without multi-second blocking waits.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+        "check_ids": [
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Pulse scheduler uses 8-bit millis truncation, missing triggers",
+        "description": "Line 63 truncates millis() to a uint8_t and line 71 compares now8 against nextDue with a fragile `(uint8_t)(now8 - nextDue) < 128 && now8 >= nextDue` test, so the due check only fires in a narrow window and can be skipped entirely. Measured evidence: 'D8 missed 1 of 1 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.' The 8-bit wrap logic at lines 56 and 73 cannot reliably schedule an 800 ms period. D8 missed 1 of 1 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.",
+        "category": "timed_pulse"
+      },
+      {
+        "id": "bug-a2",
+        "title": "'drip' printed at wrong cadence due to broken 8-bit period tracking",
+        "description": "The period is tracked in a uint8_t (line 10) and advanced with `nextDue = (uint8_t)(now8 + PERIOD_MS)` at line 73, where 800 does not fit in a byte, so the schedule wraps incorrectly and pulses fire far too often. Measured evidence: '127 of 128 intervals were out of tolerance, worst gap 358 ms' with gaps of ~50 ms instead of 800 ms. The `now8 >= nextDue` guard at line 71 further distorts timing. Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Status log line never emitted in some runs",
+        "description": "The log is gated on `now - lastLog >= LOG_MS` at line 82, but the same loop's broken pulse scheduling and pause handling at lines 71-80 can starve or misalign the log path; in the searched scenario no matching line appeared at all. Measured evidence: 'No serial line matched /^drip n=[0-9]+ pause=[01]$/ in 1.60 s; expected one every 1600 ms.' The log interval is not independently robust to the scheduling faults. No serial line matched /^drip n=[0-9]+ pause=[01]$/ in 1.60 s; expected one every 1600 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes issues with 8-bit millis truncation leading to missed triggers, matching the true bug's description of cadence issues.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [2],\n  \"unique_false_alarm_indices\": [2],\n  \"notes\": \"Reported bug-a3 does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes issues with 8-bit millis truncation leading to missed triggers, matching the true bug's description of cadence issues."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [
+      2
+    ],
+    "unique_false_alarm_indices": [
+      2
+    ],
+    "notes": "Reported bug-a3 does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1249,
+    "completion_tokens": 122,
+    "cost_usd": 0.00026055,
+    "cached": false
+  }
+}

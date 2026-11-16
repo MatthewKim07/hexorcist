@@ -1,0 +1,46 @@
+{
+  "case_id": "weather_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a4",
+      "title": "Range lamp driven from noisy instantaneous sample instead of reported value",
+      "description": "updateRangeLamp() is called every loop iteration with the raw instantaneous reading (line 57), and the threshold test on line 27 uses inclusive bounds, so sensor noise straddling the -10.0/50.0 limits toggles D7 between states far faster than the 500 ms grace allows. The measured evidence shows D7 in the wrong state for 2606 ms across 962 intervals, first at 507 ms (\"D7 was not LOW for 3 ms while required\"), i.e. brief spurious pulses at the boundary rather than a steady lamp state. D7 was in the wrong state for 2606 ms across 962 interval(s), first at 507 ms: D7 was not LOW for 3 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "weather_ok",
+    "spec": "- TMP36 on A0 (10 mV/\u00b0C with 500 mV offset); freeze button on D5 (pull-up); range lamp on D7.\n- Every 1000 ms print exactly `Temp: <celsius>` with a space after the colon and one decimal place.\n- Printed temperature must stay within \u00b11.5 \u00b0C of the injected probe value.\n- While D5 is held LOW, freeze the reported value at the last sample.\n- Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.\n- Also print `weather n=<samples>` each second after the Temp line.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a4",
+        "title": "Range lamp driven from noisy instantaneous sample instead of reported value",
+        "description": "updateRangeLamp() is called every loop iteration with the raw instantaneous reading (line 57), and the threshold test on line 27 uses inclusive bounds, so sensor noise straddling the -10.0/50.0 limits toggles D7 between states far faster than the 500 ms grace allows. The measured evidence shows D7 in the wrong state for 2606 ms across 962 intervals, first at 507 ms (\"D7 was not LOW for 3 ms while required\"), i.e. brief spurious pulses at the boundary rather than a steady lamp state. D7 was in the wrong state for 2606 ms across 962 interval(s), first at 507 ms: D7 was not LOW for 3 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 794,
+    "completion_tokens": 51,
+    "cost_usd": 0.0001497,
+    "cached": false
+  }
+}

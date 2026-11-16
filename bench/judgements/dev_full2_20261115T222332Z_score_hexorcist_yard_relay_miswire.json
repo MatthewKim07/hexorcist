@@ -1,0 +1,107 @@
+{
+  "case_id": "yard_relay_miswire",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Relay wired to D7 instead of D8",
+      "description": "Line 5 defines RELAY_PIN as 7, but the spec requires the relay on D8. Every setRelay call (lines 26, 41, 59, 63, 67) therefore drives D7, so D8 never goes HIGH; measured evidence shows D8 'was not HIGH for 600 ms while required' in the glitch scenario and 'not HIGH for 1250 ms' in the nominal ramp. D8 was in the wrong state for 5450 ms across 6 interval(s), first at 400 ms: D8 was not HIGH for 600 ms while required (grace 400 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Manual override drives wrong pin, so D8 never forced ON",
+      "description": "The manual branch at lines 57-60 calls setRelay(true), which writes to RELAY_PIN=7 (line 5) rather than D8. With D3 held LOW and bright light, D8 stays low; measured 'D8 was not HIGH for 1600 ms while required' in the manual override with bright light scenario. D8 was in the wrong state for 1179 ms across 2 interval(s), first at 1.41 s: D8 was not HIGH for 591 ms while required (grace 400 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Relay driven on D7 not D8",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Relay driven on D7 not D8",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D8 must follow its stimulus; HIGH when A0 < 400; LOW when A0 > 600; within 400 ms (Relay follows light)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "yard_relay_miswire",
+    "spec": "- Light sensor on A0 scaled as 1 mV per unit; lamp relay on D8; manual override on D3 (pull-up).\n- Relay D8 ON when light reading is below 400 units; OFF when above 600 units.\n- While D3 is held LOW, force the relay ON.\n- Reach the commanded relay state within 400 ms of a sustained band crossing.\n- Print `yard u=<n> relay=ON` or `yard u=<n> relay=OFF` every 1000 ms.\n- Hysteresis band between 400 and 600 keeps the relay from chattering at dusk.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_pin",
+        "description": "Relay driven on D7 not D8",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D8 must follow its stimulus; HIGH when A0 < 400; LOW when A0 > 600; within 400 ms (Relay follows light)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Relay wired to D7 instead of D8",
+        "description": "Line 5 defines RELAY_PIN as 7, but the spec requires the relay on D8. Every setRelay call (lines 26, 41, 59, 63, 67) therefore drives D7, so D8 never goes HIGH; measured evidence shows D8 'was not HIGH for 600 ms while required' in the glitch scenario and 'not HIGH for 1250 ms' in the nominal ramp. D8 was in the wrong state for 5450 ms across 6 interval(s), first at 400 ms: D8 was not HIGH for 600 ms while required (grace 400 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Manual override drives wrong pin, so D8 never forced ON",
+        "description": "The manual branch at lines 57-60 calls setRelay(true), which writes to RELAY_PIN=7 (line 5) rather than D8. With D3 held LOW and bright light, D8 stays low; measured 'D8 was not HIGH for 1600 ms while required' in the manual override with bright light scenario. D8 was in the wrong state for 1179 ms across 2 interval(s), first at 1.41 s: D8 was not HIGH for 591 ms while required (grace 400 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause of the relay being driven on D7 instead of D8.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs describe the same underlying issue of the relay being wired to the wrong pin.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause of the relay being driven on D7 instead of D8."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs describe the same underlying issue of the relay being wired to the wrong pin."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1024,
+    "completion_tokens": 119,
+    "cost_usd": 0.000225,
+    "cached": false
+  }
+}

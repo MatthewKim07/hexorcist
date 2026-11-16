@@ -1,0 +1,134 @@
+{
+  "case_id": "panel_dual_debounce_edge",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "No debounce and wrong edge polarity: presses toggle multiple times and releases toggle",
+      "description": "The loop has no settle window at all: line 52 reads the pin and line 54 immediately acts on it, so contact bounce on press and release is counted as multiple edges (measured 2-3 toggles per press in the rapid and bounce scenarios, e.g. press at 800 ms toggled D13 2 times). The edge detector at line 28 only fires on LOW-to-HIGH (risingEdge), which is the release edge, not the active-LOW press edge, so presses are missed (0 toggles for the press at 1.00 s in the bounce-on-release scenario) and releases cause spurious toggles (9-16 unexplained toggles, first at 952 ms). The 40 ms settle requirement is never implemented anywhere in the firmware. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+      "category": "toggle_per_press"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "No settle window, bounce creates extra toggles",
+      "check_ids": [
+        "a_tpp"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "inverted_pullup",
+      "description": "Acts on release edge instead of press",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "No settle window, bounce creates extra toggles",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "inverted_pullup",
+      "description": "Acts on release edge instead of press",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "panel_dual_debounce_edge",
+    "spec": "- Panel key on D2 to ground with internal pull-up (active LOW); status LED on D13.\n- Each settled press toggles D13 exactly once within 150 ms; release must not toggle.\n- Bounce up to 20 ms on press and release must not produce extra toggles.\n- Use a 40 ms settle window before accepting a press edge (HIGH-to-LOW after settle).\n- Print `panel led=<0|1> edges=<n>` every 1000 ms.\n- Idle (unpressed) key reads HIGH.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "No settle window, bounce creates extra toggles",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "inverted_pullup",
+        "description": "Acts on release edge instead of press",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D13 toggles exactly once per settled press on None (One LED toggle per settled press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "No debounce and wrong edge polarity: presses toggle multiple times and releases toggle",
+        "description": "The loop has no settle window at all: line 52 reads the pin and line 54 immediately acts on it, so contact bounce on press and release is counted as multiple edges (measured 2-3 toggles per press in the rapid and bounce scenarios, e.g. press at 800 ms toggled D13 2 times). The edge detector at line 28 only fires on LOW-to-HIGH (risingEdge), which is the release edge, not the active-LOW press edge, so presses are missed (0 toggles for the press at 1.00 s in the bounce-on-release scenario) and releases cause spurious toggles (9-16 unexplained toggles, first at 952 ms). The 40 ms settle requirement is never implemented anywhere in the firmware. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+        "category": "toggle_per_press"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes missing debounce and extra toggles due to no settle window.\"},\n    {\"truth_id\": \"b2\", \"reported_index\": -1, \"matched\": false, \"reason\": \"No matching report for inverted pullup.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug matches the missing debounce issue, but does not cover the inverted pullup issue.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes missing debounce and extra toggles due to no settle window."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "No matching report for inverted pullup."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug matches the missing debounce issue, but does not cover the inverted pullup issue."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1068,
+    "completion_tokens": 130,
+    "cost_usd": 0.0002382,
+    "cached": false
+  }
+}

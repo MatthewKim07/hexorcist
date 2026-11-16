@@ -1,0 +1,53 @@
+{
+  "case_id": "greenhouse_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Fan toggles too often during rapid band crossings",
+      "description": "The hysteresis counters openHold and closeHold are reset to 0 whenever the temperature leaves the respective band (lines 83 and 91), so a temperature oscillating across the 26-30 \u00b0C band re-arms both debounce counters and lets the fan flip on and off repeatedly. With HOLD_N=4 at a 50 ms tick (lines 11, 13), each crossing only needs 200 ms of sustained reading to command a new state, so the measured run produced 4 toggles in the 5000 ms window starting at 3.50 s (limit 2). There is no minimum dwell time or toggle-rate limiter on setFan (lines 33-37, 104-115) to enforce the 2-toggles-per-5000 ms rule. D6 toggled 4 times in a 5000 ms window starting at 3.50 s (limit 2), and 5 times over the whole 10.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "greenhouse_ok",
+    "spec": "- Air temperature probe on A0 at 10 mV/\u00b0C; potting-shed vent fan on D6.\n- Open the fan at 30.0 \u00b0C or above; close the fan at 26.0 \u00b0C or below.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- If the probe is floating, or temperature reads below 5.0 \u00b0C or above 100.0 \u00b0C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.\n- Print `shed: <temp> C fan=ON` or `shed: <temp> C fan=OFF` every 1000 ms with one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Fan toggles too often during rapid band crossings",
+        "description": "The hysteresis counters openHold and closeHold are reset to 0 whenever the temperature leaves the respective band (lines 83 and 91), so a temperature oscillating across the 26-30 \u00b0C band re-arms both debounce counters and lets the fan flip on and off repeatedly. With HOLD_N=4 at a 50 ms tick (lines 11, 13), each crossing only needs 200 ms of sustained reading to command a new state, so the measured run produced 4 toggles in the 5000 ms window starting at 3.50 s (limit 2). There is no minimum dwell time or toggle-rate limiter on setFan (lines 33-37, 104-115) to enforce the 2-toggles-per-5000 ms rule. D6 toggled 4 times in a 5000 ms window starting at 3.50 s (limit 2), and 5 times over the whole 10.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\n      \"truth_id\": \"b1\",\n      \"reported_index\": -1,\n      \"matched\": false,\n      \"reason\": \"No truth bugs to match against.\"\n    }\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "No truth bugs to match against."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 879,
+    "completion_tokens": 92,
+    "cost_usd": 0.00018705,
+    "cached": false
+  }
+}

@@ -5,7 +5,12 @@ for the new run, <run>_replay.json from bench.replay_run. Remaining false alarms
 adjudication: a reported check that also fails on the case's known-good reference is class B (no correct firmware
 can pass it). Everything else is "not explained by the reference" and needs a human reading.
 
-Usage: backend/.venv/bin/python -m bench.dev_compare OLD_RUN NEW_RUN
+"Honest recall" counts a planted bug as found only if a report the judge matched to it comes with evidence that
+separates the buggy sketch from the correct one: some scenario where the check fails on the uploaded sketch and passes
+on the known-good reference. A matched report whose check fails identically on the reference is a coincidence of
+wording, not a detection.
+
+Usage: backend/.venv/bin/python -m bench.dev_compare RUN [RUN ...]   (writes JSON to stdout; the first run is the oldest)
 """
 from __future__ import annotations
 
@@ -65,11 +70,59 @@ def user_failures(api: str, run_id: str) -> dict[str, set[str]]:
     return out
 
 
+def judgement_path(run: str, case_id: str) -> Path | None:
+    for name in (f"{run}_score_hexorcist_{case_id}.json", f"{run}_score_deepseek_hexorcist_{case_id}.json", f"{run}_hexorcist_{case_id}.json"):
+        if (JUDGEMENTS_DIR / name).is_file():
+            return JUDGEMENTS_DIR / name
+    return None
+
+
+def matched_reports(run: str, case_id: str) -> dict[str, list[int]]:
+    """truth id -> reported indices the judge matched to it."""
+    p = judgement_path(run, case_id)
+    out: dict[str, list[int]] = {}
+    if p is None:
+        return out
+    for m in (json.loads(p.read_text()).get("judgement") or {}).get("matches") or []:
+        if m.get("matched") and m.get("truth_id") and isinstance(m.get("reported_index"), int):
+            out.setdefault(str(m["truth_id"]), []).append(m["reported_index"])
+    return out
+
+
+def honest_recall(run: str, raw: dict, score: dict, replay: dict | None, old_replay: list | None) -> dict:
+    """Detections whose matched report separates the buggy sketch from the reference."""
+    honest, hollow = 0, []
+    for c, row in score.items():
+        if not row["truth_bugs"]:
+            continue
+        bugs = raw[c].get("bugs") or []
+        user = None
+        for truth_id, ok in (row.get("detection") or {}).items():
+            if not ok:
+                continue
+            real = False
+            for i in matched_reports(run, c).get(truth_id, []):
+                if replay is not None:
+                    a = bugs[i].get("assertion_id") if i < len(bugs) else None
+                    ref = set((replay.get(c, {}).get("assertions", {}).get(a) or {}).get("ref_fail") or [])
+                    if user is None:
+                        user = user_failures(API, raw[c]["run_id"])
+                    real = real or bool(user.get(a, set()) - ref)
+                elif old_replay is not None:
+                    r = next((x for x in old_replay if x["case"] == c and x["index"] == i), None)
+                    real = real or bool(r and r["failing_scenarios"] > r["reference_also_fails"])
+            if real:
+                honest += 1
+            else:
+                hollow.append((c, truth_id))
+    return {"honest_detected": honest, "hollow": hollow}
+
+
 def med(xs):
     return statistics.median(xs) if xs else 0.0
 
 
-def summarize(run: str, replay: dict | None) -> dict:
+def summarize(run: str, replay: dict | None, old_replay: list | None = None) -> dict:
     score, raw = load_score(run), load_raw(run)
     ids = sorted(score)
     buggy = [c for c in ids if score[c]["truth_bugs"]]
@@ -109,6 +162,7 @@ def summarize(run: str, replay: dict | None) -> dict:
         out["cross_tokens"] = sum(v.get("prompt_tokens", 0) + v.get("completion_tokens", 0) for c in ids for k, v in (raw[c].get("llm_by_step") or {}).items() if k.startswith("cleanroom"))
         out["grounding_checked"] = sum((raw[c].get("grounding") or {}).get("checked") or 0 for c in ids)
         out["grounding_dropped"] = sum(len((raw[c].get("grounding") or {}).get("dropped") or []) for c in ids)
+    out.update(honest_recall(run, raw, score, replay, old_replay))
     if replay is not None:
         ref = lambda c, a: (replay.get(c, {}).get("assertions", {}).get(a) or {}).get("ref_fail")  # noqa: E731
         right, wrong, unknown = [], [], []
@@ -145,11 +199,15 @@ API = "http://127.0.0.1:8080"
 
 
 def main() -> None:
-    old_run, new_run = sys.argv[1], sys.argv[2]
-    rp = RESULTS_DIR / f"{new_run}_replay.json"
-    new = summarize(new_run, json.loads(rp.read_text()) if rp.is_file() else None)
-    old = summarize(old_run, None)
-    print(json.dumps({"old": {k: v for k, v in old.items()}, "new": {k: v for k, v in new.items()}}, indent=1, default=str))
+    runs = sys.argv[1:]
+    result = {}
+    for run in runs:
+        rp = RESULTS_DIR / f"{run}_replay.json"
+        data = json.loads(rp.read_text()) if rp.is_file() else None
+        old = data["reports"] if isinstance(data, dict) and "reports" in data else None
+        new = data if isinstance(data, dict) and "reports" not in data else None
+        result[run] = summarize(run, new, old)
+    print(json.dumps(result, indent=1, default=str))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,136 @@
+{
+  "case_id": "nav_beacon_byte_timer",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Beacon stays off too long after quiet release due to slice reset",
+      "description": "While quiet is held, line 59 resets lastSlice to nowSlice every loop, and line 58 forces the beacon off. On release, the free-blink branch at line 61 must wait a full HALF_MS from the last held loop before toggling, so the beacon remains off well past the 500 ms grace after D3 goes HIGH. Measured: 'D12 was not HIGH for 232 ms while required (grace 500 ms)' at 500 ms, and similar 244 ms violations recur. D12 was in the wrong state for 4330 ms across 20 interval(s), first at 500 ms: D12 was not HIGH for 232 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Tick period wrong because blink phase is re-anchored by quiet holds",
+      "description": "emitTick at line 68 only fires on a rising edge, but line 59 resets lastSlice on every held loop, so the 500 ms slice timer restarts from the release moment rather than continuing the blink schedule. This makes rising edges (and thus 'tick' lines) spaced far from 1000 ms. Measured: '20 of 21 intervals were out of tolerance, worst gap 489 ms' with gaps of 398-400 ms. Expected /^tick$/ every 1000 \u00b1 120 ms; 20 of 21 intervals were out of tolerance, worst gap 489 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Excessive beacon toggles from slice reset and floating input",
+      "description": "Line 59 resets lastSlice each held loop, so on release the first toggle can occur almost immediately after the forced OFF at line 58, producing closely spaced edges that exceed the toggle budget. Additionally, line 43 enables the pull-up but the firmware never debounces, so a floating/noisy D3 causes rapid quiet transitions and extra toggles. Measured: 'D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5)' and '9 toggles' in other scenarios. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+        },
+        {
+          "check_id": "a_max",
+          "type": "max_toggles",
+          "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "nav_beacon_byte_timer",
+    "spec": "- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).\n- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.\n- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms \u00b1120 ms).\n- While D3 is held LOW, force the beacon OFF and pause the blink schedule.\n- Beacon must not change state more than 5 times in any 2000 ms window during free blink.\n- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+        "check_ids": [
+          "a_period",
+          "a_max"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+          },
+          {
+            "check_id": "a_max",
+            "type": "max_toggles",
+            "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Beacon stays off too long after quiet release due to slice reset",
+        "description": "While quiet is held, line 59 resets lastSlice to nowSlice every loop, and line 58 forces the beacon off. On release, the free-blink branch at line 61 must wait a full HALF_MS from the last held loop before toggling, so the beacon remains off well past the 500 ms grace after D3 goes HIGH. Measured: 'D12 was not HIGH for 232 ms while required (grace 500 ms)' at 500 ms, and similar 244 ms violations recur. D12 was in the wrong state for 4330 ms across 20 interval(s), first at 500 ms: D12 was not HIGH for 232 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Tick period wrong because blink phase is re-anchored by quiet holds",
+        "description": "emitTick at line 68 only fires on a rising edge, but line 59 resets lastSlice on every held loop, so the 500 ms slice timer restarts from the release moment rather than continuing the blink schedule. This makes rising edges (and thus 'tick' lines) spaced far from 1000 ms. Measured: '20 of 21 intervals were out of tolerance, worst gap 489 ms' with gaps of 398-400 ms. Expected /^tick$/ every 1000 \u00b1 120 ms; 20 of 21 intervals were out of tolerance, worst gap 489 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Excessive beacon toggles from slice reset and floating input",
+        "description": "Line 59 resets lastSlice each held loop, so on release the first toggle can occur almost immediately after the forced OFF at line 58, producing closely spaced edges that exceed the toggle budget. Additionally, line 43 enables the pull-up but the firmware never debounces, so a floating/noisy D3 causes rapid quiet transitions and extra toggles. Measured: 'D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5)' and '9 toggles' in other scenarios. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes excessive off time due to incorrect timing logic, matching the millis rollover issue.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1},\n    {\"truth_id\": \"b1\", \"reported_index\": 2}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same underlying issue of timing and toggling, thus they are duplicates of the true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes excessive off time due to incorrect timing logic, matching the millis rollover issue."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 2
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same underlying issue of timing and toggling, thus they are duplicates of the true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1313,
+    "completion_tokens": 139,
+    "cost_usd": 0.00028035,
+    "cached": false
+  }
+}

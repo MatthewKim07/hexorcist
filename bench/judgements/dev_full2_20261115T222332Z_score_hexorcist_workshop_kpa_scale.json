@@ -1,0 +1,107 @@
+{
+  "case_id": "workshop_kpa_scale",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Pressure conversion omits 500 mV zero offset",
+      "description": "millivoltsToKpa() at line 25 divides mv by MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is 50 kPa too high. Measured evidence shows printed 101.7 kPa while injected was 50.1 to 52.4 kPa, and printed 163.2 kPa while injected was 99.25 to 113.98 kPa, off by ~49-50 kPa in all 11 of 11 values. The correct formula per spec is (mv - 500) / 10. Firmware printed 112.4 kPa at 7.01 s while the injected input was 60.03 to 62.7 kPa: off by 49.7 kPa (tolerance \u00b12). 11 of 11 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Gauge lamp threshold shifted low by missing offset",
+      "description": "updateGauge() at line 42 compares the offset-corrupted kPa value against WARN_KPA, so D12 goes HIGH when raw mv reaches 900 (real ~40 kPa) instead of 1400 mV (90 kPa). Measured evidence shows D12 not LOW for 1959 ms and 2440 ms while pressure was below 90 kPa, and it lights far too early across the whole range. Fixing the offset subtraction in line 25 restores the correct threshold. D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "workshop_kpa_scale",
+    "spec": "- Pressure transducer on A2 scaled at 10 mV/kPa with a 500 mV zero offset; high-pressure gauge lamp on D12.\n- Physical pressure in kPa equals (millivolts \u2212 500) / 10 using a 5.000 V / 1023 ADC span.\n- Emit `kPa: <value>` once every 1000 ms with one decimal place.\n- Printed pressure must match the injected value within \u00b12.0 kPa.\n- Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW.\n- Continue logging at the same rate while the gauge lamp is lit.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Omits 500 mV zero offset so kPa reads 50 high",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Pressure conversion omits 500 mV zero offset",
+        "description": "millivoltsToKpa() at line 25 divides mv by MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is 50 kPa too high. Measured evidence shows printed 101.7 kPa while injected was 50.1 to 52.4 kPa, and printed 163.2 kPa while injected was 99.25 to 113.98 kPa, off by ~49-50 kPa in all 11 of 11 values. The correct formula per spec is (mv - 500) / 10. Firmware printed 112.4 kPa at 7.01 s while the injected input was 60.03 to 62.7 kPa: off by 49.7 kPa (tolerance \u00b12). 11 of 11 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Gauge lamp threshold shifted low by missing offset",
+        "description": "updateGauge() at line 42 compares the offset-corrupted kPa value against WARN_KPA, so D12 goes HIGH when raw mv reaches 900 (real ~40 kPa) instead of 1400 mV (90 kPa). Measured evidence shows D12 not LOW for 1959 ms and 2440 ms while pressure was below 90 kPa, and it lights far too early across the whole range. Fixing the offset subtraction in line 25 restores the correct threshold. D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause of omitting the 500 mV zero offset.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are matched to the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause of omitting the 500 mV zero offset."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are matched to the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1124,
+    "completion_tokens": 109,
+    "cost_usd": 0.000234,
+    "cached": false
+  }
+}

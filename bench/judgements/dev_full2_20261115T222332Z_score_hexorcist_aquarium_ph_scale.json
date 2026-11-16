@@ -1,0 +1,106 @@
+{
+  "case_id": "aquarium_ph_scale",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "pH conversion omits division by 500 mV/pH",
+      "description": "computePh() at line 23 simply returns the millivolt value unchanged, so the required division by 500 mV/pH is never performed. The measured output confirms this: injected 6.0 pH produced a printed value of 3000.98 pH, which is exactly the raw millivolt reading (6.0 * 500 = 3000) rather than a pH. Firmware printed 3005.87 pH at 9.01 s while the injected input was 5.98 to 6.02 pH: off by 2999.8 pH (tolerance \u00b10.2). 9 of 9 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Alert LED driven from unscaled millivolts, never triggers correctly",
+      "description": "The alert decision at line 66 compares lastPh against ALERT_PH (7.20), but lastPh is actually a millivolt value (line 62 via computePh returning millivolts). Since any real probe reading is hundreds to thousands of millivolts, the comparison is effectively always true, so D13 stays HIGH regardless of actual pH, producing the measured wrong-state intervals such as 'D13 was not HIGH for 1270 ms while required'. D13 was in the wrong state for 4850 ms across 6 interval(s), first at 500 ms: D13 was not HIGH for 500 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Prints millivolts as pH instead of mv/500",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Prints millivolts as pH instead of mv/500",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pH: (-?[0-9.]+)' match the stimulus (tolerance 0.2) (Printed pH matches probe)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "aquarium_ph_scale",
+    "spec": "- Linearized pH probe on A0 with scale 500 mV/pH (0 mV \u2192 pH 0.0); low-pH alert LED on D13.\n- Convert ADC samples using a 5.000 V / 1023 full-scale span, then divide millivolts by 500 to obtain pH.\n- Print exactly one line every 1000 ms matching `pH: <value>` with two decimal places.\n- Printed pH must stay within \u00b10.20 of the injected probe value.\n- Drive D13 HIGH when reported pH is below 7.20; otherwise drive D13 LOW.\n- Keep logging while the alert LED is on or off.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Prints millivolts as pH instead of mv/500",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pH: (-?[0-9.]+)' match the stimulus (tolerance 0.2) (Printed pH matches probe)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "pH conversion omits division by 500 mV/pH",
+        "description": "computePh() at line 23 simply returns the millivolt value unchanged, so the required division by 500 mV/pH is never performed. The measured output confirms this: injected 6.0 pH produced a printed value of 3000.98 pH, which is exactly the raw millivolt reading (6.0 * 500 = 3000) rather than a pH. Firmware printed 3005.87 pH at 9.01 s while the injected input was 5.98 to 6.02 pH: off by 2999.8 pH (tolerance \u00b10.2). 9 of 9 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Alert LED driven from unscaled millivolts, never triggers correctly",
+        "description": "The alert decision at line 66 compares lastPh against ALERT_PH (7.20), but lastPh is actually a millivolt value (line 62 via computePh returning millivolts). Since any real probe reading is hundreds to thousands of millivolts, the comparison is effectively always true, so D13 stays HIGH regardless of actual pH, producing the measured wrong-state intervals such as 'D13 was not HIGH for 1270 ms while required'. D13 was in the wrong state for 4850 ms across 6 interval(s), first at 500 ms: D13 was not HIGH for 500 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes incorrect pH calculation due to missing division by 500 mV/pH.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes incorrect pH calculation due to missing division by 500 mV/pH."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1096,
+    "completion_tokens": 97,
+    "cost_usd": 0.0002226,
+    "cached": false
+  }
+}

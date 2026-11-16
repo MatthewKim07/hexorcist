@@ -1,0 +1,120 @@
+{
+  "case_id": "porch_gate_block",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Heartbeat starved by blocking chime pulse",
+      "description": "pulseChimeBlocking() calls delay(CHIME_MS) at line 27, which halts the whole loop for 1800 ms, so the heartbeat check at lines 57-62 cannot run during that time. Measured evidence shows gaps of 1900 ms between `gate-hb` lines (e.g. 1909.182 to 3809.188 ms), far outside the 300 \u00b1 100 ms requirement. Expected /^gate-hb$/ every 300 \u00b1 100 ms; 4 of 11 intervals were out of tolerance, worst gap 1900 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Firmware silent for 1800 ms during chime",
+      "description": "The blocking delay(CHIME_MS) at line 27 freezes both serial output and any pin activity for the full pulse duration, since nothing else runs in loop() until it returns. Measured evidence shows 1800 ms of no activity (e.g. 100.009 to 1900.017 ms), exceeding the 700 ms limit. Firmware went silent for 1800 ms with no serial output or pin activity (limit 700 ms); 4 such gap(s).",
+      "category": "responsive"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(1800) stalls heartbeat during chime",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "blocking_delay",
+      "description": "delay(1800) stalls heartbeat during chime",
+      "check_ids": [
+        "a_hb",
+        "a_resp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_hb",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^gate-hb$' every 300 ms (Gate heartbeat)"
+        },
+        {
+          "check_id": "a_resp",
+          "type": "responsive",
+          "behaviour": " responds to stimulus within None ms (Stay responsive)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "porch_gate_block",
+    "spec": "- Porch gate contact on D3 to ground with internal pull-up (active LOW when open); chime driver on D10.\n- A settled open event as short as 40 ms starts an 1800 ms HIGH pulse on D10 within 150 ms.\n- Presses while the chime is already sounding are ignored (pulse length is not restarted).\n- Print the exact line `gate-hb` every 300 ms continuously, including while the chime is sounding.\n- Never remain silent (no serial and no output change) for more than 700 ms.\n- Closed/idle gate reads HIGH on D3.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "blocking_delay",
+        "description": "delay(1800) stalls heartbeat during chime",
+        "check_ids": [
+          "a_hb",
+          "a_resp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_hb",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^gate-hb$' every 300 ms (Gate heartbeat)"
+          },
+          {
+            "check_id": "a_resp",
+            "type": "responsive",
+            "behaviour": " responds to stimulus within None ms (Stay responsive)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Heartbeat starved by blocking chime pulse",
+        "description": "pulseChimeBlocking() calls delay(CHIME_MS) at line 27, which halts the whole loop for 1800 ms, so the heartbeat check at lines 57-62 cannot run during that time. Measured evidence shows gaps of 1900 ms between `gate-hb` lines (e.g. 1909.182 to 3809.188 ms), far outside the 300 \u00b1 100 ms requirement. Expected /^gate-hb$/ every 300 \u00b1 100 ms; 4 of 11 intervals were out of tolerance, worst gap 1900 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Firmware silent for 1800 ms during chime",
+        "description": "The blocking delay(CHIME_MS) at line 27 freezes both serial output and any pin activity for the full pulse duration, since nothing else runs in loop() until it returns. Measured evidence shows 1800 ms of no activity (e.g. 100.009 to 1900.017 ms), exceeding the 700 ms limit. Firmware went silent for 1800 ms with no serial output or pin activity (limit 700 ms); 4 such gap(s).",
+        "category": "responsive"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Heartbeat starved by blocking chime pulse describes the same blocking delay issue.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs describe the same underlying issue related to the blocking delay, thus they are duplicates.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Heartbeat starved by blocking chime pulse describes the same blocking delay issue."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs describe the same underlying issue related to the blocking delay, thus they are duplicates."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1022,
+    "completion_tokens": 115,
+    "cost_usd": 0.0002223,
+    "cached": false
+  }
+}

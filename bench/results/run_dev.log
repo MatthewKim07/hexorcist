@@ -976,3 +976,482 @@ merged 40 hexorcist rows into /Users/matthewkim/Documents/GitHub/hexorcist/bench
  Container hexorcist-sandbox-image-1 Exited 
  Container hexorcist-backend-1 Starting 
  Container hexorcist-backend-1 Started 
+2026-11-15 17:23:32  === DEV-set run dev_full2_20261115T222332Z (full, 40 cases, Hexorcist only) ===
+2026-11-15 17:23:32  freeze check ok: bench/cases unchanged since 6a92c57
+preflight LLM_*: configured=True model=deepseek-chat host=api.deepseek.com
+2026-11-15 17:23:33  docker compose up --build -d (bench override: RATE_LIMIT_PER_HOUR=1000). This builds the current agent code.
+ Image hexorcist-backend Building 
+ Image hexorcist-frontend Building 
+ Image hexorcist-sandbox:latest Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.55kB done
+#1 DONE 0.0s
+
+#2 [sandbox-image internal] load build definition from Dockerfile
+#2 transferring dockerfile: 2.63kB done
+#2 DONE 0.0s
+
+#3 [frontend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 308B done
+#3 DONE 0.0s
+
+#4 [backend internal] load build definition from Dockerfile
+#4 transferring dockerfile: 387B done
+#4 DONE 0.0s
+
+#5 [backend internal] load metadata for docker.io/library/python:3.12-slim
+#5 ...
+
+#6 [auth] library/nginx:pull token for registry-1.docker.io
+#6 DONE 0.0s
+
+#7 [auth] library/debian:pull token for registry-1.docker.io
+#7 DONE 0.0s
+
+#8 [auth] library/node:pull token for registry-1.docker.io
+#8 DONE 0.0s
+
+#9 [auth] library/python:pull token for registry-1.docker.io
+#9 DONE 0.0s
+
+#10 [sandbox-image internal] load metadata for docker.io/library/debian:bookworm-slim
+#10 DONE 0.4s
+
+#11 [frontend internal] load metadata for docker.io/library/node:22-slim
+#11 DONE 0.5s
+
+#5 [backend internal] load metadata for docker.io/library/python:3.12-slim
+#5 DONE 0.5s
+
+#12 [sandbox-image internal] load .dockerignore
+#12 transferring context: 2B done
+#12 DONE 0.0s
+
+#13 [frontend internal] load metadata for docker.io/library/nginx:1.27-alpine
+#13 DONE 0.5s
+
+#14 [backend internal] load .dockerignore
+#14 transferring context: 97B done
+#14 DONE 0.0s
+
+#15 [frontend internal] load .dockerignore
+#15 transferring context: 58B done
+#15 DONE 0.0s
+
+#16 [sandbox-image arduino 1/4] FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+#16 resolve docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc done
+#16 DONE 0.0s
+
+#17 [sandbox-image internal] load build context
+#17 transferring context: 134B done
+#17 DONE 0.0s
+
+#18 [sandbox-image stage-2  3/11] COPY --from=simavr /usr/local/bin/hexharness /usr/local/bin/hexharness
+#18 CACHED
+
+#19 [sandbox-image arduino 3/4] COPY arduino-cli.yaml /etc/arduino-cli.yaml
+#19 CACHED
+
+#20 [sandbox-image stage-2  7/11] COPY --from=arduino /opt/arduino /opt/arduino
+#20 CACHED
+
+#21 [sandbox-image stage-2  4/11] COPY --from=simavr /usr/local/lib/libsimavr.a /usr/local/lib/libsimavr.a
+#21 CACHED
+
+#22 [sandbox-image arduino 4/4] RUN curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/v1.1.1/install.sh         | BINDIR=/usr/local/bin sh -s "1.1.1"     && arduino-cli --config-file /etc/arduino-cli.yaml core update-index     && arduino-cli --config-file /etc/arduino-cli.yaml core install "arduino:avr@1.8.6"     && arduino-cli --config-file /etc/arduino-cli.yaml lib install Servo     && rm -rf /opt/arduino/downloads     && mkdir -p /opt/arduino/downloads
+#22 CACHED
+
+#23 [sandbox-image simavr 4/5] COPY harness/hexharness.c /src/harness/hexharness.c
+#23 CACHED
+
+#24 [sandbox-image arduino 2/4] RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl     && rm -rf /var/lib/apt/lists/*
+#24 CACHED
+
+#25 [sandbox-image simavr 3/5] RUN git clone --depth 1 --branch "v1.7" https://github.com/buserror/simavr.git /src/simavr     && make -C /src/simavr/simavr RELEASE=1 libsimavr     && make -C /src/simavr/simavr RELEASE=1 install DESTDIR=/usr/local
+#25 CACHED
+
+#26 [sandbox-image stage-2  2/11] RUN apt-get update && apt-get install -y --no-install-recommends         ca-certificates jq libelf1 libcjson1     && rm -rf /var/lib/apt/lists/*
+#26 CACHED
+
+#27 [sandbox-image simavr 2/5] RUN apt-get update && apt-get install -y --no-install-recommends         build-essential ca-certificates git pkg-config         gcc-avr avr-libc libelf-dev libcjson-dev     && rm -rf /var/lib/apt/lists/*
+#27 CACHED
+
+#28 [sandbox-image stage-2 10/11] RUN chmod 0555 /usr/local/bin/sandbox-entry     && useradd --uid 1000 --no-create-home --home-dir /work --shell /usr/sbin/nologin hex     && chmod -R a+rX /opt/arduino     && mkdir -p /work && chown hex:hex /work
+#28 CACHED
+
+#29 [sandbox-image stage-2  6/11] COPY --from=arduino /usr/local/bin/arduino-cli /usr/local/bin/arduino-cli
+#29 CACHED
+
+#30 [sandbox-image stage-2  8/11] COPY arduino-cli.yaml /etc/arduino-cli.yaml
+#30 CACHED
+
+#31 [sandbox-image simavr 5/5] RUN gcc -O2 -std=gnu11 -Wall -Wextra -I/usr/local/include         -o /usr/local/bin/hexharness /src/harness/hexharness.c         /usr/local/lib/libsimavr.a -lelf -lcjson -lm -lpthread
+#31 CACHED
+
+#32 [sandbox-image stage-2  9/11] COPY entry.sh /usr/local/bin/sandbox-entry
+#32 CACHED
+
+#33 [sandbox-image stage-2  5/11] COPY --from=simavr /usr/local/include/simavr /usr/local/include/simavr
+#33 CACHED
+
+#34 [sandbox-image stage-2 11/11] WORKDIR /work
+#34 CACHED
+
+#35 [backend 1/5] FROM docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+#35 resolve docker.io/library/python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b 0.0s done
+#35 DONE 0.0s
+
+#36 [frontend build 1/6] FROM docker.io/library/node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee
+#36 resolve docker.io/library/node:22-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee 0.0s done
+#36 DONE 0.0s
+
+#37 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+#37 resolve docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10 0.0s done
+#37 DONE 0.0s
+
+#38 [backend internal] load build context
+#38 transferring context: 354.41kB 0.0s done
+#38 DONE 0.0s
+
+#39 [backend 2/5] WORKDIR /srv
+#39 CACHED
+
+#40 [backend 3/5] COPY requirements.txt .
+#40 CACHED
+
+#41 [backend 4/5] RUN pip install --no-cache-dir -r requirements.txt
+#41 CACHED
+
+#42 [frontend internal] load build context
+#42 transferring context: 16.53kB done
+#42 DONE 0.0s
+
+#43 [frontend build 2/6] WORKDIR /app
+#43 CACHED
+
+#44 [frontend build 3/6] COPY package.json package-lock.json ./
+#44 CACHED
+
+#45 [frontend build 4/6] RUN npm ci --no-audit --no-fund
+#45 CACHED
+
+#46 [sandbox-image] exporting to image
+#46 exporting layers done
+#46 exporting manifest sha256:78728f0462d6c486738e1072e4e8b85aea03d20f6ef636b0d13bb1e5020efb94 done
+#46 exporting config sha256:648787ca29af612a6d4cbf47ca3e57c9f0033c4cd5c0aa00c78bcffed94834d6 done
+#46 exporting attestation manifest sha256:94c6ceeecdd81ca3148886ea4a5cc217aaf5ba16971939035d23622447d9c818 0.0s done
+#46 exporting manifest list sha256:bf03b2963cadc75b6093e998f8f443f0e2f2b76fb7ffe9ba2648197c17ce7896 0.0s done
+#46 naming to docker.io/library/hexorcist-sandbox:latest
+#46 naming to docker.io/library/hexorcist-sandbox:latest done
+#46 unpacking to docker.io/library/hexorcist-sandbox:latest done
+#46 DONE 0.1s
+
+#47 [backend 5/5] COPY app ./app
+#47 DONE 0.1s
+
+#48 [frontend build 5/6] COPY . .
+#48 DONE 0.1s
+
+#49 [backend] exporting to image
+#49 ...
+
+#50 [sandbox-image] resolving provenance for metadata file
+#50 DONE 0.0s
+
+#49 [backend] exporting to image
+#49 exporting layers 0.1s done
+#49 exporting manifest sha256:5975cf0c162b24004c750b645dc095ede1ca5397f0bf9918e68dcf6a282c2a7a 0.0s done
+#49 exporting config sha256:c6782b5815d1abeb136d939210486e1db96eb6ba665d3ec91dbecd0f6014af4f 0.0s done
+#49 exporting attestation manifest sha256:d10f57ea0466fc5392be6720ea09985d377e3f0b83d374b3cca572e1ec7f820f done
+#49 exporting manifest list sha256:e7dab2b62bbee50f8f47cb66b07cc1d4ae65648c5d654fdc4fa0113f94c28507 done
+#49 naming to docker.io/library/hexorcist-backend:latest done
+#49 unpacking to docker.io/library/hexorcist-backend:latest 0.0s done
+#49 DONE 0.2s
+
+#51 [backend] resolving provenance for metadata file
+#51 DONE 0.0s
+
+#52 [frontend build 6/6] RUN npm run build
+#52 0.691 
+#52 0.691 > hexorcist-frontend@0.1.0 build
+#52 0.691 > tsc --noEmit && vite build
+#52 0.691 
+#52 3.208 vite v5.4.11 building for production...
+#52 3.254 transforming...
+#52 5.373 ✓ 2287 modules transformed.
+#52 5.483 rendering chunks...
+#52 5.584 computing gzip size...
+#52 5.596 dist/index.html                                           1.03 kB │ gzip:   0.50 kB
+#52 5.596 dist/assets/geist-mono-latin-400-normal-DTRLJnHl.woff2    9.86 kB
+#52 5.596 dist/assets/geist-mono-latin-500-normal-YINYabwD.woff2   10.12 kB
+#52 5.596 dist/assets/geist-sans-latin-400-normal-gapTbOY8.woff2   33.40 kB
+#52 5.596 dist/assets/geist-sans-latin-500-normal-uokXdC-Q.woff2   34.72 kB
+#52 5.596 dist/assets/geist-sans-latin-600-normal-DFOURf8L.woff2   35.29 kB
+#52 5.597 dist/assets/index-Buid5VWx.css                           32.77 kB │ gzip:   7.30 kB
+#52 5.597 dist/assets/arrow-left-C2m5gIx_.js                        0.33 kB │ gzip:   0.27 kB
+#52 5.597 dist/assets/copy-D6P-k2ZA.js                              0.40 kB │ gzip:   0.31 kB
+#52 5.597 dist/assets/Skeletons-DYaT1-ai.js                         0.72 kB │ gzip:   0.30 kB
+#52 5.597 dist/assets/RunsPage-C3Rxg0TL.js                          1.32 kB │ gzip:   0.74 kB
+#52 5.597 dist/assets/SpecAmbiguity-qfG1pHAm.js                     2.02 kB │ gzip:   0.83 kB
+#52 5.597 dist/assets/FirmwareCard-BKGzD-dj.js                      2.07 kB │ gzip:   1.02 kB
+#52 5.597 dist/assets/ComparePanel-CSR4X2B-.js                      5.44 kB │ gzip:   2.16 kB
+#52 5.597 dist/assets/BugList-ByMAQEvP.js                           6.76 kB │ gzip:   2.56 kB
+#52 5.597 dist/assets/NewRun-BcKTTWSg.js                            9.50 kB │ gzip:   3.63 kB
+#52 5.597 dist/assets/RunView-fLQZ1Vrf.js                          50.23 kB │ gzip:  16.08 kB
+#52 5.597 dist/assets/index-CADWH_CK.js                           303.47 kB │ gzip:  98.01 kB
+#52 5.597 dist/assets/Replay-wP02vttd.js                          447.13 kB │ gzip: 122.47 kB
+#52 5.597 ✓ built in 2.37s
+#52 DONE 5.7s
+
+#53 [frontend stage-1 2/3] COPY nginx.conf /etc/nginx/conf.d/default.conf
+#53 CACHED
+
+#54 [frontend stage-1 3/3] COPY --from=build /app/dist /usr/share/nginx/html
+#54 DONE 0.0s
+
+#55 [frontend] exporting to image
+#55 exporting layers 0.1s done
+#55 exporting manifest sha256:94f5047dbb1ed939bcedb4d89ba4bc9fcc03bb643e81ab1466fc5712dcd00f55 0.0s done
+#55 exporting config sha256:bc90df0b71cb986eb9acf13a62f1a774fd903f7b983f4bce2fd1bc1af279404c done
+#55 exporting attestation manifest sha256:9fd790da2d33ba464c51ac4ae4af27adefbb7a65399cf254f75bd042b9368434 done
+#55 exporting manifest list sha256:6d7fbc43382be615002fa7c229d52887ae23671c4e7b37e4804b21774e0b4cc3 done
+#55 naming to docker.io/library/hexorcist-frontend:latest done
+#55 unpacking to docker.io/library/hexorcist-frontend:latest 0.0s done
+#55 DONE 0.2s
+
+#56 [frontend] resolving provenance for metadata file
+#56 DONE 0.0s
+ Image hexorcist-sandbox:latest Built 
+ Image hexorcist-backend Built 
+ Image hexorcist-frontend Built 
+ Container hexorcist-sandbox-image-1 Recreate 
+ Container hexorcist-sandbox-image-1 Recreated 
+ Container hexorcist-backend-1 Recreate 
+ Container hexorcist-backend-1 Recreated 
+ Container hexorcist-frontend-1 Recreate 
+ Container hexorcist-frontend-1 Recreated 
+ Container hexorcist-sandbox-image-1 Starting 
+ Container hexorcist-sandbox-image-1 Started 
+ Container hexorcist-sandbox-image-1 Waiting 
+ Container hexorcist-sandbox-image-1 Exited 
+ Container hexorcist-backend-1 Starting 
+ Container hexorcist-backend-1 Started 
+ Container hexorcist-frontend-1 Starting 
+ Container hexorcist-frontend-1 Started 
+health: ok=True sandbox={'docker': True, 'image': True, 'error': ''} llm_model=deepseek-chat llm_base_url=https://api.deepseek.com/v1 passcode_required=False rate_limit_per_hour=1000 max_active_runs=3
+agent settings: {'cross_check': True, 'cleanroom_samples': 2, 'search_variants': 30, 'search_seed': 1337, 'search_budget_s': 90}
+2026-11-15 17:23:45  stack current, app on deepseek-chat
+2026-11-15 17:23:45  hexorcist 1/40 aquarium_ph_scale: start (DeepSeek spent so far $0.000000)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+aquarium_ph_scale: status=fixed bugs=2 time=173.62s cost=0.00525378
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/aquarium_ph_scale.json
+2026-11-15 17:26:39  hexorcist 1/40 aquarium_ph_scale: done
+2026-11-15 17:26:41  hexorcist 2/40 attic_vent_hyst: start (DeepSeek spent so far $0.005254)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+attic_vent_hyst: status=partial bugs=2 time=209.71s cost=0.00749224
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/attic_vent_hyst.json
+2026-11-15 17:30:11  hexorcist 2/40 attic_vent_hyst: done
+2026-11-15 17:30:13  hexorcist 3/40 bench_led_miswire: start (DeepSeek spent so far $0.012746)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+bench_led_miswire: status=partial bugs=1 time=184.28s cost=0.00708946
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/bench_led_miswire.json
+2026-11-15 17:33:18  hexorcist 3/40 bench_led_miswire: done
+2026-11-15 17:33:20  hexorcist 4/40 blend_tank_sum_ovf: start (DeepSeek spent so far $0.019835)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+blend_tank_sum_ovf: status=fixed bugs=2 time=295.7s cost=0.00713552
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/blend_tank_sum_ovf.json
+2026-11-15 17:38:16  hexorcist 4/40 blend_tank_sum_ovf: done
+2026-11-15 17:38:18  hexorcist 5/40 boiler_ok: start (DeepSeek spent so far $0.026971)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+boiler_ok: status=clean bugs=0 time=122.21s cost=0.00319186
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/boiler_ok.json
+2026-11-15 17:40:21  hexorcist 5/40 boiler_ok: done
+2026-11-15 17:40:23  hexorcist 6/40 boiler_valve_failsafe: start (DeepSeek spent so far $0.030163)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+boiler_valve_failsafe: status=fixed bugs=1 time=159.98s cost=0.00653268
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/boiler_valve_failsafe.json
+2026-11-15 17:43:04  hexorcist 6/40 boiler_valve_failsafe: done
+2026-11-15 17:43:06  hexorcist 7/40 cabin_heater_mul_ovf: start (DeepSeek spent so far $0.036696)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+cabin_heater_mul_ovf: status=partial bugs=1 time=199.14s cost=0.00743582
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/cabin_heater_mul_ovf.json
+2026-11-15 17:46:25  hexorcist 7/40 cabin_heater_mul_ovf: done
+2026-11-15 17:46:27  hexorcist 8/40 cellar_pump_hyst: start (DeepSeek spent so far $0.044131)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+cellar_pump_hyst: status=fixed bugs=1 time=247.42s cost=0.00494032
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/cellar_pump_hyst.json
+2026-11-15 17:50:35  hexorcist 8/40 cellar_pump_hyst: done
+2026-11-15 17:50:37  hexorcist 9/40 cooler_ok: start (DeepSeek spent so far $0.049072)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+cooler_ok: status=clean bugs=0 time=98.1s cost=0.00307874
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/cooler_ok.json
+2026-11-15 17:52:16  hexorcist 9/40 cooler_ok: done
+2026-11-15 17:52:18  hexorcist 10/40 drip_scheduler_u8: start (DeepSeek spent so far $0.052150)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+drip_scheduler_u8: status=partial bugs=3 time=245.91s cost=0.00736344
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/drip_scheduler_u8.json
+2026-11-15 17:56:24  hexorcist 10/40 drip_scheduler_u8: done
+2026-11-15 17:56:26  hexorcist 11/40 foyer_lamp_debounce: start (DeepSeek spent so far $0.059514)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+foyer_lamp_debounce: status=fixed bugs=1 time=164.45s cost=0.00392798
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/foyer_lamp_debounce.json
+2026-11-15 17:59:11  hexorcist 11/40 foyer_lamp_debounce: done
+2026-11-15 17:59:13  hexorcist 12/40 glue_solenoid_short: start (DeepSeek spent so far $0.063442)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+glue_solenoid_short: status=clean bugs=0 time=75.48s cost=0.00266896
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/glue_solenoid_short.json
+2026-11-15 18:00:29  hexorcist 12/40 glue_solenoid_short: done
+2026-11-15 18:00:32  hexorcist 13/40 greenhouse_dual: start (DeepSeek spent so far $0.066111)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+greenhouse_dual: status=fixed bugs=3 time=286.67s cost=0.00654374
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/greenhouse_dual.json
+2026-11-15 18:05:19  hexorcist 13/40 greenhouse_dual: done
+2026-11-15 18:05:21  hexorcist 14/40 greenhouse_ok: start (DeepSeek spent so far $0.072655)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+greenhouse_ok: status=fixed bugs=1 time=250.54s cost=0.00693476
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/greenhouse_ok.json
+2026-11-15 18:09:32  hexorcist 14/40 greenhouse_ok: done
+2026-11-15 18:09:34  hexorcist 15/40 hoist_estop_invert: start (DeepSeek spent so far $0.079589)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+hoist_estop_invert: status=fixed bugs=1 time=122.26s cost=0.00423822
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/hoist_estop_invert.json
+2026-11-15 18:11:37  hexorcist 15/40 hoist_estop_invert: done
+2026-11-15 18:11:39  hexorcist 16/40 hold_to_arm_late: start (DeepSeek spent so far $0.083828)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+hold_to_arm_late: status=clean bugs=0 time=95.05s cost=0.0023821
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/hold_to_arm_late.json
+2026-11-15 18:13:14  hexorcist 16/40 hold_to_arm_late: done
+2026-11-15 18:13:16  hexorcist 17/40 inject_pulse_short: start (DeepSeek spent so far $0.086210)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+inject_pulse_short: status=fixed bugs=1 time=110.16s cost=0.0040446
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/inject_pulse_short.json
+2026-11-15 18:15:07  hexorcist 17/40 inject_pulse_short: done
+2026-11-15 18:15:09  hexorcist 18/40 kiln_door_block: start (DeepSeek spent so far $0.090254)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+kiln_door_block: status=fixed bugs=2 time=116.22s cost=0.00431578
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/kiln_door_block.json
+2026-11-15 18:17:06  hexorcist 18/40 kiln_door_block: done
+2026-11-15 18:17:08  hexorcist 19/40 lab_ph_ok: start (DeepSeek spent so far $0.094570)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+lab_ph_ok: status=clean bugs=0 time=163.31s cost=0.00311234
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/lab_ph_ok.json
+2026-11-15 18:19:51  hexorcist 19/40 lab_ph_ok: done
+2026-11-15 18:19:53  hexorcist 20/40 laundry_cycle_stuck: start (DeepSeek spent so far $0.097682)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+laundry_cycle_stuck: status=fixed bugs=2 time=320.39s cost=0.00736638
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/laundry_cycle_stuck.json
+2026-11-15 18:25:14  hexorcist 20/40 laundry_cycle_stuck: done
+2026-11-15 18:25:16  hexorcist 21/40 laundry_ok: start (DeepSeek spent so far $0.105049)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+laundry_ok: status=clean bugs=0 time=199.51s cost=0.00295218
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/laundry_ok.json
+2026-11-15 18:28:36  hexorcist 21/40 laundry_ok: done
+2026-11-15 18:28:38  hexorcist 22/40 lobby_lamp_ok: start (DeepSeek spent so far $0.108001)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+lobby_lamp_ok: status=clean bugs=0 time=52.97s cost=0.00241276
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/lobby_lamp_ok.json
+2026-11-15 18:29:32  hexorcist 22/40 lobby_lamp_ok: done
+2026-11-15 18:29:34  hexorcist 23/40 lock_ok: start (DeepSeek spent so far $0.110414)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+lock_ok: status=clean bugs=0 time=72.57s cost=0.00269024
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/lock_ok.json
+2026-11-15 18:30:47  hexorcist 23/40 lock_ok: done
+2026-11-15 18:30:49  hexorcist 24/40 loft_fan_ok: start (DeepSeek spent so far $0.113104)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+loft_fan_ok: status=partial bugs=3 time=334.01s cost=0.00958678
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/loft_fan_ok.json
+2026-11-15 18:36:24  hexorcist 24/40 loft_fan_ok: done
+2026-11-15 18:36:26  hexorcist 25/40 mist_injector_long: start (DeepSeek spent so far $0.122691)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+mist_injector_long: status=fixed bugs=1 time=122.56s cost=0.0042308
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/mist_injector_long.json
+2026-11-15 18:38:29  hexorcist 25/40 mist_injector_long: done
+2026-11-15 18:38:31  hexorcist 26/40 nav_beacon_byte_timer: start (DeepSeek spent so far $0.126921)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+nav_beacon_byte_timer: status=partial bugs=3 time=176.88s cost=0.00830452
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/nav_beacon_byte_timer.json
+2026-11-15 18:41:28  hexorcist 26/40 nav_beacon_byte_timer: done
+2026-11-15 18:41:30  hexorcist 27/40 panel_dual_debounce_edge: start (DeepSeek spent so far $0.135226)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+panel_dual_debounce_edge: status=fixed bugs=1 time=129.74s cost=0.00467824
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/panel_dual_debounce_edge.json
+2026-11-15 18:43:40  hexorcist 27/40 panel_dual_debounce_edge: done
+2026-11-15 18:43:43  hexorcist 28/40 porch_gate_block: start (DeepSeek spent so far $0.139904)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+porch_gate_block: status=fixed bugs=2 time=119.24s cost=0.00425278
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/porch_gate_block.json
+2026-11-15 18:45:42  hexorcist 28/40 porch_gate_block: done
+2026-11-15 18:45:44  hexorcist 29/40 process_dual_block_scale: start (DeepSeek spent so far $0.144157)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+process_dual_block_scale: status=partial bugs=4 time=250.43s cost=0.00775152
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/process_dual_block_scale.json
+2026-11-15 18:49:55  hexorcist 29/40 process_dual_block_scale: done
+2026-11-15 18:49:57  hexorcist 30/40 rail_limit_invert: start (DeepSeek spent so far $0.151909)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+rail_limit_invert: status=clean bugs=0 time=102.66s cost=0.00251468
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/rail_limit_invert.json
+2026-11-15 18:51:40  hexorcist 30/40 rail_limit_invert: done
+2026-11-15 18:51:43  hexorcist 31/40 shop_estop_debounce: start (DeepSeek spent so far $0.154423)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+shop_estop_debounce: status=fixed bugs=1 time=141.82s cost=0.00391482
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/shop_estop_debounce.json
+2026-11-15 18:54:05  hexorcist 31/40 shop_estop_debounce: done
+2026-11-15 18:54:07  hexorcist 32/40 solenoid_ok: start (DeepSeek spent so far $0.158338)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+solenoid_ok: status=clean bugs=0 time=63.47s cost=0.00272594
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/solenoid_ok.json
+2026-11-15 18:55:11  hexorcist 32/40 solenoid_ok: done
+2026-11-15 18:55:13  hexorcist 33/40 spindle_rpm_prefix: start (DeepSeek spent so far $0.161064)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+spindle_rpm_prefix: status=fixed bugs=2 time=158.54s cost=0.00493864
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/spindle_rpm_prefix.json
+2026-11-15 18:57:52  hexorcist 33/40 spindle_rpm_prefix: done
+2026-11-15 18:57:54  hexorcist 34/40 studio_siren_ok: start (DeepSeek spent so far $0.166003)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+studio_siren_ok: status=clean bugs=0 time=92.07s cost=0.00244678
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/studio_siren_ok.json
+2026-11-15 18:59:27  hexorcist 34/40 studio_siren_ok: done
+2026-11-15 18:59:29  hexorcist 35/40 vault_lock_stuck: start (DeepSeek spent so far $0.168449)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+vault_lock_stuck: status=clean bugs=0 time=78.51s cost=0.00266938
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/vault_lock_stuck.json
+2026-11-15 19:00:48  hexorcist 35/40 vault_lock_stuck: done
+2026-11-15 19:00:50  hexorcist 36/40 walk_in_cooler_failsafe: start (DeepSeek spent so far $0.171119)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+walk_in_cooler_failsafe: status=fixed bugs=1 time=247.47s cost=0.0054894
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/walk_in_cooler_failsafe.json
+2026-11-15 19:04:58  hexorcist 36/40 walk_in_cooler_failsafe: done
+2026-11-15 19:05:00  hexorcist 37/40 weather_line_prefix: start (DeepSeek spent so far $0.176608)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+weather_line_prefix: status=partial bugs=3 time=321.41s cost=0.0079639
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/weather_line_prefix.json
+2026-11-15 19:10:22  hexorcist 37/40 weather_line_prefix: done
+2026-11-15 19:10:24  hexorcist 38/40 weather_ok: start (DeepSeek spent so far $0.184572)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+weather_ok: status=partial bugs=1 time=271.56s cost=0.0087871
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/weather_ok.json
+2026-11-15 19:14:56  hexorcist 38/40 weather_ok: done
+2026-11-15 19:14:58  hexorcist 39/40 workshop_kpa_scale: start (DeepSeek spent so far $0.193359)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+workshop_kpa_scale: status=fixed bugs=2 time=288.06s cost=0.00726866
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/workshop_kpa_scale.json
+2026-11-15 19:19:47  hexorcist 39/40 workshop_kpa_scale: done
+2026-11-15 19:19:49  hexorcist 40/40 yard_relay_miswire: start (DeepSeek spent so far $0.200628)
+health {'ok': True, 'llm_configured': True, 'llm_model': 'deepseek-chat', 'passcode_required': False}
+yard_relay_miswire: status=partial bugs=2 time=190.09s cost=0.007525
+wrote /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist_cases/yard_relay_miswire.json
+2026-11-15 19:23:00  hexorcist 40/40 yard_relay_miswire: done
+merged 40 hexorcist rows into /Users/matthewkim/Documents/GitHub/hexorcist/bench/results/dev_full2_20261115T222332Z_hexorcist.json; missing=[]; errored=[]
+2026-11-15 19:23:02  === summary ===
+2026-11-15 19:23:02  hexorcist deepseek: merged file dev_full2_20261115T222332Z_hexorcist.json
+2026-11-15 19:23:02  DeepSeek total: $0.208153 of cap $0.60
+2026-11-15 19:23:03  ALL CASES COMPLETE for run dev_full2_20261115T222332Z. Tell the agent to continue with scoring and comparison.
+2026-11-15 19:23:03  restoring the default rate limit (recreating backend without the bench override)
+ Container hexorcist-backend-1 Recreate 
+ Container hexorcist-backend-1 Recreated 
+ Container hexorcist-sandbox-image-1 Starting 
+ Container hexorcist-sandbox-image-1 Started 
+ Container hexorcist-sandbox-image-1 Waiting 
+ Container hexorcist-sandbox-image-1 Exited 
+ Container hexorcist-backend-1 Starting 
+ Container hexorcist-backend-1 Started 

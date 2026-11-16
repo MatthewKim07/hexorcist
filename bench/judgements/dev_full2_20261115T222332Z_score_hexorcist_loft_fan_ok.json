@@ -1,0 +1,74 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Fan ignores hysteresis thresholds and follows boost/offHold instead",
+      "description": "The threshold logic at lines 70-94 only drives the fan after HOLD (4) consecutive samples, and the boost branch at lines 62-67 resets both hold counters and forces the fan ON every 50 ms, so on release the fan state is decided by whichever counter fills first rather than by the 36/32 \u00b0C thresholds. Measured evidence shows D5 in the wrong state for 150 ms at 1.92 s, 802 ms at 1.40 s, and 1182 ms at 2.97 s, all exceeding the 500 ms grace. The offHold path at lines 78-93 can also turn the fan OFF while temperature is still above 32 \u00b0C after a boost release. D5 was in the wrong state for 150 ms across 1 interval(s), first at 1.92 s: D5 was not LOW for 150 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Boost force-ON is not sustained; fan drops OFF while button held",
+      "description": "Boost only forces the fan ON inside the 50 ms sample branch (lines 62-67), but the else branch at lines 68-95 and the offHold counter at lines 78-93 can drive the fan OFF on the next sample when the button reads HIGH, and the hold counters are reset on every boost sample so the fan state is unstable. Measured evidence shows D5 wrong for 6850 ms across 6 intervals (first at 500 ms), 6899 ms across 2 intervals, and 4349 ms across 2 intervals while D4 was held LOW. The 500 ms grace is exceeded by large margins. D5 was in the wrong state for 6850 ms across 6 interval(s), first at 500 ms: D5 was not LOW for 500 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No rate limiting on fan toggles; boost and hysteresis cause toggle bursts",
+      "description": "driveFan() at lines 29-33 writes D5 unconditionally with no minimum interval or toggle budget, and the boost branch at line 66 plus the hysteresis branches at lines 89 and 93 can each toggle the fan independently. Measured evidence shows D5 toggling 8 times in a 5000 ms window starting at 1.00 s and 26 times starting at 1.10 s, far above the limit of 2. Nothing in the code tracks recent toggle timestamps to enforce the 2-per-5000 ms rule. D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Fan ignores hysteresis thresholds and follows boost/offHold instead",
+        "description": "The threshold logic at lines 70-94 only drives the fan after HOLD (4) consecutive samples, and the boost branch at lines 62-67 resets both hold counters and forces the fan ON every 50 ms, so on release the fan state is decided by whichever counter fills first rather than by the 36/32 \u00b0C thresholds. Measured evidence shows D5 in the wrong state for 150 ms at 1.92 s, 802 ms at 1.40 s, and 1182 ms at 2.97 s, all exceeding the 500 ms grace. The offHold path at lines 78-93 can also turn the fan OFF while temperature is still above 32 \u00b0C after a boost release. D5 was in the wrong state for 150 ms across 1 interval(s), first at 1.92 s: D5 was not LOW for 150 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Boost force-ON is not sustained; fan drops OFF while button held",
+        "description": "Boost only forces the fan ON inside the 50 ms sample branch (lines 62-67), but the else branch at lines 68-95 and the offHold counter at lines 78-93 can drive the fan OFF on the next sample when the button reads HIGH, and the hold counters are reset on every boost sample so the fan state is unstable. Measured evidence shows D5 wrong for 6850 ms across 6 intervals (first at 500 ms), 6899 ms across 2 intervals, and 4349 ms across 2 intervals while D4 was held LOW. The 500 ms grace is exceeded by large margins. D5 was in the wrong state for 6850 ms across 6 interval(s), first at 500 ms: D5 was not LOW for 500 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No rate limiting on fan toggles; boost and hysteresis cause toggle bursts",
+        "description": "driveFan() at lines 29-33 writes D5 unconditionally with no minimum interval or toggle budget, and the boost branch at line 66 plus the hysteresis branches at lines 89 and 93 can each toggle the fan independently. Measured evidence shows D5 toggling 8 times in a 5000 ms window starting at 1.00 s and 26 times starting at 1.10 s, far above the limit of 2. Nothing in the code tracks recent toggle timestamps to enforce the 2-per-5000 ms rule. D5 toggled 8 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1270,
+    "completion_tokens": 64,
+    "cost_usd": 0.0002289,
+    "cached": false
+  }
+}
