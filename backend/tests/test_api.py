@@ -134,4 +134,19 @@ def test_events_can_be_polled_as_json():
 
 def test_health_reports_the_agent_settings_the_bench_checks():
     body = TestClient(create_app(settings(cross_check=True, search_variants=30))).get("/api/health").json()
-    assert body["agent"] == {"cross_check": True, "cleanroom_samples": 2, "search_variants": 30, "search_seed": 1337, "search_budget_s": 90}
+    assert body["agent"] == {
+        "cross_check": True,
+        "cleanroom_samples": 2,
+        "cleanroom2": {"mixed": False, "model": "m", "host": "unused"},
+        "search_variants": 30,
+        "search_seed": 1337,
+        "search_budget_s": 90,
+    }
+
+
+def test_health_names_the_second_clean_room_model_and_never_a_key():
+    mixed = settings(room2_base_url="https://api.openai.com/v1", room2_api_key="sk-secret-room2", room2_model="gpt-4o-mini")
+    response = TestClient(create_app(mixed)).get("/api/health")
+    assert response.json()["agent"]["cleanroom2"] == {"mixed": True, "model": "gpt-4o-mini", "host": "api.openai.com"}
+    assert "sk-secret-room2" not in response.text
+

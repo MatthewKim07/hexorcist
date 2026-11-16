@@ -10,6 +10,7 @@ import time
 import uuid
 from collections import defaultdict, deque
 from typing import Literal, Optional
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -145,6 +146,12 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             "agent": {
                 "cross_check": cfg.cross_check,
                 "cleanroom_samples": cfg.cleanroom_samples,
+                # Which model writes clean room 2. mixed=False means it falls back to the main model. No key is ever shown.
+                "cleanroom2": {
+                    "mixed": cfg.room2_configured and cfg.cleanroom_samples >= 2,
+                    "model": cfg.room2_model if cfg.room2_configured else cfg.llm_model,
+                    "host": (urlparse(cfg.room2_base_url).hostname if cfg.room2_configured else urlparse(cfg.llm_base_url).hostname) or "",
+                },
                 "search_variants": cfg.search_variants,
                 "search_seed": cfg.search_seed,
                 "search_budget_s": cfg.search_budget_s,

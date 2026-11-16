@@ -12,7 +12,8 @@ import logging
 import re
 import time
 import traceback
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from urllib.parse import urlparse
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import TypeAdapter, ValidationError
@@ -317,6 +318,8 @@ class Pipeline:
         self.store = store
         self.bus = bus
         self.llm = LLMClient(settings)
+        # Clean room 2 is written by another model when OPENAI_* is configured. Otherwise None, and room 2 uses self.llm.
+        self.llm2: Optional[LLMClient] = LLMClient(replace(settings, llm_base_url=settings.room2_base_url, llm_api_key=settings.room2_api_key, llm_model=settings.room2_model)) if settings.room2_configured and settings.cleanroom_samples >= 2 else None
         self.records: list[dict] = []
         self.warnings: list[str] = []
         self._sem = asyncio.Semaphore(settings.max_parallel)
@@ -410,14 +413,19 @@ class Pipeline:
 
     # ------------------------------------------------------ clean-room check
 
+    def _room_llm(self, index: int) -> LLMClient:
+        """The model that writes clean room `index`: room 2 uses the second endpoint when there is one."""
+        return self.llm2 if index == 2 and self.llm2 is not None else self.llm
+
     async def _build_cleanroom(self, spec: DeviceSpec, index: int) -> CleanRoom:
         """Write one clean-room sketch from the spec and pin map alone, and compile it. One repair on a compile error."""
         room = CleanRoom(index=index)
         step = f"cleanroom{index}"
+        llm = self._room_llm(index)
         sample = {"temperature": CLEANROOM_TEMPERATURE, "seed": CLEANROOM_SEEDS[(index - 1) % len(CLEANROOM_SEEDS)]}
         started = time.monotonic()
         try:
-            code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec), step, **sample)
+            code, _ = await llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec), step, **sample)
             for attempt in (1, 2):
                 screened = await asyncio.to_thread(screen_request, code, "")
                 if not screened["allowed"]:
@@ -432,7 +440,7 @@ class Pipeline:
                     room.status, room.reason = "skipped", f"Clean-room implementation {index} did not compile after one repair attempt."
                     break
                 room.repaired = True
-                code, _ = await self.llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec, built.log, code), step, **sample)
+                code, _ = await llm.code(prompts.CLEANROOM_SYSTEM, prompts.cleanroom_user(spec, built.log, code), step, **sample)
         except (LLMError, SandboxError) as exc:
             room.status, room.reason = "skipped", f"Clean-room implementation {index} could not be built: {str(exc)[:200]}"
         room.wall_ms = (time.monotonic() - started) * 1000
@@ -487,10 +495,34 @@ class Pipeline:
             )
         return out
 
+    def _room_model(self, index: int) -> tuple[str, str]:
+        """(model, host) that wrote clean room `index`."""
+        cfg = self.settings
+        if index == 2 and self.llm2 is not None:
+            return cfg.room2_model, urlparse(cfg.room2_base_url).hostname or ""
+        return cfg.llm_model, urlparse(cfg.llm_base_url).hostname or ""
+
+    def _model_diversity(self) -> dict:
+        """Whether the clean rooms came from different models, and if not, why not. Never contains a key."""
+        cfg = self.settings
+        rooms = [{"index": i, "model": self._room_model(i)[0], "host": self._room_model(i)[1]} for i in range(1, cfg.cleanroom_samples + 1)]
+        mixed = self.llm2 is not None
+        if cfg.cleanroom_samples < 2:
+            note = "Only one clean room was asked for (CLEANROOM_SAMPLES=1), so there is no second model."
+        elif mixed:
+            note = f"Clean room 1 was written by {rooms[0]['model']}, clean room 2 by {rooms[1]['model']} (a different model)."
+        else:
+            why = "CLEANROOM_MIXED is off" if not cfg.cleanroom_mixed else "OPENAI_* is not configured"
+            note = f"{why}, so both clean rooms were written by {rooms[0]['model']}, the same model as the agent. Their mistakes are more likely to coincide."
+        return {"mixed": mixed, "fallback": not mixed and cfg.cleanroom_samples >= 2, "rooms": rooms, "note": note}
+
     def _room_report(self, room: CleanRoom) -> dict:
-        calls = [c for c in self.llm.calls if c.step == f"cleanroom{room.index}"]
+        calls = [c for c in self._room_llm(room.index).calls if c.step == f"cleanroom{room.index}"]
+        model, host = self._room_model(room.index)
         return {
             "index": room.index,
+            "model": model,
+            "host": host,
             "status": room.status,
             "reason": room.reason,
             "repaired": room.repaired,
@@ -534,6 +566,7 @@ class Pipeline:
             "rule": "both" if len(ready) >= 2 else ("single" if len(ready) == 1 else "none"),
             "unconfirmed": self._ambiguities(assertions, scenarios),
             "usage": usage,
+            "model_diversity": self._model_diversity(),
             "rooms": per_room,
             "firmware": ready[0].code if ready else "",
         }
@@ -1130,7 +1163,11 @@ class Pipeline:
         }
 
     def _llm_summary(self) -> dict:
-        calls = self.llm.calls
+        """Everything the run asked of any model. `providers` splits it by endpoint, so each can be priced on its own."""
+        clients = [("agent", self.llm, self.settings.llm_model, self.settings.llm_base_url)]
+        if self.llm2 is not None:
+            clients.append(("cleanroom2", self.llm2, self.settings.room2_model, self.settings.room2_base_url))
+        calls = [c for _, client, _, _ in clients for c in client.calls]
         by_step: dict[str, dict] = {}
         for c in calls:
             row = by_step.setdefault(c.step, {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "seconds": 0.0})
@@ -1138,6 +1175,17 @@ class Pipeline:
             row["prompt_tokens"] += c.prompt_tokens
             row["completion_tokens"] += c.completion_tokens
             row["seconds"] = round(row["seconds"] + c.duration_ms / 1000, 1)
+        providers = [
+            {
+                "role": role,
+                "model": model,
+                "host": urlparse(base_url).hostname or "",
+                "calls": len(client.calls),
+                "prompt_tokens": sum(c.prompt_tokens for c in client.calls),
+                "completion_tokens": sum(c.completion_tokens for c in client.calls),
+            }
+            for role, client, model, base_url in clients
+        ]
         return {
             "model": self.settings.llm_model,
             "calls": len(calls),
@@ -1145,6 +1193,7 @@ class Pipeline:
             "prompt_tokens": sum(c.prompt_tokens for c in calls),
             "completion_tokens": sum(c.completion_tokens for c in calls),
             "by_step": by_step,
+            "providers": providers,
         }
 
     # ---------------------------------------------------- containment mode

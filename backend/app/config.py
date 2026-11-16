@@ -46,6 +46,12 @@ class Settings:
     cross_check: bool = True
     # How many independent clean-room sketches to write (1 or 2). A check is dropped only if every one of them fails it.
     cleanroom_samples: int = 2
+    # Model diversity: clean room 2 is written by a different model, through the OPENAI_* endpoint. Without it
+    # (no key, or CLEANROOM_MIXED=0) both rooms use the main LLM_* model and the report says so.
+    cleanroom_mixed: bool = True
+    room2_base_url: str = ""
+    room2_api_key: str = ""
+    room2_model: str = ""
     # Stimulus search: bounded variants of each scenario, run on the uploaded firmware. 0 turns it off.
     search_variants: int = 30
     search_seed: int = 1337
@@ -54,6 +60,11 @@ class Settings:
     @property
     def llm_configured(self) -> bool:
         return bool(self.llm_api_key and self.llm_model and self.llm_base_url)
+
+    @property
+    def room2_configured(self) -> bool:
+        """True when the second clean room has its own endpoint (a different model from the main one)."""
+        return bool(self.cleanroom_mixed and self.room2_api_key and self.room2_model and self.room2_base_url)
 
 
 def load_settings() -> Settings:
@@ -74,6 +85,10 @@ def load_settings() -> Settings:
         llm_timeout_s=_int("LLM_TIMEOUT_S", 180),
         cross_check=_flag("CLEANROOM", True),
         cleanroom_samples=max(1, min(2, _int("CLEANROOM_SAMPLES", 2))),
+        cleanroom_mixed=_flag("CLEANROOM_MIXED", True),
+        room2_base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").strip(),
+        room2_api_key=os.environ.get("OPENAI_API_KEY", "").strip(),
+        room2_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini").strip(),
         search_variants=max(0, _int("SEARCH_VARIANTS", 30)),
         search_seed=_int("SEARCH_SEED", 1337),
         search_budget_s=max(0, _int("SEARCH_BUDGET_S", 90)),
