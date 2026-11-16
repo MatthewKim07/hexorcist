@@ -25,15 +25,16 @@ The first full run (`v2_full_20261115T003855Z`, in `bench/results/summary.md`) w
 
 ### Dev-set rerun
 
-`bench/run_dev.sh` runs Hexorcist only, on all 40 cases or on a subset, with the same safeguards as `run_all.sh` (frozen-case check, DeepSeek pre-flight, health pre-flight, raised rate limit through the bench override and restored afterwards, resume per case, a $0.60 DeepSeek cap, log in `bench/results/run_dev.log`):
+`bench/run_dev.sh` runs Hexorcist only, on all 40 cases or on a subset, with the same safeguards as `run_all.sh` (frozen-case check, DeepSeek and OpenAI pre-flights, health pre-flight, raised rate limit through the bench override and restored afterwards, resume per case, a $0.60 DeepSeek cap and a $0.50 OpenAI cap, log in `bench/results/run_dev.log`). Clean room 1 is written by DeepSeek and clean room 2 by the `OPENAI_*` model (`gpt-4o-mini`); the script refuses to start if the backend is not set up that way (`ALLOW_FALLBACK=1` runs two DeepSeek rooms and the report says so). The stimulus search is off by default and the script refuses to start with it on. A fresh run needs an explicit id, because the script resumes the last one otherwise:
 
 ```bash
 bench/run_dev.sh --list                                   # what would run, touches nothing
 bench/run_dev.sh --cases solenoid_ok,loft_fan_ok          # a subset (comma or space separated)
-bench/run_dev.sh                                          # all 40
+RUN_ID="dev_full3_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh   # a fresh run of all 40
+bench/run_dev.sh                                          # no RUN_ID: resumes the last run
 ```
 
-Each per-case row also records what the new steps did: the checks the clean-room run left unconfirmed (with both measurements), bugs found by search, the search and clean-room usage, spec citations dropped, and the tokens per step.
+Each per-case row also records what the new steps did: the checks the clean-room run left unconfirmed (with both measurements), bugs found by search, the search and clean-room usage (which model wrote each room), spec citations dropped, the tokens per step and per provider, and the cost per provider (`cost_deepseek_usd`, `cost_openai_usd`).
 
 ## Freeze rule
 
