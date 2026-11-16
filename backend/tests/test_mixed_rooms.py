@@ -149,3 +149,15 @@ def test_the_second_client_points_at_the_openai_endpoint_and_the_first_stays_on_
     assert (second.llm_base_url, second.llm_model, second.llm_api_key) == ("https://api.openai.com/v1", "gpt-4o-mini", "sk-secret-room2")
     assert str(pipeline.llm2.client.base_url).startswith("https://api.openai.com/v1")
     assert str(pipeline.llm.client.base_url).startswith("http://unused/v1")
+
+
+def test_nothing_is_billed_to_either_endpoint_when_no_check_fails():
+    config = {"max_parallel": 2, "cross_check": True, **SECOND}
+    pipeline = Pipeline("r", settings(**config), RoomRunner(), NullStore(), NullBus())
+    pipeline.llm = MainLLM([], [CLEAN_OK])
+    pipeline.llm2 = SecondLLM([CLEAN_OK])
+    status, report = asyncio.run(pipeline.run_break(CLEAN_OK, SPEC))
+    assert status == "clean" and report["cross_check"]["status"] == "not_needed"
+    assert [s for s in pipeline.llm.steps if s.startswith("cleanroom")] == []
+    assert pipeline.llm2.steps == []
+    assert "providers" not in report["llm"] or all(p["role"] != "cleanroom2" or p["calls"] == 0 for p in report["llm"]["providers"])

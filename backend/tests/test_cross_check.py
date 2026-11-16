@@ -312,3 +312,25 @@ def test_no_failures_means_no_clean_room_run():
     assert status == "clean"
     assert report["cross_check"]["status"] == "not_needed"
     assert crosscheck.unconfirmed_ids({}) == set()
+
+
+def test_a_run_where_nothing_fails_never_calls_either_clean_room_model():
+    # Billing: the clean rooms used to be written before anyone knew whether a check would fail.
+    runner = RoomRunner()
+    pipeline = Pipeline("r", settings(max_parallel=2, cross_check=True), runner, NullStore(), NullBus())
+    pipeline.llm = RoomLLM([], [[CLEAN_OK], [CLEAN_OK]])
+    status, report = asyncio.run(pipeline.run_break(CLEAN_OK, SPEC))
+    assert status == "clean"
+    cross = report["cross_check"]
+    assert cross["status"] == "not_needed"
+    assert pipeline.llm.room_prompts == {1: [], 2: []}
+    assert pipeline.llm.calls == [c for c in pipeline.llm.calls if not c.step.startswith("cleanroom")]
+    assert cross["rooms"] == [] and cross["usage"]["llm_calls"] == 0 and cross["usage"]["sandbox_runs"] == 0
+    assert not any(k.startswith("cleanroom") for k in report["llm"]["by_step"])
+    assert pipeline._room_tasks == []
+
+
+def test_the_first_failing_check_starts_the_clean_rooms_once():
+    status, report, _, llm = run([PERSIST_FIXED], rooms=[[CLEAN_OK], [CLEAN_OK]])
+    assert report["cross_check"]["status"] == "ran"
+    assert [len(llm.room_prompts[1]), len(llm.room_prompts[2])] == [1, 1]

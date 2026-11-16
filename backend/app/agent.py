@@ -14,7 +14,7 @@ import time
 import traceback
 from dataclasses import dataclass, field, replace
 from urllib.parse import urlparse
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -326,6 +326,7 @@ class Pipeline:
         self._sem = asyncio.Semaphore(settings.max_parallel)
         # Clean-room cross-check state (see crosscheck.py).
         self._room_tasks: list[asyncio.Task] = []
+        self._rooms_wanted = False  # the cross-check is on and there is more than the crash check to compare
         self.rooms: Optional[list[CleanRoom]] = None  # every sample that was built, ready or skipped
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
@@ -352,7 +353,7 @@ class Pipeline:
         await self._record(built.record)
         return built
 
-    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None) -> None:
+    async def _run_one(self, elf: bytes, scenario: Scenario, assertions: list, spec: DeviceSpec, suite: SuiteResult, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None, on_fail: Optional[Callable[[list[str]], None]] = None) -> None:
         async with self._sem:
             if deadline is not None and time.monotonic() > deadline:
                 return  # out of time: this scenario simply has no result
@@ -363,6 +364,8 @@ class Pipeline:
         results = evaluate_all(assertions, run.trace, scenario, spec)
         suite.results[scenario.id] = results
         suite.exit_reasons[scenario.id] = run.trace.get("exit_reason", "unknown")
+        if on_fail is not None:
+            on_fail([r.assertion_id for r in results if r.status == "fail"])
         if not publish:
             return
         await asyncio.to_thread(self.store.add_trace, self.run_id, suite.iteration, scenario.id, trim_trace(run.trace))
@@ -379,9 +382,9 @@ class Pipeline:
             duration_ms=round(run.record.duration_ms, 1),
         )
 
-    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None) -> SuiteResult:
+    async def _run_suite(self, elf: bytes, scenarios: list[Scenario], assertions: list, spec: DeviceSpec, iteration: int, label: str, publish: bool = True, meter: Optional[Meter] = None, deadline: Optional[float] = None, on_fail: Optional[Callable[[list[str]], None]] = None) -> SuiteResult:
         suite = SuiteResult(iteration=iteration)
-        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label, publish, meter, deadline) for s in scenarios))
+        await asyncio.gather(*(self._run_one(elf, s, assertions, spec, suite, label, publish, meter, deadline, on_fail) for s in scenarios))
         return suite
 
     @staticmethod
@@ -417,6 +420,11 @@ class Pipeline:
     def _room_llm(self, index: int) -> LLMClient:
         """The model that writes clean room `index`: room 2 uses the second endpoint when there is one."""
         return self.llm2 if index == 2 and self.llm2 is not None else self.llm
+
+    def _start_rooms(self, spec: DeviceSpec) -> None:
+        """Start writing the clean-room sketches, once. Nothing is written, and nothing is billed, until a check really fails."""
+        if self._rooms_wanted and not self._room_tasks:
+            self._room_tasks = [asyncio.create_task(self._build_cleanroom(spec, i + 1)) for i in range(self.settings.cleanroom_samples)]
 
     async def _build_cleanroom(self, spec: DeviceSpec, index: int) -> CleanRoom:
         """Write one clean-room sketch from the spec and pin map alone, and compile it. One repair on a compile error."""
@@ -542,10 +550,10 @@ class Pipeline:
         ready = [r for r in rooms if r.status == "ready"]
         if not self.settings.cross_check:
             status = "disabled"
-        elif not self._room_tasks:
+        elif not self._rooms_wanted:
             status = "not_run"
-        elif not rooms:
-            status = "not_needed"  # the samples were never needed, so never awaited
+        elif not self._room_tasks or not rooms:
+            status = "not_needed"  # no confirmed check failed, so no sample was written (or none was awaited)
         elif not ready:
             status = "skipped"
         else:
@@ -684,6 +692,7 @@ class Pipeline:
             return []
 
         # Gate (b): the check must pass on both clean rooms in this very variant, so no correct firmware is known to fail it.
+        self._start_rooms(spec)
         rooms = await self._cleanroom_ready()
         by_cx = lambda i: (complexity(by_id[i]), i)  # noqa: E731
         judged = sorted({i for ids in found.values() for i in sorted(ids, key=by_cx)[:MAX_JUDGED_PER_CHECK]}, key=by_cx)[:MAX_JUDGED_VARIANTS]
@@ -839,9 +848,9 @@ class Pipeline:
         await bus.emit("device_model", device_model=device_model.model_dump())
         await bus.emit("assertions", assertions=[a.model_dump(exclude_none=True) for a in assertions])
         await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions{reused}")
-        if self.settings.cross_check and len(assertions) > 1:
-            # Written from the spec alone while the uploaded firmware compiles and the attack is planned.
-            self._room_tasks = [asyncio.create_task(self._build_cleanroom(spec, i + 1)) for i in range(self.settings.cleanroom_samples)]
+        # The clean rooms are written from the spec alone, but only once a check has failed on the uploaded firmware
+        # (see _start_rooms). A run where nothing fails never calls the clean-room models.
+        self._rooms_wanted = self.settings.cross_check and len(assertions) > 1
 
         # 2. COMPILE
         await bus.step("compile", "running", "Compiling in a sandbox")
@@ -875,10 +884,12 @@ class Pipeline:
 
         # 4. EXECUTE
         await bus.step("execute", "running", f"Running {len(scenarios)} scenarios in parallel sandboxes")
-        baseline = await self._run_suite(built.elf, scenarios, assertions, spec, 0, "attack")
         all_ids = {a.id for a in assertions}
         confirmed = set(all_ids)
+        # The first scenario that fails a check starts the clean rooms, so they are written while the rest still run.
+        baseline = await self._run_suite(built.elf, scenarios, assertions, spec, 0, "attack", on_fail=lambda failed: self._start_rooms(spec) if confirmed.intersection(failed) else None)
         if baseline.failing_assertions():
+            self._start_rooms(spec)
             rooms = await self._cleanroom_ready()
             if rooms:
                 await bus.step("execute", "running", f"Cross-checking the failures against {len(rooms)} clean-room implementation{'s' if len(rooms) > 1 else ''} written from the spec alone")
