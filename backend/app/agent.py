@@ -46,6 +46,7 @@ from .models import (
 from .sandbox import CompileResult, ContainmentRecord, SandboxError, SandboxRunner
 from .scenario_lib import builtin_scenarios, fill_defaults, idle_level
 from .search import UNSUPPORTED, complexity, make_variants, reproduction_point, shrink
+from .search_gates import REQUIRED_ROOMS, out_of_range, passes_in_every_room, stated_limits
 from .store import Store
 
 if TYPE_CHECKING:
@@ -67,8 +68,8 @@ MAX_SEARCH_KEPT = 6
 # Variants that break a check are shown to the clean-room firmware, a few per check and this many in all.
 MAX_JUDGED_PER_CHECK = 6
 MAX_JUDGED_VARIANTS = 12
-# Without a clean-room firmware to compare against, a check must break on this many variants to count.
-MIN_VARIANTS_UNCHECKED = 2
+# The rejected variants listed in the report are capped. The counts per gate are not.
+MAX_REJECTED_LISTED = 40
 # Variants get this share of the search budget. Shrinking what they found gets the rest.
 VARIANT_SHARE = 0.65
 # A run killed by the wall clock says nothing about the firmware, so only these count as a crash.
@@ -585,9 +586,10 @@ class Pipeline:
         """Run seeded variants of the scenarios on the uploaded firmware, and keep a shrunk copy of each that breaks a new check.
 
         Only checks that passed in every scenario so far can be "found": a check that already fails has its bug.
-        Before anything is kept, the clean-room firmware sees the same variants, so a check no correct firmware passes
-        cannot produce a finding. Kept scenarios are merged into `baseline` (iteration 0), so they are reported,
-        diagnosed and re-run when a patch is verified. `confirmed` loses any check the clean room rejects.
+        A finding must pass three gates (search_gates.py): (c) the variant is within the spec's stated ranges, (b) the
+        check passes on BOTH clean rooms in that same variant, and in the shrunk scenario that is finally kept, and (a) the
+        kept scenario fails on the uploaded firmware once more. Kept scenarios are merged into `baseline` (iteration 0),
+        so they are reported, diagnosed and re-run when a patch is verified.
         """
         bus = self.bus
         started = time.monotonic()
@@ -603,6 +605,9 @@ class Pipeline:
             "new_failing_checks": 0,
             "also_failing_known": {},
             "discarded_by_clean_room": [],
+            "gates": {"a": 0, "b": 0, "c": 0},
+            "rejected": [],
+            "limits": {},
             "kept": [],
             "mutations": {},
             "unsupported": UNSUPPORTED,
@@ -655,24 +660,47 @@ class Pipeline:
             finish()
             return []
 
-        # A check no correct firmware could pass must not produce a finding: ask the clean room first.
-        order = [v.id for v in variants]
+        by_scenario = {sc.id: sc for sc in scenarios}
+
+        def reject(aid: str, vid: str, gate: str, why: str) -> None:
+            info["gates"][gate] += 1
+            if len(info["rejected"]) < MAX_REJECTED_LISTED:
+                info["rejected"].append({"assertion_id": aid, "scenario_id": vid, "variant": by_id[vid].variant, "gate": gate, "reason": why[:300]})
+
+        # Gate (c): only a variant within the spec's stated ranges can be a finding. No sandbox run needed.
+        limits = stated_limits(spec, scenarios)
+        info["limits"] = limits.report()
+        in_range: dict[str, list[str]] = {}
+        for aid, ids in found.items():
+            for vid in ids:
+                why = out_of_range(by_id[vid], by_scenario.get(by_id[vid].parent), limits)
+                if why:
+                    reject(aid, vid, "c", why[0])
+                else:
+                    in_range.setdefault(aid, []).append(vid)
+        found = in_range
+        if not found:
+            finish()
+            return []
+
+        # Gate (b): the check must pass on both clean rooms in this very variant, so no correct firmware is known to fail it.
         rooms = await self._cleanroom_ready()
-        if rooms:
-            judged = sorted({i for ids in found.values() for i in sorted(ids, key=lambda i: complexity(by_id[i]))[:MAX_JUDGED_PER_CHECK]}, key=lambda i: (complexity(by_id[i]), i))[:MAX_JUDGED_VARIANTS]
+        by_cx = lambda i: (complexity(by_id[i]), i)  # noqa: E731
+        judged = sorted({i for ids in found.values() for i in sorted(ids, key=by_cx)[:MAX_JUDGED_PER_CHECK]}, key=by_cx)[:MAX_JUDGED_VARIANTS]
+        if len(rooms) >= REQUIRED_ROOMS:
             await self._cleanroom_judge(rooms, [by_id[i] for i in judged], assertions, spec)
-            verdicts = classify({i: suite.results[i] for i in judged}, [r.results for r in rooms], order, set(found))
-            for aid, verdict in verdicts.items():
-                if verdict.unconfirmed:
-                    self.verdicts[aid] = verdict
-                    self.unconfirmed.add(aid)
-                    confirmed.discard(aid)
-                    found.pop(aid, None)
-                    info["discarded_by_clean_room"].append(aid)
-            if info["discarded_by_clean_room"]:
-                await bus.emit("cross_check", unconfirmed=self._ambiguities(assertions, scenarios))
-        else:
-            found = {aid: ids for aid, ids in found.items() if len(ids) >= MIN_VARIANTS_UNCHECKED}
+        accepted: dict[str, list[str]] = {}
+        for aid, ids in found.items():
+            for vid in sorted(ids, key=by_cx)[:MAX_JUDGED_PER_CHECK]:
+                if vid not in judged:
+                    continue
+                ok, why = passes_in_every_room(aid, vid, [r.results for r in rooms])
+                if ok:
+                    accepted.setdefault(aid, []).append(vid)
+                else:
+                    reject(aid, vid, "b", why)
+        info["discarded_by_clean_room"] = sorted(aid for aid in found if aid not in accepted)
+        found = accepted
         if not found:
             finish()
             return []
@@ -700,7 +728,26 @@ class Pipeline:
 
             return await shrink(variant, first, still_fails, deadline=shrink_deadline)
 
-        shrunk = await asyncio.gather(*(shrink_one(aid, vid) for aid, vid in picks.items()))
+        shrunk = list(await asyncio.gather(*(shrink_one(aid, vid) for aid, vid in picks.items())))
+
+        # A smaller scenario is a different stimulus, so gates (b) and (c) apply to it again. If it fails either, the
+        # unshrunk variant (which passed both) is kept instead.
+        probes: dict[str, Scenario] = {}
+        for (aid, vid), result in zip(picks.items(), shrunk):
+            if result.scenario is not by_id[vid]:
+                probe = result.scenario.model_copy(deep=True)
+                probe.id = f"{vid}-shrunk"
+                probes[vid] = probe
+        if probes:
+            await self._cleanroom_judge(rooms, list(probes.values()), assertions, spec)
+        for n, ((aid, vid), result) in enumerate(zip(picks.items(), shrunk)):
+            if vid not in probes:
+                continue
+            why_c = out_of_range(result.scenario, by_scenario.get(by_id[vid].parent), limits)
+            ok_b, why_b = passes_in_every_room(aid, probes[vid].id, [r.results for r in rooms])
+            if why_c or not ok_b:
+                reject(aid, vid, "c" if why_c else "b", "after shrinking: " + (why_c[0] if why_c else why_b))
+                shrunk[n] = replace(result, scenario=by_id[vid], events_after=result.events_before, duration_after_ms=result.duration_before_ms, steps=["kept unshrunk: the smaller scenario failed a gate"])
 
         kept: list[Scenario] = []
         meta: dict[str, dict] = {}
@@ -728,8 +775,9 @@ class Pipeline:
         await bus.emit("scenarios", scenarios=[s.model_dump() for s in scenarios + kept])
         final = await self._run_suite(elf, kept, assertions, spec, 0, "search finding", publish=True, meter=meter)
         really = [s for (aid, _), s in zip(picks.items(), kept) if self._breaks(final, s.id, aid)]
-        for s in kept:
+        for (aid, _), s in zip(picks.items(), kept):
             if s not in really:
+                reject(aid, s.id, "a", "it did not fail again on the uploaded firmware")
                 await self._warn(f"A search finding ({s.name}) did not reproduce on its final run, so it was dropped.")
         baseline.results.update({s.id: final.results[s.id] for s in really})
         baseline.exit_reasons.update({s.id: final.exit_reasons[s.id] for s in really})

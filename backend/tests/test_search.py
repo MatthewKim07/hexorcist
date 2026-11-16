@@ -192,13 +192,16 @@ class NoisySandbox:
 
     def compile(self, sketch, label="compile"):
         self.compiled.append(sketch)
-        return CompileResult(ok=True, log="", elf=sketch.encode(), record=ContainmentRecord(kind="compile", label=label))
+        ok = "NOCOMPILE" not in sketch
+        return CompileResult(ok=ok, log="" if ok else "error: boom", elf=sketch.encode() if ok else None, record=ContainmentRecord(kind="compile", label=label))
 
     def run(self, elf, scenario, label, no_sim_cap=False):
         self.ran.append(scenario)
         noisy = any(a["noise_mv"] >= 20 for a in scenario["analog"])
         code = elf.decode()
-        trace = fake_trace(code + (" CHATTER" if noisy and "NOISY" in code else ""))
+        # NOISY chatters on any noisy run. SHORT only on a noisy run shorter than 8 s, which is what shrinking makes.
+        chatters = noisy and ("NOISY" in code or ("SHORT" in code and scenario["duration_ms"] < 8000))
+        trace = fake_trace(code + (" CHATTER" if chatters else ""))
         trace["sim_ms"] = scenario["duration_ms"]
         return RunResult(trace=trace, record=ContainmentRecord(kind="emulate", label=label, duration_ms=100.0))
 
@@ -207,8 +210,9 @@ UPLOADED = "void setup() {}\nvoid loop() { heartbeat(); } // NOISY\n"
 FIXED = "void setup() {}\nvoid loop() { heartbeat(); } // calm\n"
 SPEC2 = DeviceSpec(
     pins=[PinSpec(pin="A0", role="temp", type="analog_input", scale="10 mV/°C"), PinSpec(pin="D9", role="fan", type="digital_output")],
-    behaviour="D9 must not chatter. Heartbeat every 250 ms.",
+    behaviour="D9 must not chatter. Heartbeat every 250 ms. The sensor output carries noise of up to 40 mV.",
 )
+SPEC_QUIET = DeviceSpec(pins=SPEC2.pins, behaviour="D9 must not chatter. Heartbeat every 250 ms.")
 UNDERSTAND = {
     "assertions": [
         {"type": "max_toggles", "pin": "D9", "max_toggles": 2, "window_ms": 1000, "description": "No chatter", "spec_quote": "D9 must not chatter"},
@@ -266,7 +270,7 @@ def test_a_check_a_clean_implementation_also_fails_is_not_a_search_finding():
     status, report, _, _ = run(patches=(), rooms=((UPLOADED,), (UPLOADED,)))
     assert report["bugs"] == []
     assert report["search"]["discarded_by_clean_room"] == ["a1"]
-    assert [u["assertion_id"] for u in report["cross_check"]["unconfirmed"]] == ["a1"]
+    assert report["search"]["gates"]["b"] >= 1 and report["search"]["kept"] == []
     assert status == "clean"
 
 
@@ -282,12 +286,6 @@ def test_the_search_can_be_switched_off():
     assert report["search"]["enabled"] is False
     assert status == "clean"
     assert not any(a["noise_mv"] >= 20 for s in sandbox.ran for a in s["analog"])
-
-
-def test_without_a_clean_room_one_odd_variant_is_not_enough():
-    # No clean-room firmware to compare with, so a check must break on two variants. This one breaks on several.
-    status, report, _, _ = run(cross_check=False)
-    assert report["search"]["new_failing_checks"] == 1 and status == "fixed"
 
 
 def test_a_search_that_runs_out_of_time_skips_variants_instead_of_hanging():
@@ -322,3 +320,121 @@ def test_the_reproduction_point_uses_the_checks_window_not_a_violation_that_runs
     short = [Violation(t_start=1200, t_end=1500)]
     assert reproduction_point(a, short, 8000) == 1500
     assert reproduction_point(a, [], 8000) == 8000
+
+
+# ------------------------------------------------------------------ the acceptance gates
+
+
+def gate_run(spec=None, **kw):
+    """Like run(), but returns the pipeline's report together with the rooms' recorded results."""
+    sandbox = kw.get("sandbox") or NoisySandbox()
+    config = {"max_parallel": 4, "cross_check": True, "search_variants": 40, "search_budget_s": 60, **kw.pop("config", {})}
+    pipeline = Pipeline("r", settings(**config), sandbox, NullStore(), NullBus())
+    pipeline.llm = SearchLLM(list(kw.get("patches", (FIXED,))), [list(r) for r in kw.get("rooms", ((CLEAN_OK,), (CLEAN_OK,)))])
+    status, report = asyncio.run(pipeline.run_break(UPLOADED, spec or SPEC2))
+    return status, report, sandbox, pipeline
+
+
+def test_search_is_off_unless_asked_for():
+    status, report, sandbox, _ = gate_run(config={"search_variants": 0}, patches=())
+    assert report["search"]["enabled"] is False and status == "clean"
+    assert not any(a["noise_mv"] >= 20 for s in sandbox.ran for a in s["analog"])
+
+
+class NotReproducible(NoisySandbox):
+    """The uploaded firmware chatters during the search and its shrinking, but not when the kept scenario is run again."""
+
+    def run(self, elf, scenario, label, no_sim_cap=False):
+        result = super().run(elf, scenario, label, no_sim_cap)
+        if label.startswith("search finding") and "NOISY" in elf.decode():
+            result.trace = fake_trace(elf.decode())
+            result.trace["sim_ms"] = scenario["duration_ms"]
+        return result
+
+
+def test_gate_a_a_kept_finding_fails_again_on_the_uploaded_firmware():
+    status, report, _, _ = gate_run()
+    kept = report["search"]["kept"]
+    assert len(kept) == 1 and report["search"]["gates"]["a"] == 0
+    # The kept scenario is a real result of iteration 0 and the check fails in it.
+    scenario_id = kept[0]["scenario_id"]
+    failing = report["bugs"][0]["failing_scenarios"]
+    assert report["bugs"][0]["found_by_search"] is True and [f["id"] for f in failing] == [scenario_id]
+    assert "toggled" in failing[0]["evidence"]
+    assert status == "fixed"
+
+
+def test_gate_a_a_finding_that_does_not_fail_again_is_dropped():
+    status, report, _, _ = gate_run(patches=(), sandbox=NotReproducible())
+    search = report["search"]
+    assert search["kept"] == [] and search["gates"]["a"] == 1 and report["bugs"] == [] and status == "clean"
+    assert any(r["gate"] == "a" for r in search["rejected"])
+    assert any("did not reproduce" in w for w in report["warnings"])
+
+
+def test_gate_b_both_clean_rooms_must_pass_the_same_variant():
+    _, report, _, pipeline = gate_run()
+    kept = report["search"]["kept"][0]
+    # The variant that was kept, and the shrunk scenario that is finally reported, both ran on both rooms.
+    for room in pipeline.rooms:
+        assert kept["scenario_id"] in room.results
+        if kept["events_after"] != kept["events_before"] or kept["duration_after_ms"] != kept["duration_before_ms"]:
+            assert f"{kept['scenario_id']}-shrunk" in room.results
+        assert all(r.status == "pass" for r in room.results[kept["scenario_id"]] if r.assertion_id == kept["assertion_id"])
+
+
+def test_gate_b_one_room_failing_the_variant_rejects_the_finding():
+    status, report, _, _ = gate_run(patches=(), rooms=((UPLOADED,), (CLEAN_OK,)))
+    search = report["search"]
+    assert search["kept"] == [] and report["bugs"] == [] and status == "clean"
+    assert search["gates"]["b"] >= 1 and search["discarded_by_clean_room"] == ["a1"]
+    assert all(r["gate"] == "b" and "clean room 1 fails it too" in r["reason"] for r in search["rejected"] if r["gate"] == "b")
+    # The other room failing instead is rejected just the same.
+    assert gate_run(patches=(), rooms=((CLEAN_OK,), (UPLOADED,)))[1]["search"]["kept"] == []
+
+
+def test_gate_b_needs_both_rooms_to_have_built():
+    status, report, _, _ = gate_run(patches=(), rooms=((CLEAN_OK,), ("NOCOMPILE one", "NOCOMPILE two")))
+    search = report["search"]
+    assert search["kept"] == [] and status == "clean" and search["gates"]["b"] >= 1
+    assert any("only 1 clean room built" in r["reason"] for r in search["rejected"])
+
+
+def test_gate_b_without_any_clean_room_nothing_is_kept():
+    status, report, _, _ = gate_run(patches=(), config={"cross_check": False})
+    search = report["search"]
+    assert search["kept"] == [] and status == "clean"
+    assert any("only 0 clean rooms built" in r["reason"] for r in search["rejected"])
+
+
+def test_gate_b_applies_again_to_the_shrunk_scenario_and_falls_back_to_the_unshrunk_variant():
+    # SHORT rooms pass the full 8 s variant but chatter on the 1.5 s scenario shrinking makes, so the shrunk one is refused.
+    short = "void setup() {}\nvoid loop() { heartbeat(); } // SHORT\n"
+    status, report, _, _ = gate_run(rooms=((short,), (short,)))
+    search = report["search"]
+    kept = search["kept"][0]
+    assert kept["duration_after_ms"] == kept["duration_before_ms"] == 8000
+    assert any(r["gate"] == "b" and r["reason"].startswith("after shrinking") for r in search["rejected"])
+    assert kept["steps"] == ["kept unshrunk: the smaller scenario failed a gate"]
+    assert status == "fixed"
+
+
+def test_gate_c_a_variant_outside_the_spec_ranges_is_not_a_finding():
+    # The spec states no noise, and the run's own scenarios use at most 12 mV, so the 20 and 30 mV variants are out of range.
+    status, report, _, _ = gate_run(spec=SPEC_QUIET, patches=())
+    search = report["search"]
+    assert search["kept"] == [] and report["bugs"] == [] and status == "clean"
+    assert search["gates"]["c"] >= 1 and search["gates"]["b"] == 0
+    assert all("noise" in r["reason"] for r in search["rejected"])
+    assert search["limits"]["max_noise_mv"] == 12.0 and search["limits"]["stated_in_spec"] == []
+
+
+def test_gate_c_the_same_variant_is_a_finding_once_the_spec_states_the_noise():
+    status, report, _, _ = gate_run()
+    assert report["search"]["limits"]["max_noise_mv"] == 40.0 and report["search"]["limits"]["stated_in_spec"] == ["maximum noise"]
+    assert report["search"]["gates"]["c"] == 0 and len(report["search"]["kept"]) == 1
+
+
+def test_gate_c_rejected_variants_never_reach_the_clean_rooms():
+    _, _, _, pipeline = gate_run(spec=SPEC_QUIET, patches=())
+    assert all(not any(k.startswith("search-") for k in room.results) for room in pipeline.rooms or [])
