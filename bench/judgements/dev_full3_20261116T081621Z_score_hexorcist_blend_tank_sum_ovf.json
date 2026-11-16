@@ -1,0 +1,106 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "16-bit int accumulator overflows in ADC window sum",
+      "description": "The rolling-window accumulator `sum` is declared `int` (line 11), which is 16-bit on ATmega328P, but it accumulates up to WINDOW=50 raw samples of up to 1023 (lines 54-55), reaching ~51150 and overflowing past 32767. The overflowed negative sum is divided by n (line 59) and converted to a percent (line 60), so the firmware printed -148.6 % at 3.00 s while the injected input was 489.08 to 495.15 % (off by 637.7 %), and -140.3 % at 500.0 % input. The accumulator must be a wider type (e.g. long/uint32_t). Firmware printed -148.6 % at 3.00 s while the injected input was 489.08 to 495.15 %: off by 637.7 % (tolerance \u00b13). 6 of 6 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Button handling with delay(30) stalls the periodic pct stream",
+      "description": "Every loop iteration that reads D5 LOW calls forceSampleNote() and then delay(30) (lines 65-69) with no debounce, so contact chatter and rapid presses repeatedly block the loop and stretch the time between window fills and STATUS_MS checks. The measured pct: gaps reached 1246 ms, 1337 ms and 2523 ms against the 1000 \u00b1 150 ms requirement, and the first line appeared only at 1.72 s. The blocking delay and lack of debounce must be removed so the periodic cadence is preserved. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "16-bit int accumulator overflows in ADC window sum",
+        "description": "The rolling-window accumulator `sum` is declared `int` (line 11), which is 16-bit on ATmega328P, but it accumulates up to WINDOW=50 raw samples of up to 1023 (lines 54-55), reaching ~51150 and overflowing past 32767. The overflowed negative sum is divided by n (line 59) and converted to a percent (line 60), so the firmware printed -148.6 % at 3.00 s while the injected input was 489.08 to 495.15 % (off by 637.7 %), and -140.3 % at 500.0 % input. The accumulator must be a wider type (e.g. long/uint32_t). Firmware printed -148.6 % at 3.00 s while the injected input was 489.08 to 495.15 %: off by 637.7 % (tolerance \u00b13). 6 of 6 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Button handling with delay(30) stalls the periodic pct stream",
+        "description": "Every loop iteration that reads D5 LOW calls forceSampleNote() and then delay(30) (lines 65-69) with no debounce, so contact chatter and rapid presses repeatedly block the loop and stretch the time between window fills and STATUS_MS checks. The measured pct: gaps reached 1246 ms, 1337 ms and 2523 ms against the 1000 \u00b1 150 ms requirement, and the first line appeared only at 1.72 s. The blocking delay and lack of debounce must be removed so the periodic cadence is preserved. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"reported bug describes the same integer overflow issue\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"Only bug-a1 matches the true bug b1; bug-a2 does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "reported bug describes the same integer overflow issue"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "Only bug-a1 matches the true bug b1; bug-a2 does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1146,
+    "completion_tokens": 96,
+    "cost_usd": 0.0002295,
+    "cached": false
+  }
+}

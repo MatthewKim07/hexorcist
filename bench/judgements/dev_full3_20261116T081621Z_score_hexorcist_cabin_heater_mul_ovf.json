@@ -1,0 +1,106 @@
+{
+  "case_id": "cabin_heater_mul_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Heater stays ON above 22 \u00b0C because band decisions use a stale/incorrect temperature reading",
+      "description": "The control logic in lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the temperature is computed in readCabinC() (lines 20-21) with integer math `analogRead(TEMP_PIN) * 5000 / 1023`; the multiplication and division are done as int, and the result is then divided by MV_PER_C. The measured evidence shows D9 was not LOW for 5030 ms during the nominal ramp and 3400 ms in the max/min range scenario, meaning the heater was held ON well past the 22 \u00b0C threshold instead of switching OFF within 600 ms. D9 was in the wrong state for 4160 ms across 3 interval(s), first at 600 ms: D9 was not LOW for 900 ms while required (grace 600 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Frost override not honored reliably while D2 is LOW",
+      "description": "The frost check at line 56 reads D2 only once per 50 ms sample and applies the override only inside that branch (lines 58-61); when D2 is LOW the heater is forced ON, but the measured evidence shows D9 was not LOW for 400-1400 ms intervals across bounce, short-press, and floating-input scenarios. Because the override is re-evaluated only every SAMPLE_MS and there is no latching/debounce, brief or chattering LOW periods on D2 are missed and the heater does not stay ON as required within 600 ms. D9 was in the wrong state for 3371 ms across 5 interval(s), first at 600 ms: D9 was not LOW for 400 ms while required (grace 600 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "analogRead*5000 overflows 16-bit int before /1023",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cabin_heater_mul_ovf",
+    "spec": "- Cabin LM35 on A0 at 10 mV/\u00b0C; heater enable on D9; frost override on D2 (pull-up, active LOW).\n- Turn the heater ON when temperature is below 18.0 \u00b0C and OFF when temperature is above 22.0 \u00b0C.\n- While D2 is held LOW, force the heater ON regardless of temperature.\n- Reach the commanded heater state within 600 ms of a sustained band crossing.\n- Print `cabin: <temp> C heat=ON` or `cabin: <temp> C heat=OFF` every 1000 ms with one decimal place.\n- Temperature in the status line is informational; control decisions use the comfort band above.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "analogRead*5000 overflows 16-bit int before /1023",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; HIGH when A0 < 18; LOW when A0 > 22; within 600 ms (Heat below 18, off above 22)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Heater stays ON above 22 \u00b0C because band decisions use a stale/incorrect temperature reading",
+        "description": "The control logic in lines 62-69 only turns the heater OFF when lastC > HEAT_OFF_C, but the temperature is computed in readCabinC() (lines 20-21) with integer math `analogRead(TEMP_PIN) * 5000 / 1023`; the multiplication and division are done as int, and the result is then divided by MV_PER_C. The measured evidence shows D9 was not LOW for 5030 ms during the nominal ramp and 3400 ms in the max/min range scenario, meaning the heater was held ON well past the 22 \u00b0C threshold instead of switching OFF within 600 ms. D9 was in the wrong state for 4160 ms across 3 interval(s), first at 600 ms: D9 was not LOW for 900 ms while required (grace 600 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Frost override not honored reliably while D2 is LOW",
+        "description": "The frost check at line 56 reads D2 only once per 50 ms sample and applies the override only inside that branch (lines 58-61); when D2 is LOW the heater is forced ON, but the measured evidence shows D9 was not LOW for 400-1400 ms intervals across bounce, short-press, and floating-input scenarios. Because the override is re-evaluated only every SAMPLE_MS and there is no latching/debounce, brief or chattering LOW periods on D2 are missed and the heater does not stay ON as required within 600 ms. D9 was in the wrong state for 3371 ms across 5 interval(s), first at 600 ms: D9 was not LOW for 400 ms while required (grace 600 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes incorrect heater behavior due to integer overflow affecting temperature reading.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes incorrect heater behavior due to integer overflow affecting temperature reading."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1178,
+    "completion_tokens": 92,
+    "cost_usd": 0.0002319,
+    "cached": false
+  }
+}

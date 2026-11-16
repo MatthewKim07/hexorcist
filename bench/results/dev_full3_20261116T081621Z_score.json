@@ -1,0 +1,1012 @@
+{
+  "run_id": "dev_full3_20261116T081621Z_score",
+  "created_at": "2026-11-16T18:03:39.939647+00:00",
+  "systems": [
+    {
+      "system": "hexorcist",
+      "cases": 40,
+      "detection_recall": 0.84375,
+      "bugs_detected": 27,
+      "bugs_truth": 32,
+      "false_alarms": 14,
+      "compile_rate": 0.725,
+      "fix_rate": 0.65,
+      "per_category": {
+        "blocking_delay": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "correct": {
+          "cases": 11,
+          "truth_bugs": 0,
+          "false_alarms": 5,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "integer_overflow": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 1,
+          "compiles": 2
+        },
+        "inverted_pullup": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "millis_rollover": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 0,
+          "compiles": 2
+        },
+        "missing_debounce": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 2,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "missing_failsafe": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "missing_hysteresis": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        },
+        "off_by_one_timing": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "fixed": 1,
+          "compiles": 1,
+          "detected": 1
+        },
+        "serial_format": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 2,
+          "fixed": 2,
+          "compiles": 2
+        },
+        "stuck_state_machine": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "timed_pulse_length": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "fixed": 1,
+          "compiles": 1,
+          "detected": 1
+        },
+        "wrong_pin": {
+          "cases": 2,
+          "truth_bugs": 2,
+          "truth_bugs_cat": 2,
+          "fixed": 2,
+          "compiles": 2,
+          "detected": 1
+        },
+        "wrong_unit_scaling": {
+          "cases": 3,
+          "truth_bugs": 4,
+          "truth_bugs_cat": 3,
+          "detected": 3,
+          "fixed": 3,
+          "compiles": 3
+        }
+      },
+      "rows": [
+        {
+          "case_id": "aquarium_ph_scale",
+          "categories": [
+            "wrong_unit_scaling"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 185.64,
+          "llm_calls": 8,
+          "prompt_tokens": 15945,
+          "completion_tokens": 4801,
+          "cost_usd": 0.006468,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "attic_vent_hyst",
+          "categories": [
+            "missing_hysteresis"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 187.42,
+          "llm_calls": 8,
+          "prompt_tokens": 19566,
+          "completion_tokens": 6241,
+          "cost_usd": 0.00811501,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "bench_led_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 1,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 152.7,
+          "llm_calls": 9,
+          "prompt_tokens": 18503,
+          "completion_tokens": 5796,
+          "cost_usd": 0.00762549,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "blend_tank_sum_ovf",
+          "categories": [
+            "integer_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 179.85,
+          "llm_calls": 7,
+          "prompt_tokens": 11794,
+          "completion_tokens": 4538,
+          "cost_usd": 0.00517344,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "boiler_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 39.37,
+          "llm_calls": 5,
+          "prompt_tokens": 6666,
+          "completion_tokens": 4070,
+          "cost_usd": 0.0035358,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "boiler_valve_failsafe",
+          "categories": [
+            "missing_failsafe"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 120.91,
+          "llm_calls": 7,
+          "prompt_tokens": 10818,
+          "completion_tokens": 4926,
+          "cost_usd": 0.00505697,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "cabin_heater_mul_ovf",
+          "categories": [
+            "integer_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_follow"
+          ],
+          "wall_s": 172.17,
+          "llm_calls": 9,
+          "prompt_tokens": 22802,
+          "completion_tokens": 6258,
+          "cost_usd": 0.00902336,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "cellar_pump_hyst",
+          "categories": [
+            "missing_hysteresis"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 164.72,
+          "llm_calls": 7,
+          "prompt_tokens": 10519,
+          "completion_tokens": 4831,
+          "cost_usd": 0.00494145,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "cooler_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 57.48,
+          "llm_calls": 4,
+          "prompt_tokens": 5727,
+          "completion_tokens": 3861,
+          "cost_usd": 0.00325897,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "drip_scheduler_u8",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_period"
+          ],
+          "wall_s": 157.17,
+          "llm_calls": 9,
+          "prompt_tokens": 17272,
+          "completion_tokens": 5427,
+          "cost_usd": 0.0071106,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "foyer_lamp_debounce",
+          "categories": [
+            "missing_debounce"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 107.37,
+          "llm_calls": 6,
+          "prompt_tokens": 8595,
+          "completion_tokens": 3874,
+          "cost_usd": 0.00404587,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "glue_solenoid_short",
+          "categories": [
+            "timed_pulse_length"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 57.42,
+          "llm_calls": 4,
+          "prompt_tokens": 4856,
+          "completion_tokens": 3061,
+          "cost_usd": 0.00267769,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "greenhouse_dual",
+          "categories": [
+            "missing_hysteresis",
+            "missing_failsafe"
+          ],
+          "truth_bugs": 2,
+          "detected": 2,
+          "detection": {
+            "b1": true,
+            "b2": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 207.08,
+          "llm_calls": 7,
+          "prompt_tokens": 14277,
+          "completion_tokens": 5867,
+          "cost_usd": 0.00651372,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "greenhouse_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 52.95,
+          "llm_calls": 5,
+          "prompt_tokens": 7397,
+          "completion_tokens": 4996,
+          "cost_usd": 0.00421796,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "hoist_estop_invert",
+          "categories": [
+            "inverted_pullup"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 93.7,
+          "llm_calls": 6,
+          "prompt_tokens": 9603,
+          "completion_tokens": 3534,
+          "cost_usd": 0.00419696,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "hold_to_arm_late",
+          "categories": [
+            "off_by_one_timing"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 63.51,
+          "llm_calls": 4,
+          "prompt_tokens": 4598,
+          "completion_tokens": 2655,
+          "cost_usd": 0.00242997,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "inject_pulse_short",
+          "categories": [
+            "off_by_one_timing"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 81.61,
+          "llm_calls": 6,
+          "prompt_tokens": 9433,
+          "completion_tokens": 3257,
+          "cost_usd": 0.00403857,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "kiln_door_block",
+          "categories": [
+            "blocking_delay"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 86.14,
+          "llm_calls": 6,
+          "prompt_tokens": 10054,
+          "completion_tokens": 3584,
+          "cost_usd": 0.00432966,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "lab_ph_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 217.89,
+          "llm_calls": 9,
+          "prompt_tokens": 23442,
+          "completion_tokens": 6182,
+          "cost_usd": 0.00916878,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "laundry_cycle_stuck",
+          "categories": [
+            "stuck_state_machine"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 256.87,
+          "llm_calls": 8,
+          "prompt_tokens": 18449,
+          "completion_tokens": 6450,
+          "cost_usd": 0.00791648,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "laundry_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 120.95,
+          "llm_calls": 4,
+          "prompt_tokens": 5590,
+          "completion_tokens": 3248,
+          "cost_usd": 0.00295024,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "lobby_lamp_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 30.29,
+          "llm_calls": 4,
+          "prompt_tokens": 4271,
+          "completion_tokens": 3245,
+          "cost_usd": 0.00257242,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "lock_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 60.45,
+          "llm_calls": 4,
+          "prompt_tokens": 4764,
+          "completion_tokens": 3224,
+          "cost_usd": 0.00270793,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "loft_fan_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 1,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 272.01,
+          "llm_calls": 9,
+          "prompt_tokens": 17003,
+          "completion_tokens": 7456,
+          "cost_usd": 0.00786123,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "mist_injector_long",
+          "categories": [
+            "timed_pulse_length"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 105.82,
+          "llm_calls": 6,
+          "prompt_tokens": 9674,
+          "completion_tokens": 3408,
+          "cost_usd": 0.0041715,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "nav_beacon_byte_timer",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 3,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_max",
+            "a_period"
+          ],
+          "wall_s": 121.0,
+          "llm_calls": 9,
+          "prompt_tokens": 27614,
+          "completion_tokens": 6170,
+          "cost_usd": 0.01034746,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "panel_dual_debounce_edge",
+          "categories": [
+            "missing_debounce",
+            "inverted_pullup"
+          ],
+          "truth_bugs": 2,
+          "detected": 1,
+          "detection": {
+            "b1": false,
+            "b2": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 86.14,
+          "llm_calls": 7,
+          "prompt_tokens": 11238,
+          "completion_tokens": 3770,
+          "cost_usd": 0.00475262,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "porch_gate_block",
+          "categories": [
+            "blocking_delay"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 95.2,
+          "llm_calls": 6,
+          "prompt_tokens": 9861,
+          "completion_tokens": 3416,
+          "cost_usd": 0.00420609,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "process_dual_block_scale",
+          "categories": [
+            "wrong_unit_scaling",
+            "blocking_delay"
+          ],
+          "truth_bugs": 2,
+          "detected": 2,
+          "detection": {
+            "b1": true,
+            "b2": true
+          },
+          "reported": 4,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 132.94,
+          "llm_calls": 6,
+          "prompt_tokens": 13981,
+          "completion_tokens": 3525,
+          "cost_usd": 0.00540989,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "rail_limit_invert",
+          "categories": [
+            "inverted_pullup"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 90.66,
+          "llm_calls": 6,
+          "prompt_tokens": 9535,
+          "completion_tokens": 3779,
+          "cost_usd": 0.00427728,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "shop_estop_debounce",
+          "categories": [
+            "missing_debounce"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 105.81,
+          "llm_calls": 6,
+          "prompt_tokens": 8587,
+          "completion_tokens": 3600,
+          "cost_usd": 0.00394601,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "solenoid_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 30.27,
+          "llm_calls": 4,
+          "prompt_tokens": 4855,
+          "completion_tokens": 3086,
+          "cost_usd": 0.00267837,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "spindle_rpm_prefix",
+          "categories": [
+            "serial_format"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 104.27,
+          "llm_calls": 6,
+          "prompt_tokens": 10013,
+          "completion_tokens": 4253,
+          "cost_usd": 0.00460534,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "studio_siren_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 39.35,
+          "llm_calls": 4,
+          "prompt_tokens": 4513,
+          "completion_tokens": 3033,
+          "cost_usd": 0.00258476,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "vault_lock_stuck",
+          "categories": [
+            "stuck_state_machine"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 52.91,
+          "llm_calls": 4,
+          "prompt_tokens": 4695,
+          "completion_tokens": 3291,
+          "cost_usd": 0.00271675,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "walk_in_cooler_failsafe",
+          "categories": [
+            "missing_failsafe"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 172.24,
+          "llm_calls": 6,
+          "prompt_tokens": 10515,
+          "completion_tokens": 4696,
+          "cost_usd": 0.00495517,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "weather_line_prefix",
+          "categories": [
+            "serial_format"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 4,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 264.48,
+          "llm_calls": 8,
+          "prompt_tokens": 25369,
+          "completion_tokens": 6198,
+          "cost_usd": 0.00972017,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "weather_ok",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 232.81,
+          "llm_calls": 9,
+          "prompt_tokens": 23292,
+          "completion_tokens": 5914,
+          "cost_usd": 0.00902149,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "workshop_kpa_scale",
+          "categories": [
+            "wrong_unit_scaling"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 193.5,
+          "llm_calls": 9,
+          "prompt_tokens": 19840,
+          "completion_tokens": 6119,
+          "cost_usd": 0.00811271,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "yard_relay_miswire",
+          "categories": [
+            "wrong_pin"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 166.16,
+          "llm_calls": 8,
+          "prompt_tokens": 19099,
+          "completion_tokens": 5020,
+          "cost_usd": 0.00746389,
+          "model": "deepseek-chat"
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.006106,
+    "spent_strong": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 0.3,
+    "cap_strong": 2.0,
+    "calls": 28
+  }
+}

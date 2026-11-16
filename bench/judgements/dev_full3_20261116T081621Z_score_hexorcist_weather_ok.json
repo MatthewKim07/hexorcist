@@ -1,0 +1,60 @@
+{
+  "case_id": "weather_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Range lamp chatters at the low threshold with no hysteresis",
+      "description": "Line 27 compares the reported temperature directly against the fixed -10.0 \u00b0C limit with no hysteresis or debounce, so sensor noise around the threshold toggles D7 on every loop pass. The measured evidence shows D7 in the wrong state for 2574 ms across 1031 intervals (first at 791 ms, 'D7 was not LOW for 2 ms while required'), and the rapid-oscillation scenario shows 3700 ms wrong across 25 intervals, confirming the lamp follows each noise cycle instead of holding a stable state. D7 was in the wrong state for 2574 ms across 1031 interval(s), first at 791 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Range lamp driven by unvalidated/raw reading at the high threshold",
+      "description": "Line 27 again uses a bare threshold comparison with no hysteresis, and line 48/22 trust the raw ADC value unconditionally, so hovering at 50.0 \u00b0C chatters D7 and a disconnected sensor (0 V) or rail-to-rail input produces a bogus out-of-range decision. The measured evidence shows D7 wrong for 1982 ms across 791 intervals at the 50 \u00b0C hover, 6000 ms continuously when the sensor reads 0 V, and 3510 ms in the max/min range scenario, all because the lamp state is recomputed from a single noisy sample each loop. D7 was in the wrong state for 2517 ms across 1024 interval(s), first at 500 ms: D7 was not LOW for 1 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "weather_ok",
+    "spec": "- TMP36 on A0 (10 mV/\u00b0C with 500 mV offset); freeze button on D5 (pull-up); range lamp on D7.\n- Every 1000 ms print exactly `Temp: <celsius>` with a space after the colon and one decimal place.\n- Printed temperature must stay within \u00b11.5 \u00b0C of the injected probe value.\n- While D5 is held LOW, freeze the reported value at the last sample.\n- Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.\n- Also print `weather n=<samples>` each second after the Temp line.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Range lamp chatters at the low threshold with no hysteresis",
+        "description": "Line 27 compares the reported temperature directly against the fixed -10.0 \u00b0C limit with no hysteresis or debounce, so sensor noise around the threshold toggles D7 on every loop pass. The measured evidence shows D7 in the wrong state for 2574 ms across 1031 intervals (first at 791 ms, 'D7 was not LOW for 2 ms while required'), and the rapid-oscillation scenario shows 3700 ms wrong across 25 intervals, confirming the lamp follows each noise cycle instead of holding a stable state. D7 was in the wrong state for 2574 ms across 1031 interval(s), first at 791 ms: D7 was not LOW for 2 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Range lamp driven by unvalidated/raw reading at the high threshold",
+        "description": "Line 27 again uses a bare threshold comparison with no hysteresis, and line 48/22 trust the raw ADC value unconditionally, so hovering at 50.0 \u00b0C chatters D7 and a disconnected sensor (0 V) or rail-to-rail input produces a bogus out-of-range decision. The measured evidence shows D7 wrong for 1982 ms across 791 intervals at the 50 \u00b0C hover, 6000 ms continuously when the sensor reads 0 V, and 3510 ms in the max/min range scenario, all because the lamp state is recomputed from a single noisy sample each loop. D7 was in the wrong state for 2517 ms across 1024 interval(s), first at 500 ms: D7 was not LOW for 1 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1017,
+    "completion_tokens": 57,
+    "cost_usd": 0.00018675,
+    "cached": false
+  }
+}

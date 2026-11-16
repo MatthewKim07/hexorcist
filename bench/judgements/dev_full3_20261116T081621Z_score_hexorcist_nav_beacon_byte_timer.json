@@ -1,0 +1,136 @@
+{
+  "case_id": "nav_beacon_byte_timer",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Beacon timing broken by 8-bit millis slice",
+      "description": "Line 53 truncates millis() to a uint8_t and line 61 compares (uint8_t)(nowSlice - lastSlice) >= HALF_MS, so the 500 ms threshold is evaluated modulo 256 ms rather than against real elapsed time. The measured evidence shows D12 not HIGH for 231-244 ms while required (e.g. 2040-2271 ms), i.e. the blink period is wrong and the beacon is off when it should be on. The quiet-hold reset at line 59 also keeps lastSlice current so release timing is misaligned with the real schedule. D12 was in the wrong state for 5079 ms across 21 interval(s), first at 2.04 s: D12 was not HIGH for 231 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Tick period far from 1000 ms",
+      "description": "emitTick is only called on a rising edge (lines 66-68), but the toggle interval is governed by the broken 8-bit slice comparison at line 61, so rising edges occur roughly every 500 ms instead of 1000 ms. Measured gaps of 319/321 ms and 487-519 ms confirm the tick cadence is nowhere near 1000 \u00b1120 ms. Expected /^tick$/ every 1000 \u00b1 120 ms; 24 of 25 intervals were out of tolerance, worst gap 488 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Excessive beacon toggles per 2000 ms window",
+      "description": "Because line 61 uses a uint8_t slice difference against HALF_MS, the effective toggle period is ~256-500 ms rather than 1000 ms, producing far more than 5 transitions per 2000 ms. Measured 8-9 toggles in 2000 ms windows (limit 5), e.g. 8 toggles from 244.855 ms. The lack of debounce on readQuiet (line 52) and lastSlice resets on quiet (line 59) add spurious toggles on release. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+        },
+        {
+          "check_id": "a_max",
+          "type": "max_toggles",
+          "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "nav_beacon_byte_timer",
+    "spec": "- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).\n- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.\n- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms \u00b1120 ms).\n- While D3 is held LOW, force the beacon OFF and pause the blink schedule.\n- Beacon must not change state more than 5 times in any 2000 ms window during free blink.\n- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+        "check_ids": [
+          "a_period",
+          "a_max"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+          },
+          {
+            "check_id": "a_max",
+            "type": "max_toggles",
+            "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Beacon timing broken by 8-bit millis slice",
+        "description": "Line 53 truncates millis() to a uint8_t and line 61 compares (uint8_t)(nowSlice - lastSlice) >= HALF_MS, so the 500 ms threshold is evaluated modulo 256 ms rather than against real elapsed time. The measured evidence shows D12 not HIGH for 231-244 ms while required (e.g. 2040-2271 ms), i.e. the blink period is wrong and the beacon is off when it should be on. The quiet-hold reset at line 59 also keeps lastSlice current so release timing is misaligned with the real schedule. D12 was in the wrong state for 5079 ms across 21 interval(s), first at 2.04 s: D12 was not HIGH for 231 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Tick period far from 1000 ms",
+        "description": "emitTick is only called on a rising edge (lines 66-68), but the toggle interval is governed by the broken 8-bit slice comparison at line 61, so rising edges occur roughly every 500 ms instead of 1000 ms. Measured gaps of 319/321 ms and 487-519 ms confirm the tick cadence is nowhere near 1000 \u00b1120 ms. Expected /^tick$/ every 1000 \u00b1 120 ms; 24 of 25 intervals were out of tolerance, worst gap 488 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Excessive beacon toggles per 2000 ms window",
+        "description": "Because line 61 uses a uint8_t slice difference against HALF_MS, the effective toggle period is ~256-500 ms rather than 1000 ms, producing far more than 5 transitions per 2000 ms. Measured 8-9 toggles in 2000 ms windows (limit 5), e.g. 8 toggles from 244.855 ms. The lack of debounce on readQuiet (line 52) and lastSlice resets on quiet (line 59) add spurious toggles on release. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Beacon timing broken by 8-bit millis slice describes the same root cause as the truth bug.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1},\n    {\"truth_id\": \"b1\", \"reported_index\": 2}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same underlying issue of the 8-bit millis slice affecting timing.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Beacon timing broken by 8-bit millis slice describes the same root cause as the truth bug."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 2
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same underlying issue of the 8-bit millis slice affecting timing."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1313,
+    "completion_tokens": 136,
+    "cost_usd": 0.00027855,
+    "cached": false
+  }
+}

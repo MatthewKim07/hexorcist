@@ -1,0 +1,94 @@
+{
+  "case_id": "bench_led_miswire",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Blink mode re-initialization and stale lit state",
+      "description": "The blink branch only initializes when pressMs==0 (line 59), but pressMs is also used as a timestamp elsewhere, so blink start/lastBlink can be re-triggered or skipped, leaving D13 in the wrong phase. The measured blink-mode scenario shows D13 not HIGH for 600-2700 ms intervals while required. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_pin",
+      "description": "Drives D12 instead of D13",
+      "check_ids": [
+        "a_follow"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_follow",
+          "type": "output_follows",
+          "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "bench_led_miswire",
+    "spec": "- Button on D2 with INPUT_PULLUP (active LOW); user LED on D13; blink-mode switch on D4 (pull-up).\n- While D2 is pressed and D4 is released, light D13 HIGH; release turns D13 LOW.\n- Reach the commanded LED state within 100 ms of the button level.\n- While D4 is held LOW and D2 is pressed, blink D13 with ~120 ms half-period.\n- Print `bench led=<0|1> held_ms=<n>` every 1000 ms.\n- Idle (D2 released) always keeps D13 LOW.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_pin",
+        "description": "Drives D12 instead of D13",
+        "check_ids": [
+          "a_follow"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_follow",
+            "type": "output_follows",
+            "behaviour": "D13 must follow its stimulus; HIGH when D2 == 0; LOW when D2 == 1; within 100 ms (D13 follows button)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Blink mode re-initialization and stale lit state",
+        "description": "The blink branch only initializes when pressMs==0 (line 59), but pressMs is also used as a timestamp elsewhere, so blink start/lastBlink can be re-triggered or skipped, leaving D13 in the wrong phase. The measured blink-mode scenario shows D13 not HIGH for 600-2700 ms intervals while required. D13 was in the wrong state for 721 ms across 15 interval(s), first at 902 ms: D13 was not HIGH for 48 ms while required (grace 100 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": false, \"reason\": \"describes incorrect behavior of D13 but does not match the root cause of wrong pin\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"The reported bug describes an issue with D13 but does not match the true bug's root cause of driving the wrong pin.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": false,
+        "reason": "describes incorrect behavior of D13 but does not match the root cause of wrong pin"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "The reported bug describes an issue with D13 but does not match the true bug's root cause of driving the wrong pin."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 839,
+    "completion_tokens": 109,
+    "cost_usd": 0.00019125,
+    "cached": false
+  }
+}
