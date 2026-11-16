@@ -9,9 +9,12 @@
 #
 # v2 has been seen, so these results are DEV-set results: they show the changes work, they are not final evidence.
 #
-# Same safeguards as run_all.sh: frozen-case check, DeepSeek endpoint pre-flight, health pre-flight, the raised rate
-# limit through the bench override only (restored when the script ends), resume per case, a DeepSeek cap (0.60 USD),
-# and a log in bench/results/run_dev.log. This script never reads or prints .env (the Python runners load it themselves).
+# Same safeguards as run_all.sh: frozen-case check, DeepSeek and OpenAI endpoint pre-flights, health pre-flight, the
+# raised rate limit through the bench override only (restored when the script ends), resume per case, a DeepSeek cap
+# (0.60 USD) and an OpenAI cap (0.50 USD, for clean room 2), and a log in bench/results/run_dev.log.
+# Clean room 1 is written by DeepSeek, clean room 2 by the OPENAI_* model (gpt-4o-mini). The stimulus search is OFF.
+# ALLOW_FALLBACK=1 lets the run go ahead with two DeepSeek rooms when OPENAI_* is not configured (the report says so).
+# This script never reads or prints .env (the Python runners load it themselves).
 # Exit 3 = budget stop or incomplete.
 set -uo pipefail
 
@@ -24,6 +27,7 @@ LOG="$RESULTS/run_dev.log"
 PORT="${HEXORCIST_PORT:-8080}"
 API="http://127.0.0.1:${PORT}"
 CAP_DS="0.60"
+CAP_OA="0.50"
 FREEZE_COMMIT="6a92c57"
 COMPOSE=(docker compose -f docker-compose.yml -f bench/docker-compose.bench.yml)
 
@@ -45,7 +49,7 @@ while [ "$#" -gt 0 ]; do
       [ "${#SELECTED[@]}" -gt 0 ] || { echo "--cases needs at least one case id" >&2; exit 2; }
       ;;
     --list) LIST_ONLY=1; shift ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -99,7 +103,7 @@ if [ "$LIST_ONLY" -eq 1 ]; then
   echo "run id : ${RUN_ID} (${KIND})"
   echo "cases  : ${TOTAL}"
   printf '  %s\n' "${CASES[@]}"
-  echo "cap    : DeepSeek \$${CAP_DS}"
+  echo "cap    : DeepSeek \$${CAP_DS}, OpenAI \$${CAP_OA}"
   echo "log    : ${LOG}"
   exit 0
 fi
@@ -140,6 +144,27 @@ if not ds.configured or ds.model != "deepseek-chat" or "deepseek" not in (urlpar
 EOF
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "endpoint pre-flight failed (see above)"
 
+# OpenAI endpoint check for clean room 2. Prints only the model name and host, never a key.
+ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
+import os, sys
+from pathlib import Path
+from urllib.parse import urlparse
+root = Path.cwd()
+sys.path[:0] = [str(root), str(root / "backend")]
+from dotenv import load_dotenv
+load_dotenv(root / ".env", override=False)
+from bench.llm_budget import endpoint_from_env
+oa = endpoint_from_env("OPENAI")
+print(f"preflight OPENAI_*: configured={oa.configured} model={oa.model} host={urlparse(oa.base_url).hostname}")
+if not oa.configured or oa.model != "gpt-4o-mini" or "openai" not in (urlparse(oa.base_url).hostname or ""):
+    if os.environ.get("ALLOW_FALLBACK") == "1":
+        print("PREFLIGHT NOTE: OPENAI_* is not configured for gpt-4o-mini. ALLOW_FALLBACK=1, so both clean rooms will use DeepSeek and the report will say so.")
+    else:
+        print("PREFLIGHT FAIL: OPENAI_* must be gpt-4o-mini on an openai host for the mixed-model rooms (ALLOW_FALLBACK=1 runs two DeepSeek rooms instead)")
+        sys.exit(1)
+EOF
+[ "${PIPESTATUS[0]}" -eq 0 ] || die "OpenAI pre-flight failed (see above)"
+
 # --- Rebuild + health ---------------------------------------------------------------------------------
 restore_limits()
 {
@@ -163,7 +188,7 @@ for _ in $(seq 1 60); do
 done
 [ -n "$HEALTH" ] || die "no answer from $API/api/health after 120 s"
 
-HEALTH_JSON="$HEALTH" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
+HEALTH_JSON="$HEALTH" ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
 import json, os, sys
 h = json.loads(os.environ["HEALTH_JSON"])
 lim = h.get("limits", {})
@@ -183,8 +208,12 @@ if not agent:
     errs.append("the running backend is not the current agent (no 'agent' settings in /api/health): the rebuild did not take")
 elif agent.get("cleanroom_samples") != 2:
     errs.append(f"this run is for two independent clean-room sketches, the stack has {agent.get('cleanroom_samples')}")
-elif not agent.get("cross_check") or not agent.get("search_variants"):
-    errs.append(f"cross-check or search is off in this stack: {agent}")
+elif not agent.get("cross_check"):
+    errs.append(f"the cross-check is off in this stack: {agent}")
+elif agent.get("search_variants"):
+    errs.append(f"the stimulus search must be OFF for this run (SEARCH_VARIANTS=0), the stack has {agent.get('search_variants')}: {agent}")
+elif not (agent.get("cleanroom2") or {}).get("mixed") and os.environ.get("ALLOW_FALLBACK") != "1":
+    errs.append(f"clean room 2 is not on a second model (OPENAI_* missing or CLEANROOM_MIXED=0): {agent.get('cleanroom2')}")
 if h.get("passcode_required") and not os.environ.get("DEMO_PASSCODE"):
     errs.append("passcode required but DEMO_PASSCODE is not set in this shell")
 if errs:
@@ -192,7 +221,7 @@ if errs:
     sys.exit(1)
 EOF
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "health pre-flight failed (see above)"
-log "stack current, app on deepseek-chat"
+log "stack current, app on deepseek-chat, search off, clean room 2 model: see agent settings above"
 
 # --- Hexorcist, one case at a time --------------------------------------------------------------------
 hex_case_done()
@@ -208,20 +237,35 @@ sys.exit(0 if rows and not rows[0].get("error") and rows[0].get("status") else 1
 EOF
 }
 
-# DeepSeek spend so far (finished cases of this run) and the largest single case.
-ds_spent()
+# Spend so far per provider (finished cases of this run) and the largest single case of each.
+# Prints: deepseek_total deepseek_worst openai_total openai_worst
+spent()
 {
   "$PY" - "$HEX_DIR" <<'EOF'
 import json, sys
 from pathlib import Path
-total = 0.0
-worst = 0.0
+tot = {"ds": 0.0, "oa": 0.0}
+worst = {"ds": 0.0, "oa": 0.0}
 for f in sorted(Path(sys.argv[1]).glob("*.json")):
     for c in json.loads(f.read_text()).get("cases", []):
-        v = float(c.get("cost_usd") or 0)
-        total += v
-        worst = max(worst, v)
-print(f"{total:.6f} {worst:.6f}")
+        # Older rows have one cost_usd and no split: it was all DeepSeek.
+        ds = float(c["cost_deepseek_usd"] if c.get("cost_deepseek_usd") is not None else (c.get("cost_usd") or 0))
+        oa = float(c.get("cost_openai_usd") or 0)
+        tot["ds"] += ds; tot["oa"] += oa
+        worst["ds"] = max(worst["ds"], ds); worst["oa"] = max(worst["oa"], oa)
+print(f"{tot['ds']:.6f} {worst['ds']:.6f} {tot['oa']:.6f} {worst['oa']:.6f}")
+EOF
+}
+
+# One line about what the cross-check did on a finished case: the room models and whether each built.
+case_note()
+{
+  "$PY" - "$1" <<'EOF'
+import json, sys
+c = json.loads(open(sys.argv[1]).read())["cases"][0]
+cc = c.get("cross_check") or {}
+rooms = " | ".join(f"room{r.get('index')} {r.get('model')} {r.get('status')}" for r in cc.get("rooms", [])) or "no rooms"
+print(f"status={c.get('status')} rule={cc.get('rule')} {rooms} cost ds=${c.get('cost_deepseek_usd')} oa=${c.get('cost_openai_usd')}")
 EOF
 }
 
@@ -235,15 +279,21 @@ for cid in "${CASES[@]}"; do
     continue
   fi
 
-  read -r SPENT WORST <<<"$(ds_spent)"
-  # Stop before a case that could push DeepSeek spend over the cap. Use the largest case so far, at least 0.02.
+  read -r SPENT WORST OA_SPENT OA_WORST <<<"$(spent)"
+  # Stop before a case that could push either provider over its cap. Use the largest case so far, at least 0.02 (DeepSeek)
+  # and 0.005 (OpenAI: one small clean-room sketch per case).
   NEXT="$("$PY" -c 'import sys; print(max(float(sys.argv[1]), 0.02))' "$WORST")"
+  OA_NEXT="$("$PY" -c 'import sys; print(max(float(sys.argv[1]), 0.005))' "$OA_WORST")"
   if "$PY" -c 'import sys; sys.exit(0 if float(sys.argv[1]) + float(sys.argv[2]) > float(sys.argv[3]) else 1)' "$SPENT" "$NEXT" "$CAP_DS"; then
     log "BUDGET STOP before hexorcist case ${IDX}/${TOTAL} (${cid}): DeepSeek spent \$${SPENT}, next case may cost up to \$${NEXT}, cap \$${CAP_DS}"
     break
   fi
+  if "$PY" -c 'import sys; sys.exit(0 if float(sys.argv[1]) + float(sys.argv[2]) > float(sys.argv[3]) else 1)' "$OA_SPENT" "$OA_NEXT" "$CAP_OA"; then
+    log "BUDGET STOP before hexorcist case ${IDX}/${TOTAL} (${cid}): OpenAI spent \$${OA_SPENT}, next case may cost up to \$${OA_NEXT}, cap \$${CAP_OA}"
+    break
+  fi
 
-  log "hexorcist ${IDX}/${TOTAL} ${cid}: start (DeepSeek spent so far \$${SPENT})"
+  log "hexorcist ${IDX}/${TOTAL} ${cid}: start (spent so far: DeepSeek \$${SPENT}, OpenAI \$${OA_SPENT})"
   run_logged "$PY" -m bench.run_hexorcist --api "$API" --run-id "${RUN_ID}_hexorcist_cases/${cid}" "$cid"
   rc=$?
   if [ "$rc" -ne 0 ] || ! hex_case_done "$CASE_FILE"; then
@@ -254,7 +304,7 @@ for cid in "${CASES[@]}"; do
     fi
   else
     ERR_STREAK=0
-    log "hexorcist ${IDX}/${TOTAL} ${cid}: done"
+    log "hexorcist ${IDX}/${TOTAL} ${cid}: done ($(case_note "$CASE_FILE"))"
   fi
   sleep 2
 done
@@ -277,10 +327,11 @@ errs = [r["case_id"] for r in rows if r.get("error")]
 print(f"merged {len(rows)} hexorcist rows into {out}; missing={missing}; errored={errs}")
 EOF
 
-read -r SPENT WORST <<<"$(ds_spent)"
+read -r SPENT WORST OA_SPENT OA_WORST <<<"$(spent)"
 log "=== summary ==="
-log "hexorcist deepseek: merged file ${HEX_OUT##*/}"
+log "hexorcist: merged file ${HEX_OUT##*/}"
 log "DeepSeek total: \$${SPENT} of cap \$${CAP_DS}"
+log "OpenAI total:   \$${OA_SPENT} of cap \$${CAP_OA}"
 
 UNFINISHED=()
 for cid in "${CASES[@]}"; do
