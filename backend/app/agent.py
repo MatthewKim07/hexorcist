@@ -27,6 +27,7 @@ from .events import RunBus
 from .grounding import find_quote
 from .guard import screen_request
 from .llm import LLMClient, LLMError
+from .requirements import Ungrounded, ungrounded_requirements
 from .models import (
     Assertion,
     AssertionResult,
@@ -330,6 +331,8 @@ class Pipeline:
         self.rooms: Optional[list[CleanRoom]] = None  # every sample that was built, ready or skipped
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
+        # Checks that ask for more than the spec bullet they quote (requirements.py): left out of bugs, fixes and verification.
+        self.ungrounded: dict[str, Ungrounded] = {}
         self.cross_note = ""
         self.search_info: Optional[dict] = None
         self._repro: dict[str, dict] = {}
@@ -500,6 +503,30 @@ class Pipeline:
                     "clean_rooms": v.rooms,
                     "failing_scenarios": len(v.failing),
                     "shared_scenarios": min((r["shared"] for r in v.rooms), default=len(v.shared)),
+                }
+            )
+        return out
+
+    def _ungrounded_report(self, assertions: list, baseline: Optional[SuiteResult], scenarios: list[Scenario]) -> list[dict]:
+        """The checks left out because they ask for more than their spec bullet, with what they measured on the uploaded firmware."""
+        names = {s.id: s.name for s in scenarios}
+        out: list[dict] = []
+        for a in assertions:
+            found = self.ungrounded.get(a.id)
+            if found is None:
+                continue
+            failing = [r for rs in (baseline.results.values() if baseline else []) for r in rs if r.assertion_id == a.id and r.status == "fail"]
+            out.append(
+                {
+                    "assertion_id": a.id,
+                    "assertion_type": a.type,
+                    "requirement": a.description,
+                    "spec_quote": getattr(a, "spec_quote", ""),
+                    "rule": found.rule,
+                    "reason": found.reason,
+                    "scenario_name": names.get(failing[0].scenario_id, failing[0].scenario_id) if failing else "",
+                    "your_firmware": failing[0].evidence if failing else "",
+                    "failing_scenarios": len(failing),
                 }
             )
         return out
@@ -846,7 +873,11 @@ class Pipeline:
                 assertions = fallback_assertions(spec)
                 spec_checked = False
         await bus.emit("device_model", device_model=device_model.model_dump())
-        await bus.emit("assertions", assertions=[a.model_dump(exclude_none=True) for a in assertions])
+        self.ungrounded = ungrounded_requirements(assertions, spec)
+        for aid, found in self.ungrounded.items():
+            what = next((a.description for a in assertions if a.id == aid), aid)
+            await self._warn(f"Left out {aid} ({what[:80]}): it asks for more than the spec states, because {found.reason}.")
+        await bus.emit("assertions", assertions=[{**a.model_dump(exclude_none=True), **({"ungrounded": True} if a.id in self.ungrounded else {})} for a in assertions])
         await bus.step("understand", "done", f"{len(assertions)} machine-checkable assertions{reused}")
         # The clean rooms are written from the spec alone, but only once a check has failed on the uploaded firmware
         # (see _start_rooms). A run where nothing fails never calls the clean-room models.
@@ -884,11 +915,11 @@ class Pipeline:
 
         # 4. EXECUTE
         await bus.step("execute", "running", f"Running {len(scenarios)} scenarios in parallel sandboxes")
-        all_ids = {a.id for a in assertions}
+        all_ids = {a.id for a in assertions} - set(self.ungrounded)
         confirmed = set(all_ids)
         # The first scenario that fails a check starts the clean rooms, so they are written while the rest still run.
         baseline = await self._run_suite(built.elf, scenarios, assertions, spec, 0, "attack", on_fail=lambda failed: self._start_rooms(spec) if confirmed.intersection(failed) else None)
-        if baseline.failing_assertions():
+        if baseline.failing_assertions(confirmed):
             self._start_rooms(spec)
             rooms = await self._cleanroom_ready()
             if rooms:
@@ -906,6 +937,8 @@ class Pipeline:
         baseline_failures = baseline.failures(confirmed)
         failing_ids = baseline.failing_assertions(confirmed)
         detail = f"{len(baseline_failures)} failures across {len(failing_ids)} assertions"
+        if self.ungrounded:
+            detail += f". {len(self.ungrounded)} check{'s' if len(self.ungrounded) != 1 else ''} left out: more than the spec asks for"
         if self.unconfirmed:
             detail += f". {len(self.unconfirmed)} more also fail on the clean-room implementation{'s' if len(self.rooms or []) > 1 else ''}, so they are possible spec ambiguities, not bugs"
         if self.search_info:
@@ -923,7 +956,7 @@ class Pipeline:
             for step in ("diagnose", "fix", "verify"):
                 await bus.step(step, "skipped", "No bugs to work on")
             # Never give an all-clear unless the spec was really turned into checks that really ran.
-            spec_tested = spec_checked and any(a.type != "no_crash" and a.id in exercised for a in assertions)
+            spec_tested = spec_checked and any(a.type != "no_crash" and a.id in exercised and a.id not in self.ungrounded for a in assertions)
             status = "clean" if spec_tested else "inconclusive"
             report = self._report(status, firmware, spec, assertions=assertions, device_model=device_model, scenarios=scenarios, suites={0: baseline}, iterations=iterations, extra=extra_report)
             return status, report
@@ -1169,7 +1202,7 @@ class Pipeline:
             "firmware": firmware,
             "spec": spec.model_dump(),
             "device_model": device_model.model_dump() if device_model else None,
-            "assertions": [{**a.model_dump(exclude_none=True), **({"unconfirmed": True} if a.id in self.unconfirmed else {})} for a in (assertions or [])],
+            "assertions": [{**a.model_dump(exclude_none=True), **({"unconfirmed": True} if a.id in self.unconfirmed else {}), **({"ungrounded": True} if a.id in self.ungrounded else {})} for a in (assertions or [])],
             "scenarios": [s.model_dump() for s in (scenarios or [])],
             "matrix": {str(n): {sid: [r.model_dump() for r in rs] for sid, rs in suite.results.items()} for n, suite in suites.items()},
             "exit_reasons": {str(n): suite.exit_reasons for n, suite in suites.items()},
@@ -1190,6 +1223,9 @@ class Pipeline:
         }
         if self.grounding is not None:
             report["grounding"] = self.grounding
+        if assertions:
+            report["ungrounded"] = self._ungrounded_report(assertions, suites.get(0), scenarios or [])
+            report["score"]["ungrounded_requirements"] = len(self.ungrounded)
         if assertions:
             report["search"] = self.search_info or {"enabled": False, "unsupported": UNSUPPORTED}
         if assertions:
