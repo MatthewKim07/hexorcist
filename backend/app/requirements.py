@@ -46,7 +46,7 @@ TOGGLE_WORDS = re.compile(
 PRESS_TOGGLE_WORDS = re.compile(r"\b(toggl\w*|flip\w*|alternat\w*|each press|every press|per press|one press|once per)\b", re.IGNORECASE)
 RELEASE_WORDS = re.compile(
     r"\b(releas\w*|unpress\w*|not\s+(?:pressed|held|active|asserted)|idle|rest(?:ing)?|open(?:ed)?|otherwise|else|elsewhere"
-    r"|no longer|until|unless|when\s+not|stops?|ends?|deassert\w*|inactive|off|clears?|cleared|let go|lifted)\b",
+    r"|no longer|until|unless|when\s+not|stops?|ends?|deassert\w*|inactive|clears?|cleared|let go|lifted)\b",
     re.IGNORECASE,
 )
 OVERRIDE_WORDS = re.compile(r"\b(forc\w*|overrid\w*|regardless|irrespective|latch\w*|takes? priority|supersed\w*)\b", re.IGNORECASE)

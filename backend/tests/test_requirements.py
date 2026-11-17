@@ -190,6 +190,14 @@ def test_a_bullet_that_says_what_a_release_does_passes():
     assert check_requirement(a, spec("- " + quote, MODE, LAMP)) is None
 
 
+def test_a_forced_off_state_is_not_a_word_about_the_release():
+    # "OFF" is the state being forced here, so it says nothing about what the output does when the input is released.
+    quote = "While D4 is held LOW, force the fan OFF and pause the schedule."
+    a = follows(quote, ("D4", "==", 1), ("D4", "==", 0))
+    found = check_requirement(a, spec("- " + quote, FAN, BOOST))
+    assert found is not None and found.rule == "invented_converse"
+
+
 def test_a_plain_while_held_bullet_is_not_judged_by_the_converse_rule():
     quote = "The lamp is lit while D2 is held."
     a = follows(quote, ("D2", "==", 0), ("D2", "==", 1), pin="D7")
