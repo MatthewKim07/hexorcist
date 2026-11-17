@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv(_ROOT / ".env", override=False)
 
-from bench.case_io import PROMPTS_DIR, RESULTS_DIR, list_case_ids, load_case, write_json
+from bench.case_io import PROMPTS_DIR, RESULTS_DIR, add_dir_option, apply_dir_option, list_case_ids, load_case, write_json
 from bench.llm_budget import Budget, BudgetExceeded, BudgetLLM, endpoint_from_env
 
 # Reuse extract helpers (app.config already loads dotenv when imported).
@@ -43,7 +43,9 @@ def main() -> None:
     ap.add_argument("--max-cost-strong", type=float, default=2.00, help="USD cap for --endpoint strong, kept apart from the other caps")
     ap.add_argument("--max-tokens", type=int, default=4000, help="Completion budget per call. A reasoning model needs far more, such as 16000, since it spends part of it thinking")
     ap.add_argument("--run-id", default="")
+    add_dir_option(ap)
     args = ap.parse_args()
+    apply_dir_option(args)
 
     run_id = args.run_id or f"baseline_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     ep = endpoint_from_env({"openai": "OPENAI", "strong": "STRONG"}.get(args.endpoint, "LLM"))

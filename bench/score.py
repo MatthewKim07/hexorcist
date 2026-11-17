@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 load_dotenv(_ROOT / ".env", override=False)
 
-from bench.case_io import JUDGEMENTS_DIR, RESULTS_DIR, Case, load_case, load_cases, write_json
+from bench.case_io import JUDGEMENTS_DIR, RESULTS_DIR, Case, add_dir_option, apply_dir_option, load_case, load_cases, write_json
 from bench.evaluate_gt import build_spec, default_runner, load_assertions, load_scenarios, run_firmware
 from bench.llm_budget import (
     DEFAULT_JUDGE_MODEL,
@@ -384,7 +384,9 @@ def main() -> None:
     ap.add_argument("--max-cost-deepseek", type=float, default=0.80)
     ap.add_argument("--max-cost-openai", type=float, default=3.00)
     ap.add_argument("--no-judge", action="store_true")
+    add_dir_option(ap)
     args = ap.parse_args()
+    apply_dir_option(args)
 
     budget = Budget(max_cost_deepseek=args.max_cost_deepseek, max_cost_openai=args.max_cost_openai)
     judge = None

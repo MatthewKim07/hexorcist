@@ -5,12 +5,13 @@ Run from repo root:
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
 from pathlib import Path
 
-from bench.case_io import CASES_DIR, list_case_ids, load_case
+from bench.case_io import add_dir_option, apply_dir_option, list_case_ids, load_case
 
 FORBIDDEN = re.compile(
     r"\b(bug|wrong|oops|fixme|todo|should|incorrect|broken|hack)\b",
@@ -65,9 +66,14 @@ def lint_case(case_id: str) -> list[str]:
 
 
 def main() -> None:
-    ids = sys.argv[1:] or list_case_ids()
+    ap = argparse.ArgumentParser()
+    ap.add_argument("cases", nargs="*")
+    add_dir_option(ap)
+    args = ap.parse_args()
+    apply_dir_option(args)
+    ids = args.cases or list_case_ids()
     if not ids:
-        print("no cases under bench/cases/")
+        print("no cases found")
         sys.exit(1)
     all_problems: list[str] = []
     for cid in ids:

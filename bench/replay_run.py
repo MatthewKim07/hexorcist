@@ -23,7 +23,7 @@ sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
 
 from app.assertions import evaluate_all  # noqa: E402
 from app.models import Assertion, DeviceSpec, Scenario  # noqa: E402
-from bench.case_io import RESULTS_DIR, load_case, write_json  # noqa: E402
+from bench.case_io import RESULTS_DIR, add_dir_option, apply_dir_option, load_case, write_json  # noqa: E402
 from bench.evaluate_gt import default_runner  # noqa: E402
 
 ADAPTER = TypeAdapter(Assertion)
@@ -34,7 +34,9 @@ def main() -> None:
     ap.add_argument("run_id")
     ap.add_argument("cases", nargs="*")
     ap.add_argument("--api", default="http://127.0.0.1:8080")
+    add_dir_option(ap)
     args = ap.parse_args()
+    apply_dir_option(args)
 
     rows = {r["case_id"]: r for r in json.loads((RESULTS_DIR / f"{args.run_id}_hexorcist.json").read_text())["cases"]}
     out_path = RESULTS_DIR / f"{args.run_id}_replay.json"

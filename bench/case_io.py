@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 BENCH_ROOT = Path(__file__).resolve().parent
-CASES_DIR = BENCH_ROOT / "cases"
+FROZEN_DIR = BENCH_ROOT / "cases"
+PRACTICE_DIR = BENCH_ROOT / "practice"
+# The frozen v2 set unless BENCH_CASES_DIR or a tool's --dir says otherwise. Only the frozen set is part of the freeze check.
+CASES_DIR = Path(os.environ["BENCH_CASES_DIR"]).resolve() if os.environ.get("BENCH_CASES_DIR") else FROZEN_DIR
 PROMPTS_DIR = BENCH_ROOT / "prompts"
 RESULTS_DIR = BENCH_ROOT / "results"
 CACHE_DIR = BENCH_ROOT / "cache"
@@ -41,6 +45,31 @@ class Case:
             for cid in bug.get("check_ids", []):
                 ids.add(cid)
         return ids
+
+
+def resolve_cases_dir(value: str) -> Path:
+    """`practice` and `frozen` name the two bundled sets; anything else is a path."""
+    named = {"practice": PRACTICE_DIR, "frozen": FROZEN_DIR, "cases": FROZEN_DIR}
+    path = named.get(value) or Path(value).resolve()
+    if not path.is_dir():
+        raise SystemExit(f"no case directory at {path}")
+    return path
+
+
+def use_cases_dir(value: str) -> Path:
+    """Point load_case and list_case_ids at another case directory for the rest of this process."""
+    global CASES_DIR
+    CASES_DIR = resolve_cases_dir(value)
+    return CASES_DIR
+
+
+def add_dir_option(parser) -> None:
+    parser.add_argument("--dir", default="", help="case directory: practice, frozen (the default) or a path")
+
+
+def apply_dir_option(args) -> None:
+    if getattr(args, "dir", ""):
+        use_cases_dir(args.dir)
 
 
 def list_case_ids() -> list[str]:

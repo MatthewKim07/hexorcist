@@ -17,7 +17,8 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 sys.path.insert(0, str(_ROOT / "backend"))
 
-from bench.case_io import CASES_DIR, load_case, list_case_ids, write_json
+from bench import case_io
+from bench.case_io import add_dir_option, apply_dir_option, load_case, list_case_ids, write_json
 from bench.evaluate_gt import build_spec, default_runner, load_assertions, load_scenarios, run_firmware
 
 
@@ -78,7 +79,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("cases", nargs="*")
     ap.add_argument("--fix-drop", action="store_true", help="Move failing cases to bench/cases/_dropped/")
+    add_dir_option(ap)
     args = ap.parse_args()
+    apply_dir_option(args)
 
     ids = args.cases or list_case_ids()
     runner = default_runner()
@@ -100,10 +103,10 @@ def main() -> None:
             cat_counts[c] += 1
 
     if args.fix_drop and bad:
-        drop = CASES_DIR / "_dropped"
+        drop = case_io.CASES_DIR / "_dropped"
         drop.mkdir(exist_ok=True)
         for r in bad:
-            src = CASES_DIR / r["id"]
+            src = case_io.CASES_DIR / r["id"]
             dst = drop / r["id"]
             if src.exists():
                 if dst.exists():
