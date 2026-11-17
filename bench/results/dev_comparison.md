@@ -175,6 +175,31 @@ What this means for a gate: G1 and G2 (11 rows) are checks whose structure goes 
 - A rule that marks a check whose quote names two input pins while the check uses one (`dropped_condition`) was tried and removed. It would have removed `bench_led_miswire` a1 in dev_full3 (a class B false alarm), and in dev_full2 the same check was the only one matched to the planted bug, so it cost a real detection.
 - Limit of the sweep: stored assertions carry every default, so the debounce rule's "only when the model chose the settle time" test could not be replayed. The smoke run below exercises it.
 
+## Requirement gate: smoke run on 10 cases (`dev_gate_smoke_20261117T002104Z`)
+
+The four cases with threshold-lamp and fan false alarms, plus every case whose planted bug is `missing_hysteresis` or `missing_debounce`, run with the gate on and the clean rooms written only after a failure. Compared with the same cases in dev_full3. One run each, so single-case moves are within noise. Cost $0.049 (DeepSeek $0.046, OpenAI $0.003) plus $0.002 for the judge.
+
+| Case | Status old / new | Detected old / new | False alarms old / new | Checks left out |
+| --- | --- | --- | --- | ---: |
+| weather_ok (correct) | partial / clean | - | 2 / 0 | 2 |
+| weather_line_prefix | partial / fixed | 1/1 / 1/1 | 2 / 0 | 2 |
+| lab_ph_ok (correct) | partial / clean | - | 2 / 0 | 2 |
+| loft_fan_ok (correct) | partial / partial | - | 1 / 2 | 1 |
+| attic_vent_hyst | partial / fixed | 1/1 / 1/1 | 0 / 0 | 1 |
+| cellar_pump_hyst | fixed / partial | 1/1 / 1/1 | 0 / 1 | 0 |
+| foyer_lamp_debounce | fixed / fixed | 1/1 / 1/1 | 0 / 0 | 0 |
+| greenhouse_dual | fixed / fixed | 2/2 / 2/2 | 0 / 0 | 0 |
+| panel_dual_debounce_edge | fixed / fixed | 1/2 / 1/2 | 0 / 0 | 0 |
+| shop_estop_debounce | fixed / fixed | 1/1 / 1/1 | 0 / 0 | 0 |
+
+- **Real hysteresis and debounce bugs are still caught.** All six cases keep their detections: 8 of 9 planted bugs, all 8 honest (the failing check passes on the reference somewhere). The one miss, the `inverted_pullup` bug in `panel_dual_debounce_edge`, was missed in all four earlier runs. None of the left-out checks was behind a detection.
+- **The three threshold-lamp cases lose all 6 false alarms.** Each left-out check (`weather_ok` a3 and a4, `weather_line_prefix` a3 and a4, `lab_ph_ok` a3 and a4) is a `range_bound` check that fails on the reference in every scenario where it fails on the sketch. `weather_ok` and `lab_ph_ok` are now `clean` with no patch written for a correct sketch.
+- **`loft_fan_ok` went from 1 false alarm to 2.** `a3` (the spec's own 2-changes-per-5000-ms limit, broken by button bounce on the reference too, group G3) is back, and `a1` ("fan stays ON after boost release") is new: it fails on the reference in 1 scenario (group G6, the boost bullet overriding the thresholds). The gate cannot reach either.
+- **`cellar_pump_hyst` gained a false alarm,** `a5`, a printed-level tolerance of ±0.1 cm that the reference also fails in 7 scenarios. Nothing to do with the gate: it makes the status `partial`.
+- **Left-out checks, by the reference replay:** 7 of 8 fail on the reference (rightly left out). One passes on it: `loft_fan_ok` a2 (`invented_converse`), which failed on neither the sketch nor the reference in this run, so leaving it out changed no result. A real check that was wrongly removed would show as passing on the reference and failing on the sketch. None did.
+- `attic_vent_hyst` a2 (`invented_converse`, 14 failing scenarios on the sketch, 12 on the reference) was left out. The status moved from `partial` to `fixed`, and the planted bug was found through `a1` and `a3`.
+- **Clean rooms:** `weather_ok` and `lab_ph_ok` were `not_needed` and made no clean-room call (room 2 calls 0, OpenAI cost $0). The other eight ran both rooms on `deepseek-chat` and `gpt-4o-mini`, with no skips.
+
 ## Two-room run: what the 80% rule did
 Recovered as honest detections: `bench_led_miswire` and `cabin_heater_mul_ovf` (their checks fail on the uploaded sketch in scenarios where at least one clean room passes). `attic_vent_hyst` also became an honest detection. `drip_scheduler_u8` is detected again, but only through checks that fail on the reference too, so it is not an honest one.
 

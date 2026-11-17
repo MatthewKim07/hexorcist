@@ -1,0 +1,1595 @@
+{
+  "run_id": "dev_gate_smoke_20261117T002104Z_hexorcist",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "missing": [],
+  "cases": [
+    {
+      "case_id": "weather_ok",
+      "run_id": "61c67f548274",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 57.41,
+      "llm_calls": 2,
+      "prompt_tokens": 4182,
+      "completion_tokens": 2419,
+      "cost_usd": 0.00218694,
+      "cost_deepseek_usd": 0.00218694,
+      "cost_openai_usd": 0.0,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 2,
+          "prompt_tokens": 4182,
+          "completion_tokens": 2419
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [],
+      "ungrounded": [
+        {
+          "assertion_id": "a3",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A0 <= 50` also covers -10, the other bound of the quoted range -10 to 50, where the bullet asks for the opposite",
+          "spec_quote": "Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.",
+          "failing_scenarios": 13
+        },
+        {
+          "assertion_id": "a4",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A0 >= -10` also covers 50, the other bound of the quoted range -10 to 50, where the bullet asks for the opposite",
+          "spec_quote": "Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.",
+          "failing_scenarios": 8
+        }
+      ],
+      "cross_check": {
+        "status": "not_needed",
+        "reason": "",
+        "rule": "none",
+        "usage": {
+          "llm_calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "sandbox_runs": 0,
+          "llm_s": 0,
+          "sandbox_s": 0,
+          "build_s": 0.0,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": []
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 5,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2101,
+          "completion_tokens": 787,
+          "seconds": 4.2
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2081,
+          "completion_tokens": 1632,
+          "seconds": 9.2
+        }
+      },
+      "assertion_ids": {}
+    },
+    {
+      "case_id": "weather_line_prefix",
+      "run_id": "e396369b4e47",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Serial output uses wrong prefix, so no Temp line ever matches",
+          "description": "printTemp() at line 34 emits the literal \"temp=\" instead of the required \"Temp: \" prefix, so the printed line never matches the expected format. The measured evidence confirms this: \"No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s\" across all scenarios including the nominal ramp. The one-decimal formatting on line 35 is correct, but the label is wrong. No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+          "assertion_type": "serial_period",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+          "root_cause": "printTemp() at line 34 emits the literal \"temp=\" instead of the required \"Temp: \" prefix, so the printed line never matches the expected format. The measured evidence confirms this: \"No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s\" across all scenarios including the nominal ramp. The one-decimal formatting on line 35 is correct, but the label is wrong."
+        },
+        {
+          "id": "bug-a2",
+          "title": "Temperature value cannot be parsed because of the wrong serial prefix",
+          "description": "Because printTemp() at line 34 prints \"temp=\" rather than \"Temp: \", the value regex /Temp: (-?[0-9.]+)/ never matches, so the reported temperature can never be compared to the probe. The measured evidence states \"No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0\" in every scenario. The underlying conversion on line 23 is not the cause here; the output label on line 34 is. No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+          "assertion_type": "serial_value_matches",
+          "assertion_id": "a2",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+          "root_cause": "Because printTemp() at line 34 prints \"temp=\" rather than \"Temp: \", the value regex /Temp: (-?[0-9.]+)/ never matches, so the reported temperature can never be compared to the probe. The measured evidence states \"No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0\" in every scenario. The underlying conversion on line 23 is not the cause here; the output label on line 34 is."
+        }
+      ],
+      "patched_sketch": "// Patio weather node: TMP36 logger with hold-to-freeze button.\n// TMP36 on A0 (10 mV/\u00b0C + 500 mV), freeze button on D5, range lamp on D7.\n\nconst int TEMP_PIN = A0;\nconst int FREEZE_PIN = 5;\nconst int RANGE_PIN = 7;\nconst float MV_PER_C = 10.0f;\nconst float OFFSET_MV = 500.0f;\nconst float LOW_C = -10.0f;\nconst float HIGH_C = 50.0f;\nconst unsigned long PERIOD_MS = 1000;\n\nunsigned long lastPrint = 0;\nfloat tempC = 0.0f;\nfloat frozenC = 0.0f;\nbool freezeHeld = false;\nunsigned long samples = 0;\n\nfloat readTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float volts = raw * (5.0f / 1023.0f);\n    return (volts - (OFFSET_MV / 1000.0f)) * 100.0f;\n}\n\nvoid updateRangeLamp(float c)\n{\n    bool ok = (c >= LOW_C) && (c <= HIGH_C);\n    digitalWrite(RANGE_PIN, ok ? LOW : HIGH);\n}\n\nvoid printTemp(float c)\n{\n    Serial.print(\"Temp: \");\n    Serial.println(c, 1);\n}\n\nvoid setup()\n{\n    pinMode(FREEZE_PIN, INPUT_PULLUP);\n    pinMode(RANGE_PIN, OUTPUT);\n    digitalWrite(RANGE_PIN, LOW);\n    Serial.begin(9600);\n    lastPrint = millis();\n}\n\nvoid loop()\n{\n    tempC = readTempC();\n    samples++;\n    freezeHeld = (digitalRead(FREEZE_PIN) == LOW);\n    if (freezeHeld)\n    {\n        frozenC = tempC;\n    }\n\n    float report = freezeHeld ? frozenC : tempC;\n    updateRangeLamp(report);\n\n    unsigned long now = millis();\n    if (now - lastPrint >= PERIOD_MS)\n    {\n        lastPrint = now;\n        printTemp(report);\n        Serial.print(\"weather n=\");\n        Serial.println(samples);\n    }\n}\n",
+      "wall_s": 178.19,
+      "llm_calls": 6,
+      "prompt_tokens": 9995,
+      "completion_tokens": 3924,
+      "cost_usd": 0.00446109,
+      "cost_deepseek_usd": 0.00417564,
+      "cost_openai_usd": 0.00028545,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 9588,
+          "completion_tokens": 3550
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 407,
+          "completion_tokens": 374
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [
+        {
+          "assertion_id": "a3",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A0 >= -10` also covers 50, the other bound of the quoted range -10 to 50, where the bullet asks for the opposite",
+          "spec_quote": "Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.",
+          "failing_scenarios": 12
+        },
+        {
+          "assertion_id": "a4",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A0 <= 50` also covers -10, the other bound of the quoted range -10 to 50, where the bullet asks for the opposite",
+          "spec_quote": "Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.",
+          "failing_scenarios": 6
+        }
+      ],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 817,
+          "completion_tokens": 705,
+          "sandbox_runs": 44,
+          "llm_s": 8.1,
+          "sandbox_s": 279.2,
+          "build_s": 30.1,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 410,
+            "completion_tokens": 331
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 407,
+            "completion_tokens": 374
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 5,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2118,
+          "completion_tokens": 849,
+          "seconds": 4.3
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2111,
+          "completion_tokens": 1537,
+          "seconds": 8.1
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 410,
+          "completion_tokens": 331,
+          "seconds": 2.1
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2229,
+          "completion_tokens": 287,
+          "seconds": 2.5
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 2720,
+          "completion_tokens": 546,
+          "seconds": 2.6
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 407,
+          "completion_tokens": 374,
+          "seconds": 6.0
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1",
+        "bug-a2": "a2"
+      }
+    },
+    {
+      "case_id": "lab_ph_ok",
+      "run_id": "c9a76082c614",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 43.85,
+      "llm_calls": 2,
+      "prompt_tokens": 3960,
+      "completion_tokens": 2282,
+      "cost_usd": 0.00206724,
+      "cost_deepseek_usd": 0.00206724,
+      "cost_openai_usd": 0.0,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 2,
+          "prompt_tokens": 3960,
+          "completion_tokens": 2282
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [],
+      "ungrounded": [
+        {
+          "assertion_id": "a3",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A1 >= 6.5` also covers 8.5, the other bound of the quoted range 6.5 to 8.5, where the bullet asks for the opposite",
+          "spec_quote": "Drive D10 HIGH when pH is outside 6.50\u20138.50 inclusive; otherwise LOW.",
+          "failing_scenarios": 8
+        },
+        {
+          "assertion_id": "a4",
+          "assertion_type": "output_follows",
+          "rule": "range_bound",
+          "reason": "its low_when `A1 <= 8.5` also covers 6.5, the other bound of the quoted range 6.5 to 8.5, where the bullet asks for the opposite",
+          "spec_quote": "Drive D10 HIGH when pH is outside 6.50\u20138.50 inclusive; otherwise LOW.",
+          "failing_scenarios": 11
+        }
+      ],
+      "cross_check": {
+        "status": "not_needed",
+        "reason": "",
+        "rule": "none",
+        "usage": {
+          "llm_calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "sandbox_runs": 0,
+          "llm_s": 0,
+          "sandbox_s": 0,
+          "build_s": 0.0,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": []
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 4,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2067,
+          "completion_tokens": 645,
+          "seconds": 3.5
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1893,
+          "completion_tokens": 1637,
+          "seconds": 8.8
+        }
+      },
+      "assertion_ids": {}
+    },
+    {
+      "case_id": "loft_fan_ok",
+      "run_id": "b222e2f80576",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Fan stays ON after boost release below OFF threshold",
+          "description": "The boost branch at lines 62-67 calls driveFan(true) and resets offHold to 0 every sample while D4 is LOW, but on release the hysteresis logic at lines 78-94 requires offHold to reach HOLD (4 samples, ~200 ms) before turning the fan off. Because offHold was zeroed during the press, the fan lingers ON after the button is released even though tempC is below OFF_C, producing the measured 'D5 was not LOW for 300 ms while required' at 551 ms. D5 was in the wrong state for 444 ms across 3 interval(s), first at 551 ms: D5 was not LOW for 300 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D5 was in the wrong state for 444 ms across 3 interval(s), first at 551 ms: D5 was not LOW for 300 ms while required (grace 500 ms).",
+          "root_cause": "The boost branch at lines 62-67 calls driveFan(true) and resets offHold to 0 every sample while D4 is LOW, but on release the hysteresis logic at lines 78-94 requires offHold to reach HOLD (4 samples, ~200 ms) before turning the fan off. Because offHold was zeroed during the press, the fan lingers ON after the button is released even though tempC is below OFF_C, producing the measured 'D5 was not LOW for 300 ms while required' at 551 ms."
+        },
+        {
+          "id": "bug-a3",
+          "title": "No debounce or rate limiting on boost button causes excessive fan toggles",
+          "description": "The boost input is read directly at line 62 with no debounce and no minimum on/off dwell or toggle-rate limiter, so each bounce edge or rapid press drives driveFan(true) at line 66 and the subsequent offHold rebuild at lines 78-94 drives driveFan(false), toggling D5 far more than twice per 5000 ms. Measured evidence shows 7 toggles (bounce), 8 toggles (short presses), and 26 toggles (rapid presses) in a 5000 ms window against a limit of 2. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "assertion_id": "a3",
+          "found_by_search": false,
+          "verified": false,
+          "evidence": "D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+          "root_cause": "The boost input is read directly at line 62 with no debounce and no minimum on/off dwell or toggle-rate limiter, so each bounce edge or rapid press drives driveFan(true) at line 66 and the subsequent offHold rebuild at lines 78-94 drives driveFan(false), toggling D5 far more than twice per 5000 ms. Measured evidence shows 7 toggles (bounce), 8 toggles (short presses), and 26 toggles (rapid presses) in a 5000 ms window against a limit of 2."
+        }
+      ],
+      "patched_sketch": "// Loft cooling fan with hysteresis and a boost button.\n// TMP-style linear probe on A3 (10 mV/\u00b0C), fan on D5, boost on D4.\n\nconst int TEMP_PIN = A3;\nconst int FAN_PIN = 5;\nconst int BOOST_PIN = 4;\n\nconst float ON_C = 36.0f;\nconst float OFF_C = 32.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long LOG_MS = 1000;\nconst unsigned long CONFIRM_MS = 200;\nconst unsigned long BOOST_CONFIRM_MS = 200;\n\nbool fanOn = false;\nbool onActive = false;\nbool offActive = false;\nunsigned long onSince = 0;\nunsigned long offSince = 0;\nbool boostRaw = false;\nbool boostStable = false;\nunsigned long boostSince = 0;\nunsigned long lastSample = 0;\nunsigned long lastLog = 0;\nfloat tempC = 0.0f;\n\nfloat sampleTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid driveFan(bool on)\n{\n    if (on == fanOn)\n    {\n        return;\n    }\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid logLine()\n{\n    Serial.print(\"loft: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(BOOST_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSample = millis();\n    lastLog = millis();\n    boostSince = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        tempC = sampleTempC();\n\n        bool raw = (digitalRead(BOOST_PIN) == LOW);\n        if (raw != boostRaw)\n        {\n            boostRaw = raw;\n            boostSince = now;\n        }\n        if (now - boostSince >= BOOST_CONFIRM_MS)\n        {\n            boostStable = boostRaw;\n        }\n\n        if (boostStable)\n        {\n            onActive = false;\n            offActive = false;\n            driveFan(true);\n        }\n        else\n        {\n            if (tempC >= ON_C)\n            {\n                if (!onActive)\n                {\n                    onActive = true;\n                    onSince = now;\n                }\n            }\n            else\n            {\n                onActive = false;\n            }\n            if (tempC <= OFF_C)\n            {\n                if (!offActive)\n                {\n                    offActive = true;\n                    offSince = now;\n                }\n            }\n            else\n            {\n                offActive = false;\n            }\n\n            if (onActive && now - onSince >= CONFIRM_MS)\n            {\n                driveFan(true);\n            }\n            else if (offActive && now - offSince >= CONFIRM_MS)\n            {\n                driveFan(false);\n            }\n        }\n    }\n\n    if (now - lastLog >= LOG_MS)\n    {\n        lastLog = now;\n        logLine();\n    }\n}\n",
+      "wall_s": 297.14,
+      "llm_calls": 10,
+      "prompt_tokens": 20372,
+      "completion_tokens": 8316,
+      "cost_usd": 0.00916928,
+      "cost_deepseek_usd": 0.00835478,
+      "cost_openai_usd": 0.0008145,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 8,
+          "prompt_tokens": 18818,
+          "completion_tokens": 7347
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 2,
+          "prompt_tokens": 1554,
+          "completion_tokens": 969
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [],
+      "ungrounded": [
+        {
+          "assertion_id": "a2",
+          "assertion_type": "output_follows",
+          "rule": "invented_converse",
+          "reason": "its low_when demands a state while D4 is released, and its spec bullet never mentions a release, an idle input or \"otherwise\"",
+          "spec_quote": "While D4 is held LOW, force the fan ON.",
+          "failing_scenarios": 0
+        }
+      ],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 3,
+          "prompt_tokens": 1968,
+          "completion_tokens": 1514,
+          "sandbox_runs": 45,
+          "llm_s": 13.8,
+          "sandbox_s": 312.5,
+          "build_s": 30.7,
+          "repaired": true
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 414,
+            "completion_tokens": 545
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": true,
+            "llm_calls": 2,
+            "prompt_tokens": 1554,
+            "completion_tokens": 969
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 5,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2316,
+          "completion_tokens": 775,
+          "seconds": 4.2
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2285,
+          "completion_tokens": 2350,
+          "seconds": 12.0
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 414,
+          "completion_tokens": 545,
+          "seconds": 2.3
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2406,
+          "completion_tokens": 340,
+          "seconds": 2.6
+        },
+        "fix": {
+          "calls": 4,
+          "prompt_tokens": 11397,
+          "completion_tokens": 3337,
+          "seconds": 14.4
+        },
+        "cleanroom2": {
+          "calls": 2,
+          "prompt_tokens": 1554,
+          "completion_tokens": 969,
+          "seconds": 11.5
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1",
+        "bug-a3": "a3"
+      }
+    },
+    {
+      "case_id": "attic_vent_hyst",
+      "run_id": "95af770a2894",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No 38 \u00b0C release threshold; fan drops out as soon as temp falls below 42 \u00b0C",
+          "description": "The control logic at lines 66-73 uses a single trip point: it calls applyFan(false) whenever lastTempC < FAN_ON_C (42.0), so the fan turns OFF the moment temperature dips below 42 \u00b0C instead of holding ON until 38 \u00b0C. In the rapid-override scenario the measured evidence shows D8 was in the wrong state for 599 ms across 3 intervals (e.g. 1000.633-1200.314 s, 'D8 was not LOW for 200 ms while required'), because the override release path at line 72 immediately forces the fan OFF at 25 \u00b0C rather than latching. D8 was in the wrong state for 599 ms across 3 interval(s), first at 1.00 s: D8 was not LOW for 200 ms while required (grace 500 ms).",
+          "assertion_type": "output_follows",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D8 was in the wrong state for 599 ms across 3 interval(s), first at 1.00 s: D8 was not LOW for 200 ms while required (grace 500 ms).",
+          "root_cause": "The control logic at lines 66-73 uses a single trip point: it calls applyFan(false) whenever lastTempC < FAN_ON_C (42.0), so the fan turns OFF the moment temperature dips below 42 \u00b0C instead of holding ON until 38 \u00b0C. In the rapid-override scenario the measured evidence shows D8 was in the wrong state for 599 ms across 3 intervals (e.g. 1000.633-1200.314 s, 'D8 was not LOW for 200 ms while required'), because the override release path at line 72 immediately forces the fan OFF at 25 \u00b0C rather than latching."
+        },
+        {
+          "id": "bug-a3",
+          "title": "No hysteresis or input filtering causes relay chatter",
+          "description": "The comparison at line 66 is a bare single-threshold test on an unfiltered 50 ms sample (lines 53-56), so any noise or oscillation around 42 \u00b0C toggles the relay on every sample. Measured evidence: 57 toggles in a 5000 ms window during threshold hover, 34 toggles during rapid oscillation, and 8 toggles from a brief glitch spike, all far above the limit of 2. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "assertion_id": "a3",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+          "root_cause": "The comparison at line 66 is a bare single-threshold test on an unfiltered 50 ms sample (lines 53-56), so any noise or oscillation around 42 \u00b0C toggles the relay on every sample. Measured evidence: 57 toggles in a 5000 ms window during threshold hover, 34 toggles during rapid oscillation, and 8 toggles from a brief glitch spike, all far above the limit of 2."
+        }
+      ],
+      "patched_sketch": "// Attic ridge-vent controller for an Uno.\n// LM35 on A0, relay driver on D8, momentary override on D3 (pull-up).\n\nconst int TEMP_PIN = A0;\nconst int FAN_PIN = 8;\nconst int OVERRIDE_PIN = 3;\n\nconst float FAN_ON_C = 42.0f;\nconst float FAN_OFF_C = 38.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long SAMPLE_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 300;\n\nbool fanRunning = false;\nbool pendingState = false;\nbool havePending = false;\nunsigned long pendingSinceMs = 0;\nunsigned long lastSampleMs = 0;\nunsigned long lastStatusMs = 0;\nfloat lastTempC = 0.0f;\n\nfloat readAtticTempC()\n{\n    int raw = analogRead(TEMP_PIN);\n    float millivolts = raw * (5000.0f / 1023.0f);\n    return millivolts / MV_PER_C;\n}\n\nvoid applyFan(bool wantOn)\n{\n    fanRunning = wantOn;\n    digitalWrite(FAN_PIN, wantOn ? HIGH : LOW);\n}\n\nvoid publishStatus()\n{\n    Serial.print(\"attic: \");\n    Serial.print(lastTempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanRunning ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    pinMode(OVERRIDE_PIN, INPUT_PULLUP);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastSampleMs = millis();\n    lastStatusMs = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastSampleMs >= SAMPLE_MS)\n    {\n        lastSampleMs = now;\n        lastTempC = readAtticTempC();\n\n        bool overrideHeld = (digitalRead(OVERRIDE_PIN) == LOW);\n        bool wantOn;\n        if (overrideHeld)\n        {\n            wantOn = true;\n        }\n        else if (lastTempC >= FAN_ON_C)\n        {\n            wantOn = true;\n        }\n        else if (lastTempC <= FAN_OFF_C)\n        {\n            wantOn = false;\n        }\n        else\n        {\n            // Inside the hysteresis band: hold the current state.\n            wantOn = fanRunning;\n        }\n\n        // Require the new state to hold continuously before accepting it.\n        if (wantOn == fanRunning)\n        {\n            havePending = false;\n        }\n        else if (!havePending || pendingState != wantOn)\n        {\n            pendingState = wantOn;\n            pendingSinceMs = now;\n            havePending = true;\n        }\n        else if (now - pendingSinceMs >= CONFIRM_MS)\n        {\n            applyFan(wantOn);\n            havePending = false;\n        }\n    }\n\n    if (now - lastStatusMs >= STATUS_MS)\n    {\n        lastStatusMs = now;\n        publishStatus();\n    }\n}\n",
+      "wall_s": 122.27,
+      "llm_calls": 6,
+      "prompt_tokens": 10666,
+      "completion_tokens": 4636,
+      "cost_usd": 0.00495539,
+      "cost_deepseek_usd": 0.00462434,
+      "cost_openai_usd": 0.00033105,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 10223,
+          "completion_tokens": 4195
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 443,
+          "completion_tokens": 441
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [
+        {
+          "assertion_id": "a2",
+          "assertion_type": "output_follows",
+          "rule": "invented_converse",
+          "reason": "its low_when demands a state while D3 is released, and its spec bullet never mentions a release, an idle input or \"otherwise\"",
+          "spec_quote": "While D3 is held LOW, force the fan ON regardless of temperature.",
+          "failing_scenarios": 14
+        }
+      ],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 887,
+          "completion_tokens": 1003,
+          "sandbox_runs": 44,
+          "llm_s": 7.6,
+          "sandbox_s": 166.1,
+          "build_s": 18.6,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 444,
+            "completion_tokens": 562
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 443,
+            "completion_tokens": 441
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 5,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2212,
+          "completion_tokens": 850,
+          "seconds": 4.1
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2279,
+          "completion_tokens": 1682,
+          "seconds": 9.8
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 444,
+          "completion_tokens": 562,
+          "seconds": 2.7
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2308,
+          "completion_tokens": 348,
+          "seconds": 2.6
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 2980,
+          "completion_tokens": 753,
+          "seconds": 3.2
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 443,
+          "completion_tokens": 441,
+          "seconds": 4.9
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1",
+        "bug-a3": "a3"
+      }
+    },
+    {
+      "case_id": "cellar_pump_hyst",
+      "run_id": "7b20a48011ee",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a3",
+          "title": "Pump output chatters because there is no hysteresis or filtering",
+          "description": "The control logic at lines 71-78 uses a single threshold START_CM (45.0) with no stop threshold and no hysteresis band, so any level crossing 45.0 cm toggles the pump. There is also no filtering or debounce of the A1 samples taken at line 66, so noise and fast oscillation around the threshold flip D7 on every 40 ms poll. Measured evidence: 64 toggles in a 5000 ms window (limit 2) in the threshold-hover scenario, and 8 toggles in the glitch-spike scenario. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "assertion_id": "a3",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+          "root_cause": "The control logic at lines 71-78 uses a single threshold START_CM (45.0) with no stop threshold and no hysteresis band, so any level crossing 45.0 cm toggles the pump. There is also no filtering or debounce of the A1 samples taken at line 66, so noise and fast oscillation around the threshold flip D7 on every 40 ms poll. Measured evidence: 64 toggles in a 5000 ms window (limit 2) in the threshold-hover scenario, and 8 toggles in the glitch-spike scenario."
+        },
+        {
+          "id": "bug-a5",
+          "title": "Printed level is off by 0.2 cm due to ADC scaling error",
+          "description": "The millivolt conversion at line 23 divides by 1023.0 instead of 1024.0, which biases every reading low by about 0.1% of full scale; combined with the 10 mV/cm scale this yields a consistent offset. The measured evidence shows the firmware printing 29.8 cm while the injected input was 30.0 cm, off by 0.2 cm against a \u00b10.1 tolerance, in 9 of 9 values. Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "assertion_id": "a5",
+          "found_by_search": false,
+          "verified": false,
+          "evidence": "Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+          "root_cause": "The millivolt conversion at line 23 divides by 1023.0 instead of 1024.0, which biases every reading low by about 0.1% of full scale; combined with the 10 mV/cm scale this yields a consistent offset. The measured evidence shows the firmware printing 29.8 cm while the injected input was 30.0 cm, off by 0.2 cm against a \u00b10.1 tolerance, in 9 of 9 values."
+        }
+      ],
+      "patched_sketch": "// Basement sump controller.\n// Ultrasonic level proxy as linear voltage on A1, pump contactor on D7,\n// silence button on D4 (active LOW, pull-up).\n\nconst uint8_t LEVEL_PIN = A1;\nconst uint8_t PUMP_PIN = 7;\nconst uint8_t SILENCE_PIN = 4;\n\nconst float START_CM = 45.0f;\nconst float STOP_CM = 30.0f;\nconst float MV_PER_CM = 10.0f;\nconst unsigned long POLL_MS = 40;\nconst unsigned long LOG_MS = 800;\nconst unsigned long CONFIRM_MS = 400;\n\nbool pumpOn = false;\nbool silenceLatched = false;\nunsigned long lastPoll = 0;\nunsigned long lastLog = 0;\nfloat levelCm = 0.0f;\n\nbool pendingValid = false;\nbool pendingState = false;\nunsigned long pendingSince = 0;\n\nfloat sampleLevelCm()\n{\n    int adc = analogRead(LEVEL_PIN);\n    float mv = adc * (5000.0f / 1023.0f);\n    return mv / MV_PER_CM;\n}\n\nvoid setPump(bool on)\n{\n    pumpOn = on;\n    digitalWrite(PUMP_PIN, on ? HIGH : LOW);\n}\n\nvoid emitLog()\n{\n    Serial.print(\"sump cm=\");\n    Serial.print(levelCm, 1);\n    Serial.print(\" pump=\");\n    Serial.print(pumpOn ? 1 : 0);\n    Serial.print(\" mute=\");\n    Serial.println(silenceLatched ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(PUMP_PIN, OUTPUT);\n    pinMode(SILENCE_PIN, INPUT_PULLUP);\n    digitalWrite(PUMP_PIN, LOW);\n    Serial.begin(9600);\n    lastPoll = millis();\n    lastLog = millis();\n}\n\nvoid loop()\n{\n    unsigned long t = millis();\n\n    if (digitalRead(SILENCE_PIN) == LOW)\n    {\n        silenceLatched = true;\n        setPump(false);\n    }\n\n    if (t - lastPoll >= POLL_MS)\n    {\n        lastPoll = t;\n        levelCm = sampleLevelCm();\n\n        if (!silenceLatched)\n        {\n            // Hysteresis band: start at 45 cm, stop at 30 cm.\n            bool want = pumpOn;\n            if (!pumpOn && levelCm >= START_CM)\n            {\n                want = true;\n            }\n            else if (pumpOn && levelCm <= STOP_CM)\n            {\n                want = false;\n            }\n\n            if (want != pumpOn)\n            {\n                // Require the new state to hold continuously before switching.\n                if (!pendingValid || pendingState != want)\n                {\n                    pendingValid = true;\n                    pendingState = want;\n                    pendingSince = t;\n                }\n                else if (t - pendingSince >= CONFIRM_MS)\n                {\n                    setPump(want);\n                    pendingValid = false;\n                }\n            }\n            else\n            {\n                pendingValid = false;\n            }\n        }\n        else\n        {\n            pendingValid = false;\n        }\n    }\n\n    if (t - lastLog >= LOG_MS)\n    {\n        lastLog = t;\n        emitLog();\n    }\n}\n",
+      "wall_s": 227.83,
+      "llm_calls": 9,
+      "prompt_tokens": 21220,
+      "completion_tokens": 7549,
+      "cost_usd": 0.00914912,
+      "cost_deepseek_usd": 0.00877982,
+      "cost_openai_usd": 0.0003693,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 8,
+          "prompt_tokens": 20798,
+          "completion_tokens": 7039
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 422,
+          "completion_tokens": 510
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [
+        {
+          "assertion_id": "a1",
+          "type": "output_follows",
+          "requirement": "Pump D7 goes HIGH when level >= 45.0 cm and LOW when level <= 30.0 cm, within 500 ms.",
+          "your_firmware": "D7 was in the wrong state for 5500 ms across 1 interval(s), first at 3.50 s: D7 was not HIGH for 5500 ms while required (grace 500 ms).",
+          "clean_room": "D7 was in the wrong state for 5500 ms across 1 interval(s), first at 3.50 s: D7 was not HIGH for 5500 ms while required (grace 500 ms).",
+          "failing_scenarios": 4,
+          "shared_scenarios": 4
+        }
+      ],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 846,
+          "completion_tokens": 1202,
+          "sandbox_runs": 44,
+          "llm_s": 9.4,
+          "sandbox_s": 280.0,
+          "build_s": 28.0,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 424,
+            "completion_tokens": 692
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 422,
+            "completion_tokens": 510
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 5,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2231,
+          "completion_tokens": 848,
+          "seconds": 4.8
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2223,
+          "completion_tokens": 1986,
+          "seconds": 10.5
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 424,
+          "completion_tokens": 692,
+          "seconds": 2.8
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2747,
+          "completion_tokens": 328,
+          "seconds": 2.3
+        },
+        "fix": {
+          "calls": 4,
+          "prompt_tokens": 13173,
+          "completion_tokens": 3185,
+          "seconds": 13.8
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 422,
+          "completion_tokens": 510,
+          "seconds": 6.6
+        }
+      },
+      "assertion_ids": {
+        "bug-a3": "a3",
+        "bug-a5": "a5"
+      }
+    },
+    {
+      "case_id": "foyer_lamp_debounce",
+      "run_id": "f87a25db07f5",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No debounce: bounce and release edges toggle lamp multiple times per press",
+          "description": "The loop at lines 50-56 reads the raw pin and calls flipLamp() on every HIGH-to-LOW transition with no settle/debounce window, so each bounce edge during a press counts as a new press. Measured evidence: bounce scenario gave toggle counts [4,4,4,4] per press and rapid presses gave [3,3,3,...], and the long-hold scenario gave 7 toggles for one press. The spec requires a 40 ms settle window before accepting a press edge, which is entirely absent. 4 of 4 press(es) did not toggle D11 exactly once; toggle counts per press were [4, 4, 4, 4]. D11 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+          "assertion_type": "toggle_per_press",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "4 of 4 press(es) did not toggle D11 exactly once; toggle counts per press were [4, 4, 4, 4]. D11 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+          "root_cause": "The loop at lines 50-56 reads the raw pin and calls flipLamp() on every HIGH-to-LOW transition with no settle/debounce window, so each bounce edge during a press counts as a new press. Measured evidence: bounce scenario gave toggle counts [4,4,4,4] per press and rapid presses gave [3,3,3,...], and the long-hold scenario gave 7 toggles for one press. The spec requires a 40 ms settle window before accepting a press edge, which is entirely absent."
+        }
+      ],
+      "patched_sketch": "// Foyer wall switch: one pushbutton toggles a lamp channel.\n// Button D5 to ground (pull-up), lamp driver D11, status over serial.\n\nconst int SWITCH_PIN = 5;\nconst int LAMP_PIN = 11;\nconst unsigned long STATUS_EVERY_MS = 1500;\nconst unsigned long SETTLE_MS = 40;\n\nbool lampLit = false;\nint previousRaw = HIGH;\nint settledRaw = HIGH;\nint candidateRaw = HIGH;\nunsigned long candidateSince = 0;\nunsigned long lastStatusAt = 0;\nunsigned long pressEvents = 0;\nunsigned long bootMs = 0;\n\nvoid driveLamp(bool on)\n{\n    lampLit = on;\n    digitalWrite(LAMP_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLamp()\n{\n    driveLamp(!lampLit);\n    pressEvents++;\n}\n\nbool isPressedEdge(int previous, int current)\n{\n    return previous == HIGH && current == LOW;\n}\n\nvoid reportLamp()\n{\n    Serial.print(\"foyer lamp=\");\n    Serial.println(lampLit ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(SWITCH_PIN, INPUT_PULLUP);\n    pinMode(LAMP_PIN, OUTPUT);\n    driveLamp(false);\n    Serial.begin(9600);\n    previousRaw = digitalRead(SWITCH_PIN);\n    settledRaw = previousRaw;\n    candidateRaw = previousRaw;\n    candidateSince = millis();\n    lastStatusAt = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    int raw = digitalRead(SWITCH_PIN);\n    unsigned long now = millis();\n\n    if (raw != candidateRaw)\n    {\n        candidateRaw = raw;\n        candidateSince = now;\n    }\n    else if (candidateRaw != settledRaw && now - candidateSince >= SETTLE_MS)\n    {\n        settledRaw = candidateRaw;\n        if (isPressedEdge(previousRaw, settledRaw))\n        {\n            flipLamp();\n        }\n        previousRaw = settledRaw;\n    }\n\n    if (now - lastStatusAt >= STATUS_EVERY_MS)\n    {\n        lastStatusAt = now;\n        reportLamp();\n    }\n}\n",
+      "wall_s": 102.62,
+      "llm_calls": 6,
+      "prompt_tokens": 8647,
+      "completion_tokens": 3119,
+      "cost_usd": 0.00374657,
+      "cost_deepseek_usd": 0.00347522,
+      "cost_openai_usd": 0.00027135,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 8270,
+          "completion_tokens": 2761
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 377,
+          "completion_tokens": 358
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 762,
+          "completion_tokens": 699,
+          "sandbox_runs": 30,
+          "llm_s": 6.1,
+          "sandbox_s": 153.4,
+          "build_s": 12.4,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 385,
+            "completion_tokens": 341
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 377,
+            "completion_tokens": 358
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 2,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 1958,
+          "completion_tokens": 485,
+          "seconds": 3.4
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1527,
+          "completion_tokens": 1249,
+          "seconds": 6.5
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 385,
+          "completion_tokens": 341,
+          "seconds": 1.8
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 1988,
+          "completion_tokens": 167,
+          "seconds": 1.7
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 2412,
+          "completion_tokens": 519,
+          "seconds": 2.8
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 377,
+          "completion_tokens": 358,
+          "seconds": 4.3
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1"
+      }
+    },
+    {
+      "case_id": "greenhouse_dual",
+      "run_id": "a2425bd04e35",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Fan relay chatters at threshold due to no hysteresis or debounce",
+          "description": "The control logic in loop() uses a single threshold: line 72 opens the fan when tempC >= OPEN_C and the else branch at line 78 closes it for any value below 28.0 C, with no 24.0 C close point and no filtering. Sensor noise around the threshold therefore flips D9 on every 50 ms tick, measured as 46 toggles in a 5000 ms window (limit 2) and 64 over the run. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "assertion_id": "a2",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+          "root_cause": "The control logic in loop() uses a single threshold: line 72 opens the fan when tempC >= OPEN_C and the else branch at line 78 closes it for any value below 28.0 C, with no 24.0 C close point and no filtering. Sensor noise around the threshold therefore flips D9 on every 50 ms tick, measured as 46 toggles in a 5000 ms window (limit 2) and 64 over the run."
+        },
+        {
+          "id": "bug-a3",
+          "title": "No fault/safe-state handling for out-of-range or floating probe",
+          "description": "readTempC() at lines 19-24 returns the raw converted value and loop() never checks it against the 5.0 C / 100.0 C limits or detects a floating probe, so a 0 V or sub-5 C reading simply falls into the else branch at line 78 and commands the fan OFF. Measured: D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 1030 ms during the 3 C cold fault, far exceeding the 600 ms allowance. During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "assertion_type": "safe_state_on_fault",
+          "assertion_id": "a3",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "During the fault, D9 was not in safe state HIGH for 5400 ms (allowed 600 ms to react).",
+          "root_cause": "readTempC() at lines 19-24 returns the raw converted value and loop() never checks it against the 5.0 C / 100.0 C limits or detects a floating probe, so a 0 V or sub-5 C reading simply falls into the else branch at line 78 and commands the fan OFF. Measured: D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 1030 ms during the 3 C cold fault, far exceeding the 600 ms allowance."
+        }
+      ],
+      "patched_sketch": "// Greenhouse ridge-vent controller.\n// Soil-air LM35 on A2, exhaust fan relay on D9, UART status.\n\nconst int SENSOR_PIN = A2;\nconst int FAN_PIN = 9;\nconst float OPEN_C = 28.0f;\nconst float CLOSE_C = 24.0f;\nconst float FAULT_LOW_C = 5.0f;\nconst float FAULT_HIGH_C = 100.0f;\nconst float MV_PER_C = 10.0f;\nconst unsigned long TICK_MS = 50;\nconst unsigned long STATUS_MS = 1000;\nconst unsigned long CONFIRM_MS = 300;\n\nbool fanOn = false;\nbool pendingOn = false;\nbool havePending = false;\nunsigned long pendingSince = 0;\nunsigned long lastTick = 0;\nunsigned long lastStatus = 0;\nunsigned long sampleCount = 0;\nfloat tempC = 0.0f;\nfloat tempMin = 999.0f;\nfloat tempMax = -999.0f;\n\nfloat readTempC()\n{\n    int raw = analogRead(SENSOR_PIN);\n    float mv = raw * (5000.0f / 1023.0f);\n    return mv / MV_PER_C;\n}\n\nvoid trackTemp(float c)\n{\n    if (c < tempMin)\n    {\n        tempMin = c;\n    }\n    if (c > tempMax)\n    {\n        tempMax = c;\n    }\n}\n\nvoid setFan(bool on)\n{\n    fanOn = on;\n    digitalWrite(FAN_PIN, on ? HIGH : LOW);\n}\n\nvoid printStatus()\n{\n    Serial.print(\"gh: \");\n    Serial.print(tempC, 1);\n    Serial.print(\" C fan=\");\n    Serial.println(fanOn ? \"ON\" : \"OFF\");\n}\n\nvoid setup()\n{\n    pinMode(FAN_PIN, OUTPUT);\n    digitalWrite(FAN_PIN, LOW);\n    Serial.begin(9600);\n    lastTick = millis();\n    lastStatus = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n\n    if (now - lastTick >= TICK_MS)\n    {\n        lastTick = now;\n        tempC = readTempC();\n        sampleCount++;\n        trackTemp(tempC);\n\n        bool fault = (tempC < FAULT_LOW_C) || (tempC > FAULT_HIGH_C);\n        bool wantOn;\n\n        if (fault)\n        {\n            wantOn = true;\n        }\n        else if (fanOn)\n        {\n            wantOn = !(tempC <= CLOSE_C);\n        }\n        else\n        {\n            wantOn = (tempC >= OPEN_C);\n        }\n\n        if (wantOn == fanOn)\n        {\n            havePending = false;\n        }\n        else if (!havePending || pendingOn != wantOn)\n        {\n            havePending = true;\n            pendingOn = wantOn;\n            pendingSince = now;\n        }\n        else if (now - pendingSince >= CONFIRM_MS)\n        {\n            setFan(wantOn);\n            havePending = false;\n        }\n    }\n\n    if (now - lastStatus >= STATUS_MS)\n    {\n        lastStatus = now;\n        printStatus();\n    }\n}\n",
+      "wall_s": 162.98,
+      "llm_calls": 6,
+      "prompt_tokens": 11065,
+      "completion_tokens": 5326,
+      "cost_usd": 0.0053839,
+      "cost_deepseek_usd": 0.0049693,
+      "cost_openai_usd": 0.0004146,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 10633,
+          "completion_tokens": 4743
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 432,
+          "completion_tokens": 583
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 865,
+          "completion_tokens": 1307,
+          "sandbox_runs": 38,
+          "llm_s": 13.7,
+          "sandbox_s": 246.4,
+          "build_s": 23.1,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 433,
+            "completion_tokens": 724
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 432,
+            "completion_tokens": 583
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 6,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2188,
+          "completion_tokens": 1035,
+          "seconds": 5.0
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2339,
+          "completion_tokens": 1933,
+          "seconds": 9.7
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 433,
+          "completion_tokens": 724,
+          "seconds": 3.7
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2388,
+          "completion_tokens": 318,
+          "seconds": 2.5
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 3285,
+          "completion_tokens": 733,
+          "seconds": 3.1
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 432,
+          "completion_tokens": 583,
+          "seconds": 10.0
+        }
+      },
+      "assertion_ids": {
+        "bug-a2": "a2",
+        "bug-a3": "a3"
+      }
+    },
+    {
+      "case_id": "panel_dual_debounce_edge",
+      "run_id": "2b4b95fffc4a",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Toggles on release edge instead of press, with no debounce",
+          "description": "The loop only calls flipLed() when risingEdge() detects a LOW-to-HIGH transition (lines 26-29, 54-57), i.e. on key release, not on the active-LOW press; this inverts the intended edge and lets release bounce toggle the LED. There is no 40 ms settle/debounce window anywhere in loop() (lines 50-58), so every bounce transition is counted, producing measured toggle counts of [2,2,3,...] and [3,3,3,3] per press plus spurious toggles with no press (e.g. 'D13 toggled at 952 ms with no press to explain it'). The bounce-tail scenario measured 0 toggles for the press itself while 5 unexplained toggles occurred, confirming the edge logic fires on the wrong transitions. 15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+          "assertion_type": "toggle_per_press",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "15 of 15 press(es) did not toggle D13 exactly once; toggle counts per press were [2, 2, 3, 2, 2, 3, 3, 2, 2, 3, 2, 3, 2, 3, 2]. D13 also toggled 9 time(s) with no press to explain it, first at 952 ms.",
+          "root_cause": "The loop only calls flipLed() when risingEdge() detects a LOW-to-HIGH transition (lines 26-29, 54-57), i.e. on key release, not on the active-LOW press; this inverts the intended edge and lets release bounce toggle the LED. There is no 40 ms settle/debounce window anywhere in loop() (lines 50-58), so every bounce transition is counted, producing measured toggle counts of [2,2,3,...] and [3,3,3,3] per press plus spurious toggles with no press (e.g. 'D13 toggled at 952 ms with no press to explain it'). The bounce-tail scenario measured 0 toggles for the press itself while 5 unexplained toggles occurred, confirming the edge logic fires on the wrong transitions."
+        }
+      ],
+      "patched_sketch": "// Control-panel key: toggles a status LED for the technician.\n// Key on D2 (pull-up to Vcc, closes to ground), LED on D13.\n\nconst int KEY_PIN = 2;\nconst int LED_PIN = 13;\nconst unsigned long REPORT_MS = 1000;\nconst unsigned long SETTLE_MS = 40;\n\nbool ledLit = false;\nint previous = HIGH;\nunsigned long lastReport = 0;\nunsigned long edgeCount = 0;\nunsigned long bootMs = 0;\n\nint stableLevel = HIGH;\nunsigned long stableSince = 0;\n\nvoid writeLed(bool on)\n{\n    ledLit = on;\n    digitalWrite(LED_PIN, on ? HIGH : LOW);\n}\n\nvoid flipLed()\n{\n    writeLed(!ledLit);\n    edgeCount++;\n}\n\nbool fallingEdge(int previousLevel, int currentLevel)\n{\n    return previousLevel == HIGH && currentLevel == LOW;\n}\n\nvoid report()\n{\n    Serial.print(\"panel led=\");\n    Serial.print(ledLit ? 1 : 0);\n    Serial.print(\" edges=\");\n    Serial.println(edgeCount);\n}\n\nvoid setup()\n{\n    pinMode(KEY_PIN, INPUT_PULLUP);\n    pinMode(LED_PIN, OUTPUT);\n    writeLed(false);\n    Serial.begin(9600);\n    previous = digitalRead(KEY_PIN);\n    stableLevel = previous;\n    stableSince = millis();\n    lastReport = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    int nowLevel = digitalRead(KEY_PIN);\n    unsigned long t = millis();\n\n    if (nowLevel != stableLevel)\n    {\n        stableLevel = nowLevel;\n        stableSince = t;\n    }\n    else if (t - stableSince >= SETTLE_MS)\n    {\n        if (fallingEdge(previous, stableLevel))\n        {\n            flipLed();\n        }\n        previous = stableLevel;\n    }\n\n    if (t - lastReport >= REPORT_MS)\n    {\n        lastReport = t;\n        report();\n    }\n}\n",
+      "wall_s": 75.47,
+      "llm_calls": 6,
+      "prompt_tokens": 8523,
+      "completion_tokens": 3373,
+      "cost_usd": 0.00382748,
+      "cost_deepseek_usd": 0.00353738,
+      "cost_openai_usd": 0.0002901,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 8165,
+          "completion_tokens": 2979
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 358,
+          "completion_tokens": 394
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 724,
+          "completion_tokens": 778,
+          "sandbox_runs": 30,
+          "llm_s": 6.5,
+          "sandbox_s": 99.8,
+          "build_s": 7.8,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 366,
+            "completion_tokens": 384
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 358,
+            "completion_tokens": 394
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 2,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 1935,
+          "completion_tokens": 434,
+          "seconds": 2.8
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1495,
+          "completion_tokens": 1427,
+          "seconds": 8.1
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 366,
+          "completion_tokens": 384,
+          "seconds": 2.0
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 1980,
+          "completion_tokens": 236,
+          "seconds": 2.4
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 2389,
+          "completion_tokens": 498,
+          "seconds": 2.7
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 358,
+          "completion_tokens": 394,
+          "seconds": 4.5
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1"
+      }
+    },
+    {
+      "case_id": "shop_estop_debounce",
+      "run_id": "3331c07c49f9",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "No debounce: every bounce edge toggles the lamp",
+          "description": "The loop reads D6 and calls toggleArmed() on every HIGH-to-LOW transition (lines 52-58) with no settle window, so each contact bounce is counted as a separate press. Measured evidence shows press at 2.00 s toggled D9 6 times and rapid presses toggled 3 times each, versus the required exactly one toggle per settled press. The 50 ms settle window required by the spec is never implemented, and the extra toggles at 2.50 s with no press confirm bounce edges are being acted on. 3 of 3 press(es) did not toggle D9 exactly once; toggle counts per press were [6, 6, 6]. D9 also toggled 15 time(s) with no press to explain it, first at 2.50 s.",
+          "assertion_type": "toggle_per_press",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "3 of 3 press(es) did not toggle D9 exactly once; toggle counts per press were [6, 6, 6]. D9 also toggled 15 time(s) with no press to explain it, first at 2.50 s.",
+          "root_cause": "The loop reads D6 and calls toggleArmed() on every HIGH-to-LOW transition (lines 52-58) with no settle window, so each contact bounce is counted as a separate press. Measured evidence shows press at 2.00 s toggled D9 6 times and rapid presses toggled 3 times each, versus the required exactly one toggle per settled press. The 50 ms settle window required by the spec is never implemented, and the extra toggles at 2.50 s with no press confirm bounce edges are being acted on."
+        }
+      ],
+      "patched_sketch": "// Shop bench run/stop: mushroom estop toggles the \"machine armed\" lamp.\n// Estop contact on D6 (NC to ground via switch, pull-up), armed lamp on D9.\n\nconst uint8_t ESTOP_PIN = 6;\nconst uint8_t ARMED_PIN = 9;\nconst unsigned long BEAT_MS = 1200;\nconst unsigned long SETTLE_MS = 50;\n\nbool armed = false;\nuint8_t priorSample = HIGH;\nuint8_t stableSample = HIGH;\nuint8_t candidateSample = HIGH;\nunsigned long candidateSince = 0;\nunsigned long lastBeat = 0;\nunsigned long pressCount = 0;\nunsigned long bootMs = 0;\n\nvoid writeArmed(bool level)\n{\n    armed = level;\n    digitalWrite(ARMED_PIN, level ? HIGH : LOW);\n}\n\nvoid toggleArmed()\n{\n    writeArmed(!armed);\n    pressCount++;\n}\n\nbool fallingEdge(uint8_t previous, uint8_t current)\n{\n    return previous == HIGH && current == LOW;\n}\n\nvoid heartbeat()\n{\n    Serial.print(\"shop armed=\");\n    Serial.print(armed ? 1 : 0);\n    Serial.print(\" presses=\");\n    Serial.println(pressCount);\n}\n\nvoid setup()\n{\n    pinMode(ESTOP_PIN, INPUT_PULLUP);\n    pinMode(ARMED_PIN, OUTPUT);\n    writeArmed(false);\n    Serial.begin(9600);\n    priorSample = digitalRead(ESTOP_PIN);\n    stableSample = priorSample;\n    candidateSample = priorSample;\n    candidateSince = millis();\n    lastBeat = millis();\n    bootMs = millis();\n}\n\nvoid loop()\n{\n    uint8_t sample = digitalRead(ESTOP_PIN);\n    unsigned long now = millis();\n\n    if (sample != candidateSample)\n    {\n        candidateSample = sample;\n        candidateSince = now;\n    }\n    else if (candidateSample != stableSample && now - candidateSince >= SETTLE_MS)\n    {\n        stableSample = candidateSample;\n        if (fallingEdge(priorSample, stableSample))\n        {\n            toggleArmed();\n        }\n        priorSample = stableSample;\n    }\n\n    if (now - lastBeat >= BEAT_MS)\n    {\n        lastBeat = now;\n        heartbeat();\n    }\n}\n",
+      "wall_s": 111.69,
+      "llm_calls": 6,
+      "prompt_tokens": 8633,
+      "completion_tokens": 3625,
+      "cost_usd": 0.00399045,
+      "cost_deepseek_usd": 0.003612,
+      "cost_openai_usd": 0.00037845,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 8274,
+          "completion_tokens": 3084
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 359,
+          "completion_tokens": 541
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 724,
+          "completion_tokens": 902,
+          "sandbox_runs": 30,
+          "llm_s": 7.9,
+          "sandbox_s": 148.6,
+          "build_s": 11.5,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 365,
+            "completion_tokens": 361
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 359,
+            "completion_tokens": 541
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 2,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 1960,
+          "completion_tokens": 475,
+          "seconds": 3.6
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1521,
+          "completion_tokens": 1526,
+          "seconds": 8.7
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 365,
+          "completion_tokens": 361,
+          "seconds": 2.1
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2009,
+          "completion_tokens": 167,
+          "seconds": 1.7
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 2419,
+          "completion_tokens": 555,
+          "seconds": 3.0
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 359,
+          "completion_tokens": 541,
+          "seconds": 5.8
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1"
+      }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Fan stays ON after boost release below OFF threshold",
+      "description": "The boost branch at lines 62-67 calls driveFan(true) and resets offHold to 0 every sample while D4 is LOW, but on release the hysteresis logic at lines 78-94 requires offHold to reach HOLD (4 samples, ~200 ms) before turning the fan off. Because offHold was zeroed during the press, the fan lingers ON after the button is released even though tempC is below OFF_C, producing the measured 'D5 was not LOW for 300 ms while required' at 551 ms. D5 was in the wrong state for 444 ms across 3 interval(s), first at 551 ms: D5 was not LOW for 300 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No debounce or rate limiting on boost button causes excessive fan toggles",
+      "description": "The boost input is read directly at line 62 with no debounce and no minimum on/off dwell or toggle-rate limiter, so each bounce edge or rapid press drives driveFan(true) at line 66 and the subsequent offHold rebuild at lines 78-94 drives driveFan(false), toggling D5 far more than twice per 5000 ms. Measured evidence shows 7 toggles (bounce), 8 toggles (short presses), and 26 toggles (rapid presses) in a 5000 ms window against a limit of 2. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Fan stays ON after boost release below OFF threshold",
+        "description": "The boost branch at lines 62-67 calls driveFan(true) and resets offHold to 0 every sample while D4 is LOW, but on release the hysteresis logic at lines 78-94 requires offHold to reach HOLD (4 samples, ~200 ms) before turning the fan off. Because offHold was zeroed during the press, the fan lingers ON after the button is released even though tempC is below OFF_C, producing the measured 'D5 was not LOW for 300 ms while required' at 551 ms. D5 was in the wrong state for 444 ms across 3 interval(s), first at 551 ms: D5 was not LOW for 300 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No debounce or rate limiting on boost button causes excessive fan toggles",
+        "description": "The boost input is read directly at line 62 with no debounce and no minimum on/off dwell or toggle-rate limiter, so each bounce edge or rapid press drives driveFan(true) at line 66 and the subsequent offHold rebuild at lines 78-94 drives driveFan(false), toggling D5 far more than twice per 5000 ms. Measured evidence shows 7 toggles (bounce), 8 toggles (short presses), and 26 toggles (rapid presses) in a 5000 ms window against a limit of 2. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 994,
+    "completion_tokens": 57,
+    "cost_usd": 0.0001833,
+    "cached": false
+  }
+}

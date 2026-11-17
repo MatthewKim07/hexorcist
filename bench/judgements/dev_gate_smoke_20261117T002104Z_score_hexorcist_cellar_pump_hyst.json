@@ -1,0 +1,106 @@
+{
+  "case_id": "cellar_pump_hyst",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Pump output chatters because there is no hysteresis or filtering",
+      "description": "The control logic at lines 71-78 uses a single threshold START_CM (45.0) with no stop threshold and no hysteresis band, so any level crossing 45.0 cm toggles the pump. There is also no filtering or debounce of the A1 samples taken at line 66, so noise and fast oscillation around the threshold flip D7 on every 40 ms poll. Measured evidence: 64 toggles in a 5000 ms window (limit 2) in the threshold-hover scenario, and 8 toggles in the glitch-spike scenario. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    },
+    {
+      "id": "bug-a5",
+      "title": "Printed level is off by 0.2 cm due to ADC scaling error",
+      "description": "The millivolt conversion at line 23 divides by 1023.0 instead of 1024.0, which biases every reading low by about 0.1% of full scale; combined with the 10 mV/cm scale this yields a consistent offset. The measured evidence shows the firmware printing 29.8 cm while the injected input was 30.0 cm, off by 0.2 cm against a \u00b10.1 tolerance, in 9 of 9 values. Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+      "category": "serial_value_matches"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cellar_pump_hyst",
+    "spec": "- Linear water-level sensor on A1 at 10 mV/cm; sump pump contactor on D7; silence pushbutton on D4 to ground with internal pull-up (active LOW).\n- Start the pump when level reaches 45.0 cm or higher; stop the pump when level falls to 30.0 cm or lower.\n- Holding D4 LOW latches silence mode and keeps the pump OFF until reset (power cycle).\n- Pump output must not toggle more than 2 times in any 5000 ms window.\n- Every 800 ms print `sump cm=<level> pump=<0|1> mute=<0|1>` with level to one decimal place.\n- Apply pump start/stop within 500 ms of a sustained band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 45 cm start level short-cycles the pump",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Pump output chatters because there is no hysteresis or filtering",
+        "description": "The control logic at lines 71-78 uses a single threshold START_CM (45.0) with no stop threshold and no hysteresis band, so any level crossing 45.0 cm toggles the pump. There is also no filtering or debounce of the A1 samples taken at line 66, so noise and fast oscillation around the threshold flip D7 on every 40 ms poll. Measured evidence: 64 toggles in a 5000 ms window (limit 2) in the threshold-hover scenario, and 8 toggles in the glitch-spike scenario. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      },
+      {
+        "id": "bug-a5",
+        "title": "Printed level is off by 0.2 cm due to ADC scaling error",
+        "description": "The millivolt conversion at line 23 divides by 1023.0 instead of 1024.0, which biases every reading low by about 0.1% of full scale; combined with the 10 mV/cm scale this yields a consistent offset. The measured evidence shows the firmware printing 29.8 cm while the injected input was 30.0 cm, off by 0.2 cm against a \u00b10.1 tolerance, in 9 of 9 values. Firmware printed 29.8 cm at 832 ms while the injected input was 30.0 to 30.0 cm: off by 0.2 cm (tolerance \u00b10.1). 9 of 9 values were wrong.",
+        "category": "serial_value_matches"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of pump output toggling excessively due to lack of hysteresis.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug about ADC scaling error does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of pump output toggling excessively due to lack of hysteresis."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug about ADC scaling error does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1126,
+    "completion_tokens": 101,
+    "cost_usd": 0.0002295,
+    "cached": false
+  }
+}
