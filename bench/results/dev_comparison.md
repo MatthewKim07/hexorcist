@@ -1,4 +1,4 @@
-# DEV-set comparison, four runs
+# DEV-set comparison, five runs
 
 **DEV-set results.** Benchmark v2 has been seen and is now tuned on, on purpose. These numbers show whether the changes work. They are not evidence about unseen firmware: that needs the held-out v3 set, which does not exist yet. One run per case per column, so a difference of a few cases is within run-to-run noise. Every run also regenerates the checks from the spec, so a case can change result with no change in the agent.
 
@@ -8,10 +8,66 @@
 | one room | `dev_full_20261115T091310Z` | evaluator fix, one clean-room sketch (dropped if it fails the check in 50% of scenarios), spec grounding, search |
 | two rooms | `dev_full2_20261115T222332Z` | two independent clean-room sketches from DeepSeek, a check is dropped only if both fail it the same way in at least 80% of the scenarios where the uploaded sketch fails it; same search |
 | mixed rooms | `dev_full3_20261116T081621Z` | same rule, but room 1 is `deepseek-chat` and room 2 is `gpt-4o-mini`; search off (its acceptance gates were not exercised) |
+| gate | `dev_full4_20261117T030319Z` | mixed rooms, plus the requirement gate (checks that ask for more than their spec bullet are left out) and clean rooms written only after a check fails; search off |
 
 Same 40 frozen cases, same gpt-4o-mini judge, same frozen checks. The agent model is `deepseek-chat` in every run. Cost is the Hexorcist cost of each run (judge extra, about $0.006).
 
-## Verdict
+## Fifth run: requirement gate and lazy clean rooms (`dev_full4_20261117T030319Z`)
+
+Same mixed rooms as the fourth run, plus the requirement gate (`backend/app/requirements.py`: checks that ask for more than the spec bullet they quote are left out of bugs, fixes and verification) and clean rooms written only after a check fails. Search off. 40 cases, one run each, so a difference of a few cases is within noise, and the checks are regenerated every run.
+
+### Verdict
+
+**False alarms dropped without losing recall or honest recall: strict false alarms 14 (fourth run) and 12 (two rooms) became 6, class B 11 became 5, recall went from 27/32 to 29/32 and honest recall from 26/32 to 27/32.** Only part of that is the gate.
+
+- **Recall.** 29/32 (91%). Missed: `glue_solenoid_short`, `hold_to_arm_late` and the second bug of `panel_dual_debounce_edge`. Everything the fourth run detected is still detected, and `bench_led_miswire` and `vault_lock_stuck` are back. The gate left nothing out in those two cases, so those two are run-to-run variation, not a gate effect.
+- **Honest recall.** 27/32 (84%). Two detections are hollow (matched only through a check that fails identically on the reference): `drip_scheduler_u8` and `vault_lock_stuck`. `nav_beacon_byte_timer` is honest this time and `drip_scheduler_u8` is not, which cancel; `bench_led_miswire` is the +1.
+- **False alarms.** 4 on buggy cases (0.14 per case) and 2 on correct ones (0.18 per case). Eleven of the fourth run's 14 are gone and 3 are new. Six of the 11 are the same threshold-lamp checks the gate left out this time, two each in `weather_ok`, `weather_line_prefix` and `lab_ph_ok` (check ids differ from run to run). The other 5 (`bench_led_miswire` a1, `cabin_heater_mul_ovf` a2, `laundry_cycle_stuck` a1, `process_dual_block_scale` a1, `workshop_kpa_scale` a3) disappeared in cases where the gate left nothing out, so I count them as regeneration noise, not as the gate. The same six showed up as removed in the 10-case smoke run, which is the evidence that the gate effect is real.
+- **Verified fix** on the frozen checks 25/29 (86%), and all 20 `fixed` claims pass them. Correct sketches given a patch: 1 (`loft_fan_ok`), none broken.
+- **Cost** $0.195 for 40 runs (DeepSeek $0.183, OpenAI $0.012), median 109 s per case (1.09x the first run), 79 min in total, with the search off.
+
+### Checks left out: 9 in 6 cases
+
+| Case | Left out | Rule | Fails on the sketch / on the reference |
+| --- | --- | --- | --- |
+| weather_ok (correct) | a3, a4 | range_bound | 13 / 13, 8 / 8 scenarios |
+| weather_line_prefix | a3, a4 | range_bound | 13 / 13, 6 / 6 |
+| lab_ph_ok (correct) | a3, a4 | range_bound | 11 / 11, 9 / 9 |
+| attic_vent_hyst | a2 | invented_converse | 15 / 12 |
+| yard_relay_miswire | a2 | invented_converse | 4 / 19 |
+| loft_fan_ok (correct) | a2 | invented_converse | 0 / 0 |
+
+- **How many pass on the reference: 1 of 9.** It is `loft_fan_ok` a2, which failed on neither the sketch nor the reference, so leaving it out changed nothing. The other 8 fail on the reference (rightly left out). No check that fails the sketch and passes the reference, the kind that would be a real check wrongly removed, was left out.
+- No detection depended on a left-out check: all six cases keep what they detected (`attic_vent_hyst` and `weather_line_prefix` moved from `partial` to `fixed`).
+- `weather_ok` and `lab_ph_ok` became `clean` with no patch for a correct sketch, in both cases down from 2 false alarms to 0.
+
+### The 6 remaining false alarms
+
+| Case | Check | Class | Group | Why the gate does not touch it |
+| --- | --- | --- | --- | --- |
+| aquarium_ph_scale | a3 output_follows | not B | from its title, restates the planted bug | the reference fails it in only 11% of the scenarios, so it says something real |
+| blend_tank_sum_ovf | a2 serial_period | B | G4 | spec-stated print period the reference misses under button activity |
+| loft_fan_ok | a1 output_follows | B | G6 | boost bullet overrides the thresholds, check not suspended |
+| loft_fan_ok | a3 max_toggles | B | G3 | spec-stated toggle limit that button bounce breaks on any firmware |
+| nav_beacon_byte_timer | a1 output_follows | B | G2 | forcing bullet ("force the beacon OFF"), check also demands HIGH for the released input; **the gate should have caught this and did not**, see below |
+| spindle_rpm_prefix | a3 output_follows | B | G2 | "while mute is released" is dropped from the check; that is the `dropped_condition` rule that was removed |
+
+- The `nav_beacon_byte_timer` miss is a flaw in the gate: `invented_converse` accepts any bullet that contains the word "off" as having a converse, and this bullet's forced state is OFF. Taking "off" out of that word list would catch it. I have not made that change or run it.
+- The five class B false alarms are all in groups the gate does not cover, or covers only partly. A real fix for G3, G4 and G6 is in the evaluator, not in the text of the check.
+
+### Run audit
+
+| Check | Result |
+| --- | --- |
+| Rows with mixed rooms and no fallback | 40 of 40 |
+| Cases where the cross-check ran | 33, with room 2 `ready` on `gpt-4o-mini` at `api.openai.com` in all 33 |
+| Cases where the cross-check was not needed | 7 (`cooler_ok`, `greenhouse_ok`, `lab_ph_ok`, `lobby_lamp_ok`, `solenoid_ok`, `studio_siren_ok`, `weather_ok`): no clean-room call, $0 OpenAI in every one (the fourth run billed 6 of them) |
+| Rows with an error | none |
+| Search variants run | 0 |
+| Unconfirmed checks | 15 in 11 cases: 14 fail on the reference (rightly dropped), 1 passes (`glue_solenoid_short` a1, a real check wrongly dropped, as in the two previous runs) |
+
+
+## Verdict on the fourth run (mixed rooms)
 
 **Model diversity recovered `rail_limit_invert` but not `glue_solenoid_short`, and false alarms went up, not down: 14 strict, against 12 in the two-room run (10 without the two the search produced) and 6 in the one-room run.**
 
@@ -23,7 +79,7 @@ Same 40 frozen cases, same gpt-4o-mini judge, same frozen checks. The agent mode
 - Verified fix on the frozen checks is 23/29 (79%), against 24/29 in the two-room run. Every one of the 17 `fixed` claims passes the frozen checks.
 - Cost is $0.215 for 40 runs (DeepSeek $0.201, OpenAI $0.014). Median time per case is 114 s, 1.14x the first run, with the search off.
 
-## Run audit: did room 2 really run on gpt-4o-mini?
+## Run audit of the fourth run: did room 2 really run on gpt-4o-mini?
 
 From the 40 case rows (`cross_check`, `providers`) and `run_dev.log`:
 
@@ -46,25 +102,28 @@ Spend, from the per-row buckets and the log: **DeepSeek $0.2008** (cap $0.60) an
 
 ## Overall
 
-| Metric | old | one room | two rooms | mixed rooms |
-| --- | ---: | ---: | ---: | ---: |
-| Detection recall (32 bugs) | 31/32 (97%) | 24/32 (75%) | 27/32 (84%) | 27/32 (84%) |
-| **Honest recall** (see below) | 26/32 (81%) | 22/32 (69%) | 25/32 (78%) | 26/32 (81%) |
-| False alarms per buggy case, strict | 0.48 (14) | 0.17 (5) | 0.24 (7) | 0.31 (9) |
-| False alarms per correct case, strict | 1.18 (13) | 0.09 (1) | 0.45 (5) | 0.45 (5) |
-| Verified fix on buggy cases (frozen checks) | 27/29 (93%) | 21/29 (72%) | 24/29 (83%) | 23/29 (79%) |
-| Own status `fixed` | 15 | 17 | 18 | 17 |
-| Fixed-claim precision (claims whose patch passes the frozen checks) | 15/15 | 16/17 | 18/18 | 17/17 |
-| Statuses clean / fixed / partial | 3 / 15 / 22 | 17 / 17 / 6 | 12 / 18 / 10 | 11 / 17 / 12 |
-| Correct sketches given a patch (of 11) | 8 | 1 | 3 | 3 |
-| Correct sketch broken by its patch | 0 | 1 | 0 | 0 |
-| Unconfirmed checks (cases) | n/a | 27 (16) | 20 (16) | 17 (12) |
-| ...of which fail on the reference too (rightly dropped) | n/a | 25 | 18 | 16 |
-| ...of which pass on the reference (real checks wrongly dropped) | n/a | 2 | 2 | 1 |
-| Bugs found by search | n/a | 0 | 4 | 0 (search off) |
-| Cost of the 40 runs | $0.241 | $0.165 | $0.208 | $0.215 (DeepSeek $0.201, OpenAI $0.014) |
-| Median time per case | 100 s | 115 s | 164 s | 114 s |
-| Total time | 70 min | 88 min | 118 min | 85 min |
+| Metric | old | one room | two rooms | mixed rooms | gate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Detection recall (32 bugs) | 31/32 (97%) | 24/32 (75%) | 27/32 (84%) | 27/32 (84%) | 29/32 (91%) |
+| **Honest recall** (see below) | 26/32 (81%) | 22/32 (69%) | 25/32 (78%) | 26/32 (81%) | 27/32 (84%) |
+| False alarms per buggy case, strict | 0.48 (14) | 0.17 (5) | 0.24 (7) | 0.31 (9) | 0.14 (4) |
+| False alarms per correct case, strict | 1.18 (13) | 0.09 (1) | 0.45 (5) | 0.45 (5) | 0.18 (2) |
+| Verified fix on buggy cases (frozen checks) | 27/29 (93%) | 21/29 (72%) | 24/29 (83%) | 23/29 (79%) | 25/29 (86%) |
+| Own status `fixed` | 15 | 17 | 18 | 17 | 20 |
+| Fixed-claim precision (claims whose patch passes the frozen checks) | 15/15 | 16/17 | 18/18 | 17/17 | 20/20 |
+| Statuses clean / fixed / partial | 3 / 15 / 22 | 17 / 17 / 6 | 12 / 18 / 10 | 11 / 17 / 12 | 12 / 20 / 8 |
+| Correct sketches given a patch (of 11) | 8 | 1 | 3 | 3 | 1 |
+| Correct sketch broken by its patch | 0 | 1 | 0 | 0 | 0 |
+| Unconfirmed checks (cases) | n/a | 27 (16) | 20 (16) | 17 (12) | 15 (11) |
+| ...of which fail on the reference too (rightly dropped) | n/a | 25 | 18 | 16 | 14 |
+| ...of which pass on the reference (real checks wrongly dropped) | n/a | 2 | 2 | 1 | 1 |
+| Ungrounded checks left out (cases) | n/a | n/a | n/a | n/a | 9 (6) |
+| ...of which fail on the reference (rightly left out) | n/a | n/a | n/a | n/a | 8 |
+| ...of which pass on the reference | n/a | n/a | n/a | n/a | 1 (`loft_fan_ok` a2, failed nowhere) |
+| Bugs found by search | n/a | 0 | 4 | 0 (search off) | 0 (search off) |
+| Cost of the 40 runs | $0.241 | $0.165 | $0.208 | $0.215 (DeepSeek $0.201, OpenAI $0.014) | $0.194 (DeepSeek $0.182, OpenAI $0.012) |
+| Median time per case | 100 s | 115 s | 164 s | 114 s | 109 s |
+| Total time | 70 min | 88 min | 118 min | 85 min | 79 min |
 
 **Honest recall.** A planted bug counts only if a report the judge matched to it has a check that fails on the uploaded sketch in some scenario where the known-good `reference.ino` passes. A matched report whose check fails identically on the reference is a coincidence of wording, not a detection: it would flag the correct sketch just as well. By this measure the old 31 were really 26 (`attic_vent_hyst`, `drip_scheduler_u8`, `hold_to_arm_late`, `nav_beacon_byte_timer` and `vault_lock_stuck` were matched only through such reports). It is a stricter test than the first adjudication used, which counted any matched or duplicate report that separated the two, so the old figure here is 26, not 28.
 
@@ -255,58 +314,58 @@ Two rooms: 70,644 tokens for the clean-room sketches in all (one room: 33,547), 
 
 The recheck (`dev_nav_recheck_20261115T091016Z`) confirmed `serial_period` and the patch still fails `a_max` and `a_period`, as in both full runs. This case is a fix-loop failure on an 8-bit millis rollover, not a cross-check issue. It is a good first test for the clock fast-forward.
 
-## Per case (old / one room / two rooms / mixed rooms)
+## Per case (old / one room / two rooms / mixed rooms / gate)
 
-Unconfirmed is "two rooms / mixed rooms". Found by search is from the two-room run (the mixed run had the search off).
+Unconfirmed is "two rooms / mixed rooms / gate". Left out is the gate run's checks that ask for more than their spec bullet.
 
-| Case | Category | Status | Detected | False alarms | Unconfirmed | Found by search | Frozen checks on the patch |
+| Case | Category | Status | Detected | False alarms | Unconfirmed | Left out (gate) | Frozen checks on the patch |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| aquarium_ph_scale | wrong_unit_scaling | fixed / partial / fixed / partial | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 1 / 1 / 1 | 0 / 1 | - | pass / pass / pass / pass |
-| attic_vent_hyst | missing_hysteresis | partial / partial / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 0 / 0 | 0 / 1 | - | pass / pass / pass / pass |
-| bench_led_miswire | wrong_pin | partial / clean / partial / partial | 1/1 / 0/1 / 1/1 / 0/1 | 0 / 0 / 0 / 1 | 1 / 1 | - | pass / no patch / pass / pass |
-| blend_tank_sum_ovf | integer_overflow | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 1 / 1 | 0 / 0 | - | pass / pass / pass / pass |
-| boiler_ok | correct | partial / clean / clean / clean | - / - / - / - | 2 / 0 / 0 / 0 | 1 / 0 | - | pass / no patch / no patch / no patch |
-| boiler_valve_failsafe | missing_failsafe | partial / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 0 / 0 | 1 / 2 | - | pass / pass / pass / pass |
-| cabin_heater_mul_ovf | integer_overflow | partial / clean / partial / partial | 1/1 / 0/1 / 1/1 / 1/1 | 1 / 0 / 0 / 1 | 0 / 0 | - | FAIL / no patch / pass / FAIL |
-| cellar_pump_hyst | missing_hysteresis | partial / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 | 1 / 1 | - | pass / pass / pass / pass |
-| cooler_ok | correct | partial / clean / clean / clean | - / - / - / - | 1 / 0 / 0 / 0 | 0 / 0 | - | pass / no patch / no patch / no patch |
-| drip_scheduler_u8 | millis_rollover | partial / clean / partial / partial | 1/1 / 0/1 / 1/1 / 1/1 | 1 / 0 / 1 / 0 | 1 / 2 | a1, a3 | pass / no patch / pass / FAIL |
-| foyer_lamp_debounce | missing_debounce | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| glue_solenoid_short | timed_pulse_length | partial / clean / clean / clean | 1/1 / 0/1 / 0/1 / 0/1 | 0 / 0 / 0 / 0 | 1 / 1 | - | pass / no patch / no patch / no patch |
-| greenhouse_dual | missing_hysteresis, missing_failsafe | fixed / fixed / fixed / fixed | 2/2 / 2/2 / 2/2 / 2/2 | 0 / 0 / 1 / 0 | 0 / 0 | a1 | pass / pass / pass / pass |
-| greenhouse_ok | correct | clean / clean / fixed / clean | - / - / - / - | 0 / 0 / 1 / 0 | 0 / 0 | a2 | no patch / no patch / pass / no patch |
-| hoist_estop_invert | inverted_pullup | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 1 / 0 | - | pass / pass / pass / pass |
-| hold_to_arm_late | off_by_one_timing | partial / clean / clean / clean | 1/1 / 0/1 / 0/1 / 0/1 | 0 / 0 / 0 / 0 | 1 / 1 | - | pass / no patch / no patch / no patch |
-| inject_pulse_short | off_by_one_timing | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| kiln_door_block | blocking_delay | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| lab_ph_ok | correct | partial / clean / clean / partial | - / - / - / - | 2 / 0 / 0 / 2 | 2 / 0 | - | pass / no patch / no patch / pass |
-| laundry_cycle_stuck | stuck_state_machine | fixed / partial / fixed / partial | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 1 | 0 / 0 | - | pass / pass / pass / pass |
-| laundry_ok | correct | fixed / clean / clean / clean | - / - / - / - | 1 / 0 / 0 / 0 | 1 / 1 | - | pass / no patch / no patch / no patch |
-| lobby_lamp_ok | correct | clean / clean / clean / clean | - / - / - / - | 0 / 0 / 0 / 0 | 0 / 0 | - | no patch / no patch / no patch / no patch |
-| lock_ok | correct | partial / clean / clean / clean | - / - / - / - | 1 / 0 / 0 / 0 | 2 / 2 | - | pass / no patch / no patch / no patch |
-| loft_fan_ok | correct | partial / fixed / partial / partial | - / - / - / - | 3 / 1 / 3 / 1 | 0 / 0 | - | pass / FAIL / pass / pass |
-| mist_injector_long | timed_pulse_length | partial / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| nav_beacon_byte_timer | millis_rollover | partial / partial / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 | 0 / 0 | - | FAIL / FAIL / FAIL / FAIL |
-| panel_dual_debounce_edge | missing_debounce, inverted_pullup | fixed / fixed / fixed / fixed | 1/2 / 1/2 / 1/2 / 1/2 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| porch_gate_block | blocking_delay | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| process_dual_block_scale | wrong_unit_scaling, blocking_delay | fixed / partial / partial / fixed | 2/2 / 2/2 / 2/2 / 2/2 | 0 / 1 / 2 / 1 | 0 / 0 | - | pass / pass / pass / pass |
-| rail_limit_invert | inverted_pullup | fixed / clean / clean / fixed | 1/1 / 0/1 / 0/1 / 1/1 | 0 / 0 / 0 / 0 | 1 / 0 | - | pass / no patch / no patch / pass |
-| shop_estop_debounce | missing_debounce | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| solenoid_ok | correct | partial / clean / clean / clean | - / - / - / - | 1 / 0 / 0 / 0 | 0 / 0 | - | pass / no patch / no patch / no patch |
-| spindle_rpm_prefix | serial_format | partial / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 0 / 0 | 2 / 2 | - | pass / pass / pass / pass |
-| studio_siren_ok | correct | clean / clean / clean / clean | - / - / - / - | 0 / 0 / 0 / 0 | 0 / 0 | - | no patch / no patch / no patch / no patch |
-| vault_lock_stuck | stuck_state_machine | partial / clean / clean / clean | 1/1 / 0/1 / 0/1 / 0/1 | 0 / 0 / 0 / 0 | 2 / 2 | - | pass / no patch / no patch / no patch |
-| walk_in_cooler_failsafe | missing_failsafe | partial / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
-| weather_line_prefix | serial_format | partial / fixed / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 1 / 2 | 1 / 0 | - | pass / pass / pass / pass |
-| weather_ok | correct | partial / clean / partial / partial | - / - / - / - | 2 / 0 / 1 / 2 | 1 / 0 | - | pass / no patch / pass / pass |
-| workshop_kpa_scale | wrong_unit_scaling | fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 0 / 1 | 0 / 0 | - | pass / pass / pass / pass |
-| yard_relay_miswire | wrong_pin | partial / partial / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 | 0 / 0 | - | pass / pass / pass / pass |
+| aquarium_ph_scale | wrong_unit_scaling | fixed / partial / fixed / partial / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 1 / 1 / 1 / 1 | 0 / 1 / 0 | - | pass / pass / pass / pass / pass |
+| attic_vent_hyst | missing_hysteresis | partial / partial / partial / partial / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 0 / 0 / 0 | 0 / 1 / 1 | a2 | pass / pass / pass / pass / pass |
+| bench_led_miswire | wrong_pin | partial / clean / partial / partial / fixed | 1/1 / 0/1 / 1/1 / 0/1 / 1/1 | 0 / 0 / 0 / 1 / 0 | 1 / 1 / 1 | - | pass / no patch / pass / pass / pass |
+| blend_tank_sum_ovf | integer_overflow | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 1 / 1 / 1 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| boiler_ok | correct | partial / clean / clean / clean / clean | - / - / - / - / - | 2 / 0 / 0 / 0 / 0 | 1 / 0 / 2 | - | pass / no patch / no patch / no patch / no patch |
+| boiler_valve_failsafe | missing_failsafe | partial / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 0 / 0 / 0 | 1 / 2 / 2 | - | pass / pass / pass / pass / pass |
+| cabin_heater_mul_ovf | integer_overflow | partial / clean / partial / partial / partial | 1/1 / 0/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 1 / 0 | 0 / 0 / 0 | - | FAIL / no patch / pass / FAIL / pass |
+| cellar_pump_hyst | missing_hysteresis | partial / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 / 0 | 1 / 1 / 1 | - | pass / pass / pass / pass / pass |
+| cooler_ok | correct | partial / clean / clean / clean / clean | - / - / - / - / - | 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / no patch / no patch / no patch / no patch |
+| drip_scheduler_u8 | millis_rollover | partial / clean / partial / partial / partial | 1/1 / 0/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 1 / 0 / 0 | 1 / 2 / 2 | - | pass / no patch / pass / FAIL / FAIL |
+| foyer_lamp_debounce | missing_debounce | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| glue_solenoid_short | timed_pulse_length | partial / clean / clean / clean / clean | 1/1 / 0/1 / 0/1 / 0/1 / 0/1 | 0 / 0 / 0 / 0 / 0 | 1 / 1 / 1 | - | pass / no patch / no patch / no patch / no patch |
+| greenhouse_dual | missing_hysteresis, missing_failsafe | fixed / fixed / fixed / fixed / fixed | 2/2 / 2/2 / 2/2 / 2/2 / 2/2 | 0 / 0 / 1 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| greenhouse_ok | correct | clean / clean / fixed / clean / clean | - / - / - / - / - | 0 / 0 / 1 / 0 / 0 | 0 / 0 / 0 | - | no patch / no patch / pass / no patch / no patch |
+| hoist_estop_invert | inverted_pullup | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 1 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| hold_to_arm_late | off_by_one_timing | partial / clean / clean / clean / clean | 1/1 / 0/1 / 0/1 / 0/1 / 0/1 | 0 / 0 / 0 / 0 / 0 | 1 / 1 / 1 | - | pass / no patch / no patch / no patch / no patch |
+| inject_pulse_short | off_by_one_timing | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| kiln_door_block | blocking_delay | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| lab_ph_ok | correct | partial / clean / clean / partial / clean | - / - / - / - / - | 2 / 0 / 0 / 2 / 0 | 2 / 0 / 0 | a3, a4 | pass / no patch / no patch / pass / no patch |
+| laundry_cycle_stuck | stuck_state_machine | fixed / partial / fixed / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 1 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| laundry_ok | correct | fixed / clean / clean / clean / clean | - / - / - / - / - | 1 / 0 / 0 / 0 / 0 | 1 / 1 / 1 | - | pass / no patch / no patch / no patch / no patch |
+| lobby_lamp_ok | correct | clean / clean / clean / clean / clean | - / - / - / - / - | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | no patch / no patch / no patch / no patch / no patch |
+| lock_ok | correct | partial / clean / clean / clean / clean | - / - / - / - / - | 1 / 0 / 0 / 0 / 0 | 2 / 2 / 2 | - | pass / no patch / no patch / no patch / no patch |
+| loft_fan_ok | correct | partial / fixed / partial / partial / partial | - / - / - / - / - | 3 / 1 / 3 / 1 / 2 | 0 / 0 / 0 | a2 | pass / FAIL / pass / pass / pass |
+| mist_injector_long | timed_pulse_length | partial / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| nav_beacon_byte_timer | millis_rollover | partial / partial / partial / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 / 1 | 0 / 0 / 0 | - | FAIL / FAIL / FAIL / FAIL / FAIL |
+| panel_dual_debounce_edge | missing_debounce, inverted_pullup | fixed / fixed / fixed / fixed / fixed | 1/2 / 1/2 / 1/2 / 1/2 / 1/2 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| porch_gate_block | blocking_delay | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| process_dual_block_scale | wrong_unit_scaling, blocking_delay | fixed / partial / partial / fixed / fixed | 2/2 / 2/2 / 2/2 / 2/2 / 2/2 | 0 / 1 / 2 / 1 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| rail_limit_invert | inverted_pullup | fixed / clean / clean / fixed / fixed | 1/1 / 0/1 / 0/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 1 / 0 / 0 | - | pass / no patch / no patch / pass / pass |
+| shop_estop_debounce | missing_debounce | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| solenoid_ok | correct | partial / clean / clean / clean / clean | - / - / - / - / - | 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / no patch / no patch / no patch / no patch |
+| spindle_rpm_prefix | serial_format | partial / fixed / fixed / fixed / partial | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 0 / 0 / 1 | 2 / 2 / 1 | - | pass / pass / pass / pass / pass |
+| studio_siren_ok | correct | clean / clean / clean / clean / clean | - / - / - / - / - | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | no patch / no patch / no patch / no patch / no patch |
+| vault_lock_stuck | stuck_state_machine | partial / clean / clean / clean / partial | 1/1 / 0/1 / 0/1 / 0/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 2 / 2 / 0 | - | pass / no patch / no patch / no patch / pass |
+| walk_in_cooler_failsafe | missing_failsafe | partial / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| weather_line_prefix | serial_format | partial / fixed / partial / partial / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 2 / 0 / 1 / 2 / 0 | 1 / 0 / 0 | a3, a4 | pass / pass / pass / pass / pass |
+| weather_ok | correct | partial / clean / partial / partial / clean | - / - / - / - / - | 2 / 0 / 1 / 2 / 0 | 1 / 0 / 0 | a3, a4 | pass / no patch / pass / pass / no patch |
+| workshop_kpa_scale | wrong_unit_scaling | fixed / fixed / fixed / fixed / fixed | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 1 / 1 / 0 / 1 / 0 | 0 / 0 / 0 | - | pass / pass / pass / pass / pass |
+| yard_relay_miswire | wrong_pin | partial / partial / partial / partial / partial | 1/1 / 1/1 / 1/1 / 1/1 / 1/1 | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 | a2 | pass / pass / pass / pass / pass |
 
 ## What to do next
 
-1. **Cross-check:** the rule drops a check only when both rooms fail it, yet the reference replay says 11 of the 14 remaining false alarms are checks no correct firmware passes. Test a rule that also requires the room sketches to pass the check somewhere the uploaded sketch fails, or screen checks against the rooms before trusting them.
-2. **Correlated rooms:** mixing models did not decorrelate `glue_solenoid_short`. The next lever is the prompt (list the spec's ambiguous bullets first and ask the second room for a different reading), not the model.
-3. **Search:** still off, with acceptance gates in place and untested on real runs. Turn it on in a separate run only after the cross-check change, so the two effects stay apart.
-4. **Noise:** one run per column cannot separate a two-case change from run-to-run variation. Repeat the mixed run once before reading `bench_led_miswire` or `rail_limit_invert` as a trend.
+1. **Gate:** take "off" out of the converse word list of `invented_converse` (it let `nav_beacon_byte_timer` a1 through), then re-run the six cases that still have an `output_follows` false alarm. Decide separately whether to bring back the `dropped_condition` rule: it would remove `spindle_rpm_prefix` a3 and, on the stored runs, cost one real `bench_led_miswire` detection.
+2. **Evaluator:** the remaining class B false alarms are G3 (toggle limit under forced input), G4 (print period under button activity) and G6 (two bullets on one output). None can be fixed in the text of the check.
+3. **Missed bugs:** `glue_solenoid_short` (the check is dropped by both rooms as in every run since the cross-check was added), `hold_to_arm_late` and the second bug of `panel_dual_debounce_edge`.
+4. **Noise:** run the gate configuration a second time before reading single-case moves, such as `bench_led_miswire` and `vault_lock_stuck`, as a trend.
 
-Files: `bench/results/dev_full3_20261116T081621Z_{hexorcist,score,replay}.json`, `dev_full2_20261115T222332Z_*`, `dev_full_20261115T091310Z_*`, `v2_full_20261115T003855Z_*`, `bench/dev_compare.py`, `bench/replay_run.py`.
+Files: `bench/results/dev_full4_20261117T030319Z_{hexorcist,score,replay}.json`, `dev_full3_20261116T081621Z_*`, `dev_full2_20261115T222332Z_*`, `dev_full_20261115T091310Z_*`, `v2_full_20261115T003855Z_*`, `bench/dev_compare.py`, `bench/replay_run.py`.

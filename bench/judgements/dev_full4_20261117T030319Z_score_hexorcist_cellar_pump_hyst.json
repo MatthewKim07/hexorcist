@@ -1,0 +1,90 @@
+{
+  "case_id": "cellar_pump_hyst",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Pump chatters because there is no hysteresis or debounce",
+      "description": "The control logic at lines 71-78 uses a single threshold (START_CM = 45.0) with no stop threshold and no hysteresis band, so any level reading that crosses 45.0 cm flips the pump on and the next reading below it flips it off. There is also no filtering or debounce on the ADC sample (lines 22-24) and no minimum dwell time between toggles, so noise and fast swings are followed directly. The measured evidence shows D7 toggling 64 times in a 5000 ms window during threshold hover and 8 times during a brief glitch spike, far above the limit of 2. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 45 cm start level short-cycles the pump",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cellar_pump_hyst",
+    "spec": "- Linear water-level sensor on A1 at 10 mV/cm; sump pump contactor on D7; silence pushbutton on D4 to ground with internal pull-up (active LOW).\n- Start the pump when level reaches 45.0 cm or higher; stop the pump when level falls to 30.0 cm or lower.\n- Holding D4 LOW latches silence mode and keeps the pump OFF until reset (power cycle).\n- Pump output must not toggle more than 2 times in any 5000 ms window.\n- Every 800 ms print `sump cm=<level> pump=<0|1> mute=<0|1>` with level to one decimal place.\n- Apply pump start/stop within 500 ms of a sustained band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 45 cm start level short-cycles the pump",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D7 must not toggle more than 2 times in any 5000 ms window (No short cycling)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Pump chatters because there is no hysteresis or debounce",
+        "description": "The control logic at lines 71-78 uses a single threshold (START_CM = 45.0) with no stop threshold and no hysteresis band, so any level reading that crosses 45.0 cm flips the pump on and the next reading below it flips it off. There is also no filtering or debounce on the ADC sample (lines 22-24) and no minimum dwell time between toggles, so noise and fast swings are followed directly. The measured evidence shows D7 toggling 64 times in a 5000 ms window during threshold hover and 8 times during a brief glitch spike, far above the limit of 2. D7 toggled 64 times in a 5000 ms window starting at 1.32 s (limit 2), and 84 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of excessive toggling due to lack of hysteresis.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug accurately identifies the missing hysteresis issue leading to pump chatter.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of excessive toggling due to lack of hysteresis."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug accurately identifies the missing hysteresis issue leading to pump chatter."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 932,
+    "completion_tokens": 95,
+    "cost_usd": 0.0001968,
+    "cached": false
+  }
+}

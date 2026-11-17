@@ -1,0 +1,106 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "ADC sum overflows int, producing negative percent readings",
+      "description": "`sum` is declared as a 16-bit `int` (line 11) and accumulates up to WINDOW=50 raw ADC samples (lines 54-55). At high input the raw values are large enough that the running sum exceeds 32767 and wraps negative, so `avg` (line 59) and the resulting `pct` (line 60) go negative. This matches the measured evidence: at an injected 500.0 % the firmware printed -140.3 %, and on the ramps it printed -215.1 to -315.2 % while the injected value was 300-450 %. Firmware printed -140.3 % at 996 ms while the injected input was 500.0 to 500.0 %: off by 640.3 % (tolerance \u00b13). 4 of 7 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Blocking force-note path and 20 ms idle delay starve the 1 s pct stream",
+      "description": "The loop always waits `delay(IDLE_MS)` = 20 ms (line 79) and, while D5 is held LOW, calls `forceSampleNote()` plus `delay(30)` every iteration (lines 65-69), so the 50-sample window takes far longer than 1 s to fill and `publishPct` is called late. The measured gaps confirm this: 1246 ms with button bounce, up to 1337 ms with rapid presses, and 2525 ms with D5 held LOW at 9600 baud where the force note blocks on Serial. The periodic `pct:` cadence is therefore not maintained. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "ADC sum overflows int, producing negative percent readings",
+        "description": "`sum` is declared as a 16-bit `int` (line 11) and accumulates up to WINDOW=50 raw ADC samples (lines 54-55). At high input the raw values are large enough that the running sum exceeds 32767 and wraps negative, so `avg` (line 59) and the resulting `pct` (line 60) go negative. This matches the measured evidence: at an injected 500.0 % the firmware printed -140.3 %, and on the ramps it printed -215.1 to -315.2 % while the injected value was 300-450 %. Firmware printed -140.3 % at 996 ms while the injected input was 500.0 to 500.0 %: off by 640.3 % (tolerance \u00b13). 4 of 7 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Blocking force-note path and 20 ms idle delay starve the 1 s pct stream",
+        "description": "The loop always waits `delay(IDLE_MS)` = 20 ms (line 79) and, while D5 is held LOW, calls `forceSampleNote()` plus `delay(30)` every iteration (lines 65-69), so the 50-sample window takes far longer than 1 s to fill and `publishPct` is called late. The measured gaps confirm this: 1246 ms with button bounce, up to 1337 ms with rapid presses, and 2525 ms with D5 held LOW at 9600 baud where the force note blocks on Serial. The periodic `pct:` cadence is therefore not maintained. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes integer overflow causing negative percent readings\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes integer overflow causing negative percent readings"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1135,
+    "completion_tokens": 86,
+    "cost_usd": 0.00022185,
+    "cached": false
+  }
+}

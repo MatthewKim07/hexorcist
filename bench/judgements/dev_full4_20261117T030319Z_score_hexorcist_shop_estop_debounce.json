@@ -1,0 +1,90 @@
+{
+  "case_id": "shop_estop_debounce",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "No debounce: every bounce edge toggles the lamp",
+      "description": "The loop reads the raw pin and calls toggleArmed() on every HIGH->LOW transition (lines 52-58) with no 50 ms settle window, so each contact bounce is counted as a separate press. Measured evidence confirms this: bounce scenario gave toggle counts [4,4,4,4] per press and rapid presses gave [3,3,3,...], and release chatter produced extra toggles at 1.40 s and 2.00 s with no press. The spec's 50 ms settle requirement is never implemented anywhere in the firmware. 4 of 4 press(es) did not toggle D9 exactly once; toggle counts per press were [4, 4, 4, 4]. D9 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+      "category": "toggle_per_press"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_debounce",
+      "description": "Immediate edge detect counts bounce as presses",
+      "check_ids": [
+        "a_tpp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_tpp",
+          "type": "toggle_per_press",
+          "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "shop_estop_debounce",
+    "spec": "- Shop estop pushbutton on D6 to ground with internal pull-up (active LOW); machine-armed indicator on D9.\n- Each settled press toggles D9 exactly once within 150 ms; release must not toggle.\n- Bounce bursts up to 22 ms must not produce more than one toggle per physical press.\n- Use a 50 ms settle window before accepting a press.\n- Print `shop armed=<0|1> presses=<n>` every 1200 ms.\n- Unpressed idle level is HIGH on D6.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_debounce",
+        "description": "Immediate edge detect counts bounce as presses",
+        "check_ids": [
+          "a_tpp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_tpp",
+            "type": "toggle_per_press",
+            "behaviour": "D9 toggles exactly once per settled press on None (One armed toggle per estop press)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "No debounce: every bounce edge toggles the lamp",
+        "description": "The loop reads the raw pin and calls toggleArmed() on every HIGH->LOW transition (lines 52-58) with no 50 ms settle window, so each contact bounce is counted as a separate press. Measured evidence confirms this: bounce scenario gave toggle counts [4,4,4,4] per press and rapid presses gave [3,3,3,...], and release chatter produced extra toggles at 1.40 s and 2.00 s with no press. The spec's 50 ms settle requirement is never implemented anywhere in the firmware. 4 of 4 press(es) did not toggle D9 exactly once; toggle counts per press were [4, 4, 4, 4]. D9 also toggled 12 time(s) with no press to explain it, first at 1.40 s.",
+        "category": "toggle_per_press"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same observable behavior of toggling D9 multiple times due to bounce.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug accurately describes the missing debounce issue, matching the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same observable behavior of toggling D9 multiple times due to bounce."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug accurately describes the missing debounce issue, matching the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 878,
+    "completion_tokens": 95,
+    "cost_usd": 0.0001887,
+    "cached": false
+  }
+}

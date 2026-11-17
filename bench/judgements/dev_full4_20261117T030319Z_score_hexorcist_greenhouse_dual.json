@@ -1,0 +1,146 @@
+{
+  "case_id": "greenhouse_dual",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Fan relay chatters because control has no hysteresis or debounce",
+      "description": "The control block at lines 72-79 sets the fan ON whenever tempC >= OPEN_C and OFF otherwise, with no lower threshold and no filtering, so any noise around 28.0 C flips D9 on every 50 ms tick. Measured evidence: 46 toggles in a 5000 ms window in the threshold-hover scenario and 34 toggles in the rapid-oscillation scenario, far above the limit of 2. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No fault detection: sub-5 C, over-100 C, and floating probe do not force fan ON",
+      "description": "The firmware never checks tempC against the 5.0 C / 100.0 C fault limits or detects a floating probe; lines 72-79 only compare against OPEN_C, so a 3 C reading falls into the else branch and drives the fan OFF. Measured evidence: D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 3400 ms in the max/min range scenario, versus the 600 ms allowance. During the fault, D9 was not in safe state HIGH for 820 ms (allowed 600 ms to react).",
+      "category": "safe_state_on_fault"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 28 C threshold chatters under hover noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D9 must not toggle more than 2 times in any 5000 ms window (Switching limit)"
+        }
+      ]
+    },
+    {
+      "id": "b2",
+      "category": "missing_failsafe",
+      "description": "Floating probe leaves fan off instead of fail-safe ON",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D9 must stay 1 during sensor fault ({'pin': 'A2', 'op': '<', 'value': 5}) (Underrange forces fan ON)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "greenhouse_dual",
+    "spec": "- LM35 greenhouse air probe on A2 at 10 mV/\u00b0C; exhaust fan relay on D9.\n- Open the fan when temperature reaches 28.0 \u00b0C or above; close the fan when temperature falls to 24.0 \u00b0C or below.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- If the probe is floating, or temperature reads below 5.0 \u00b0C or above 100.0 \u00b0C, force the fan ON within 600 ms and hold that safe state for the duration of the fault.\n- Print `gh: <temp> C fan=ON` or `gh: <temp> C fan=OFF` every 1000 ms with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 28 C threshold chatters under hover noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D9 must not toggle more than 2 times in any 5000 ms window (Switching limit)"
+          }
+        ]
+      },
+      {
+        "id": "b2",
+        "category": "missing_failsafe",
+        "description": "Floating probe leaves fan off instead of fail-safe ON",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D9 must stay 1 during sensor fault ({'pin': 'A2', 'op': '<', 'value': 5}) (Underrange forces fan ON)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Fan relay chatters because control has no hysteresis or debounce",
+        "description": "The control block at lines 72-79 sets the fan ON whenever tempC >= OPEN_C and OFF otherwise, with no lower threshold and no filtering, so any noise around 28.0 C flips D9 on every 50 ms tick. Measured evidence: 46 toggles in a 5000 ms window in the threshold-hover scenario and 34 toggles in the rapid-oscillation scenario, far above the limit of 2. D9 toggled 46 times in a 5000 ms window starting at 1.30 s (limit 2), and 64 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No fault detection: sub-5 C, over-100 C, and floating probe do not force fan ON",
+        "description": "The firmware never checks tempC against the 5.0 C / 100.0 C fault limits or detects a floating probe; lines 72-79 only compare against OPEN_C, so a 3 C reading falls into the else branch and drives the fan OFF. Measured evidence: D9 was not HIGH for 5400 ms during the disconnected-sensor fault and 3400 ms in the max/min range scenario, versus the 600 ms allowance. During the fault, D9 was not in safe state HIGH for 820 ms (allowed 600 ms to react).",
+        "category": "safe_state_on_fault"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of excessive toggling due to lack of hysteresis.\"},\n    {\"truth_id\": \"b2\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of not forcing the fan ON during fault conditions.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs match the truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of excessive toggling due to lack of hysteresis."
+      },
+      {
+        "truth_id": "b2",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of not forcing the fan ON during fault conditions."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs match the truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1229,
+    "completion_tokens": 130,
+    "cost_usd": 0.00026235,
+    "cached": false
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "case_id": "workshop_kpa_scale",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Pressure conversion omits 500 mV zero offset",
+      "description": "millivoltsToKpa() at line 25 returns mv / MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is 50 kPa high. The measured evidence shows printed 60.1 kPa at 1.01 s while injected was 5.34 to 11.12 kPa, off by 49.0 kPa, and 11 of 11 values wrong. The correct conversion is (mv - 500) / 10 as specified. Firmware printed 60.1 kPa at 1.01 s while the injected input was 5.34 to 11.12 kPa: off by 49.0 kPa (tolerance \u00b12). 11 of 11 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Gauge lamp threshold shifted 50 kPa low by offset bug",
+      "description": "updateGauge() at line 42 compares the un-offset kPa against WARN_KPA (90.0), so D12 asserts at only 40 kPa true (900 mV) instead of 90 kPa true (1400 mV). Measured D12 was in the wrong state for 4399 ms, first at 2.00 s, not LOW for 1959 ms while required. The missing offset subtraction in millivoltsToKpa() (line 25) is the root cause. D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "wrong_unit_scaling",
+      "description": "Omits 500 mV zero offset so kPa reads 50 high",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "workshop_kpa_scale",
+    "spec": "- Pressure transducer on A2 scaled at 10 mV/kPa with a 500 mV zero offset; high-pressure gauge lamp on D12.\n- Physical pressure in kPa equals (millivolts \u2212 500) / 10 using a 5.000 V / 1023 ADC span.\n- Emit `kPa: <value>` once every 1000 ms with one decimal place.\n- Printed pressure must match the injected value within \u00b12.0 kPa.\n- Drive D12 HIGH when pressure is at or above 90.0 kPa; otherwise LOW.\n- Continue logging at the same rate while the gauge lamp is lit.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "wrong_unit_scaling",
+        "description": "Omits 500 mV zero offset so kPa reads 50 high",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'kPa: (-?[0-9.]+)' match the stimulus (tolerance 2.0) (Printed kPa matches transducer)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Pressure conversion omits 500 mV zero offset",
+        "description": "millivoltsToKpa() at line 25 returns mv / MV_PER_KPA without subtracting the 500 mV zero offset, so every reading is 50 kPa high. The measured evidence shows printed 60.1 kPa at 1.01 s while injected was 5.34 to 11.12 kPa, off by 49.0 kPa, and 11 of 11 values wrong. The correct conversion is (mv - 500) / 10 as specified. Firmware printed 60.1 kPa at 1.01 s while the injected input was 5.34 to 11.12 kPa: off by 49.0 kPa (tolerance \u00b12). 11 of 11 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Gauge lamp threshold shifted 50 kPa low by offset bug",
+        "description": "updateGauge() at line 42 compares the un-offset kPa against WARN_KPA (90.0), so D12 asserts at only 40 kPa true (900 mV) instead of 90 kPa true (1400 mV). Measured D12 was in the wrong state for 4399 ms, first at 2.00 s, not LOW for 1959 ms while required. The missing offset subtraction in millivoltsToKpa() (line 25) is the root cause. D12 was in the wrong state for 1411 ms across 3 interval(s), first at 1.53 s: D12 was not LOW for 471 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same root cause of omitting the 500 mV zero offset.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same root cause of the wrong unit scaling due to the omitted zero offset.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same root cause of omitting the 500 mV zero offset."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same root cause of the wrong unit scaling due to the omitted zero offset."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1116,
+    "completion_tokens": 120,
+    "cost_usd": 0.0002394,
+    "cached": false
+  }
+}

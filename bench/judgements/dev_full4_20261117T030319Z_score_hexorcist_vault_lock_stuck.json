@@ -1,0 +1,107 @@
+{
+  "case_id": "vault_lock_stuck",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Debounced request press never engages the lock",
+      "description": "The engage logic at lines 59-67 only fires when `raw != stableReq` after the 35 ms window, but `reqEdge` is reset on every raw change (lines 53-57). With a clean press the raw pin goes LOW once, `reqEdge` is set, and after 35 ms `stableReq` is updated to LOW and the lock engages \u2014 yet the measured evidence shows D9 never went HIGH within 200 ms of any of the 15 rapid presses, 4 short presses, or 4 bouncy presses. The condition `stableReq == LOW && doorClosed() && !locked` at line 62 is never satisfied in practice because the debounce state machine only samples `raw` at the moment of comparison and the edge timer is continuously re-armed by contact chatter, so the stable transition is never committed. D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a2",
+      "title": "No unlock path when the door opens",
+      "description": "The firmware contains no code that calls `setLock(false)` in response to the door opening; `doorClosed()` (lines 31-34) is only read inside the engage condition at line 62, and `setLock(false)` is only invoked once in `setup()` at line 41. Consequently, once locked, D9 stays HIGH indefinitely after D3 goes HIGH, as measured: D9 was not LOW for 4800 ms in the 'door opens while locked' scenario and for 3800 ms in the 'rapid door bounce while locked' scenario. The spec requires unlock within 200 ms of door open, but no such transition exists in the loop. D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "stuck_state_machine",
+      "description": "Lock latches forever after first engage",
+      "check_ids": [
+        "a_unlock"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_unlock",
+          "type": "output_follows",
+          "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "vault_lock_stuck",
+    "spec": "- Request button on D2 (pull-up); door-closed sense on D3 (pull-up, closed = LOW); lock solenoid on D9.\n- Lock D9 engages (HIGH) when request D2 is pressed while door D3 is closed (LOW).\n- Unlock (D9 LOW) when the door opens (D3 HIGH); unlock within 200 ms of door open.\n- Debounce the request contact with 35 ms of stability before engaging.\n- Print `vault lock=<0|1> engages=<n>` every 1000 ms.\n- Do not re-engage while already locked; wait for a new request after unlock.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "stuck_state_machine",
+        "description": "Lock latches forever after first engage",
+        "check_ids": [
+          "a_unlock"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_unlock",
+            "type": "output_follows",
+            "behaviour": "D9 must follow its stimulus; LOW when D3 == 1; within 200 ms (Unlocked when door open)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Debounced request press never engages the lock",
+        "description": "The engage logic at lines 59-67 only fires when `raw != stableReq` after the 35 ms window, but `reqEdge` is reset on every raw change (lines 53-57). With a clean press the raw pin goes LOW once, `reqEdge` is set, and after 35 ms `stableReq` is updated to LOW and the lock engages \u2014 yet the measured evidence shows D9 never went HIGH within 200 ms of any of the 15 rapid presses, 4 short presses, or 4 bouncy presses. The condition `stableReq == LOW && doorClosed() && !locked` at line 62 is never satisfied in practice because the debounce state machine only samples `raw` at the moment of comparison and the edge timer is continuously re-armed by contact chatter, so the stable transition is never committed. D9 missed 15 of 15 trigger(s): D9 never went HIGH within 200 ms of the trigger at 802 ms.",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a2",
+        "title": "No unlock path when the door opens",
+        "description": "The firmware contains no code that calls `setLock(false)` in response to the door opening; `doorClosed()` (lines 31-34) is only read inside the engage condition at line 62, and `setLock(false)` is only invoked once in `setup()` at line 41. Consequently, once locked, D9 stays HIGH indefinitely after D3 goes HIGH, as measured: D9 was not LOW for 4800 ms in the 'door opens while locked' scenario and for 3800 ms in the 'rapid door bounce while locked' scenario. The spec requires unlock within 200 ms of door open, but no such transition exists in the loop. D9 was in the wrong state for 771 ms across 4 interval(s), first at 1.21 s: D9 was not HIGH for 192 ms while required (grace 200 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes D9 not following its stimulus as required by the exposing check.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same underlying issue of the lock not engaging or unlocking correctly.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes D9 not following its stimulus as required by the exposing check."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same underlying issue of the lock not engaging or unlocking correctly."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1153,
+    "completion_tokens": 116,
+    "cost_usd": 0.00024255,
+    "cached": false
+  }
+}

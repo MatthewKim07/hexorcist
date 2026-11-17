@@ -1,0 +1,120 @@
+{
+  "case_id": "weather_line_prefix",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Wrong serial prefix: prints 'temp=' instead of 'Temp: '",
+      "description": "printTemp() at line 34 emits Serial.print(\"temp=\") rather than the required \"Temp: \" prefix, so no line ever matches the expected pattern. The measured evidence confirms this: \"No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s\" across all scenarios including the nominal ramp, meaning the format is wrong regardless of sensor input. No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Printed temperature unparsable due to wrong label",
+      "description": "Because line 34 prints \"temp=\" instead of \"Temp: \", the value on line 35 can never be captured by the pattern \"Temp: (-?[0-9.]+)\". The measured evidence states \"No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0\" in every scenario, so the \u00b11.5 \u00b0C accuracy requirement cannot be verified or met. No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+      "category": "serial_value_matches"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints temp= instead of Temp: ",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "serial_format",
+      "description": "Prints temp= instead of Temp: ",
+      "check_ids": [
+        "a_period",
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^Temp: ' every 1000 ms (Temp: lines)"
+        },
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'Temp: (-?[0-9.]+)' match the stimulus (tolerance 1.5) (Value OK)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "weather_line_prefix",
+    "spec": "- TMP36 on A0 (10 mV/\u00b0C with 500 mV offset); freeze button on D5 (pull-up); range lamp on D7.\n- Every 1000 ms print exactly `Temp: <celsius>` with a space after the colon and one decimal place.\n- Printed temperature must stay within \u00b11.5 \u00b0C of the injected probe value.\n- While D5 is held LOW, freeze the reported value at the last sample.\n- Light D7 when the reported temperature is outside -10.0 to 50.0 \u00b0C.\n- Also print `weather n=<samples>` each second after the Temp line.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "serial_format",
+        "description": "Prints temp= instead of Temp: ",
+        "check_ids": [
+          "a_period",
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^Temp: ' every 1000 ms (Temp: lines)"
+          },
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'Temp: (-?[0-9.]+)' match the stimulus (tolerance 1.5) (Value OK)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Wrong serial prefix: prints 'temp=' instead of 'Temp: '",
+        "description": "printTemp() at line 34 emits Serial.print(\"temp=\") rather than the required \"Temp: \" prefix, so no line ever matches the expected pattern. The measured evidence confirms this: \"No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s\" across all scenarios including the nominal ramp, meaning the format is wrong regardless of sensor input. No serial line matched /^Temp: -?[0-9]+\\.[0-9]$/ in 8.00 s; expected one every 1000 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Printed temperature unparsable due to wrong label",
+        "description": "Because line 34 prints \"temp=\" instead of \"Temp: \", the value on line 35 can never be captured by the pattern \"Temp: (-?[0-9.]+)\". The measured evidence states \"No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0\" in every scenario, so the \u00b11.5 \u00b0C accuracy requirement cannot be verified or met. No serial line matched /Temp: (-?[0-9.]+)/ so the printed value could not be compared with A0.",
+        "category": "serial_value_matches"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause and observable behavior as the truth bug.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are matched to the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause and observable behavior as the truth bug."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are matched to the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1085,
+    "completion_tokens": 106,
+    "cost_usd": 0.00022635,
+    "cached": false
+  }
+}

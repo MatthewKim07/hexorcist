@@ -1,0 +1,90 @@
+{
+  "case_id": "drip_scheduler_u8",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Drip pulses fire back-to-back instead of every 800 ms",
+      "description": "The scheduler stores the next due time in an 8-bit variable (line 10) and computes it as `(uint8_t)(now8 + PERIOD_MS)` on lines 56 and 73, so 800 ms wraps modulo 256 to 32 ms. The due check on line 71 then re-triggers almost immediately after each pulse ends, producing the measured gaps of 49-50 ms between `drip` lines instead of 800 ms. The `now8 >= nextDue` comparison also breaks across the 255->0 rollover, giving the observed worst gaps of 387-705 ms. Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+      "check_ids": [
+        "a_period"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "drip_scheduler_u8",
+    "spec": "- Drip solenoid driver on D8; pause button on D4 to ground with internal pull-up (active LOW).\n- Emit a 50 ms HIGH pulse on D8 every 800 ms while pause is released.\n- Print the exact line `drip` at the start of each pulse; period must stay 800 ms \u00b1120 ms.\n- While D4 is held LOW, suppress new pulses and keep D8 LOW.\n- Every 1600 ms print `drip n=<count> pause=<0|1>`.\n- Stay responsive: complete each pulse without multi-second blocking waits.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "uint8_t schedule and byte PERIOD_MS wrap, drip cadence too fast",
+        "check_ids": [
+          "a_period"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^drip$' every 800 ms (drip every 800 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Drip pulses fire back-to-back instead of every 800 ms",
+        "description": "The scheduler stores the next due time in an 8-bit variable (line 10) and computes it as `(uint8_t)(now8 + PERIOD_MS)` on lines 56 and 73, so 800 ms wraps modulo 256 to 32 ms. The due check on line 71 then re-triggers almost immediately after each pulse ends, producing the measured gaps of 49-50 ms between `drip` lines instead of 800 ms. The `now8 >= nextDue` comparison also breaks across the 255->0 rollover, giving the observed worst gaps of 387-705 ms. Expected /^drip$/ every 800 \u00b1 120 ms; 103 of 105 intervals were out of tolerance, worst gap 705 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"describes the observable behavior of drip pulses firing too quickly due to uint8_t wrap\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug accurately describes the behavior of the true bug related to the millis rollover issue.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "describes the observable behavior of drip pulses firing too quickly due to uint8_t wrap"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug accurately describes the behavior of the true bug related to the millis rollover issue."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 885,
+    "completion_tokens": 98,
+    "cost_usd": 0.00019155,
+    "cached": false
+  }
+}

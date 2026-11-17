@@ -1,0 +1,90 @@
+{
+  "case_id": "boiler_valve_failsafe",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "No out-of-range fault check; low temperature opens the valve",
+      "description": "The control logic at lines 63-70 only compares against the 70/75 \u00b0C band and never tests the 5 \u00b0C / 120 \u00b0C fault limits, so a reading below 5 \u00b0C falls into the `tempC < FIRE_ON_C` branch and calls setValve(true) at line 65. With a disconnected probe (0 V) the measured D6 was not LOW for 5500 ms, and with rail-to-rail input it was not LOW for 3500 ms, both far beyond the allowed 500 ms. The valve is therefore driven OPEN on a fault instead of being forced closed. During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+      "category": "safe_state_on_fault"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "Valve stays open on sensor overrange",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "boiler_valve_failsafe",
+    "spec": "- Boiler probe on A1 at 10 mV/\u00b0C; gas valve on D6; lockout key on D3 (pull-up, active LOW).\n- Open the valve (HIGH) when temperature is below 70.0 \u00b0C; close the valve when temperature is above 75.0 \u00b0C.\n- If temperature reads above 120.0 \u00b0C or below 5.0 \u00b0C, force the valve CLOSED (LOW) within 500 ms.\n- While D3 is held LOW, keep the valve CLOSED.\n- Print `boiler: <temp> C valve=OPEN` or `boiler: <temp> C valve=SHUT` every 1000 ms.\n- Reach the commanded valve state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "Valve stays open on sensor overrange",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D6 must stay 0 during sensor fault ({'pin': 'A1', 'op': '<', 'value': 5}) (Underrange closes valve)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "No out-of-range fault check; low temperature opens the valve",
+        "description": "The control logic at lines 63-70 only compares against the 70/75 \u00b0C band and never tests the 5 \u00b0C / 120 \u00b0C fault limits, so a reading below 5 \u00b0C falls into the `tempC < FIRE_ON_C` branch and calls setValve(true) at line 65. With a disconnected probe (0 V) the measured D6 was not LOW for 5500 ms, and with rail-to-rail input it was not LOW for 3500 ms, both far beyond the allowed 500 ms. The valve is therefore driven OPEN on a fault instead of being forced closed. During the fault, D6 was not in safe state LOW for 5500 ms (allowed 500 ms to react).",
+        "category": "safe_state_on_fault"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the failure to close the valve during sensor fault, matching the exposing check.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug directly addresses the true bug's behavior regarding the valve state during sensor faults.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the failure to close the valve during sensor fault, matching the exposing check."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug directly addresses the true bug's behavior regarding the valve state during sensor faults."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 966,
+    "completion_tokens": 98,
+    "cost_usd": 0.0002037,
+    "cached": false
+  }
+}
