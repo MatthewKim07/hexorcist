@@ -259,6 +259,30 @@ The four cases with threshold-lamp and fan false alarms, plus every case whose p
 - `attic_vent_hyst` a2 (`invented_converse`, 14 failing scenarios on the sketch, 12 on the reference) was left out. The status moved from `partial` to `fixed`, and the planted bug was found through `a1` and `a3`.
 - **Clean rooms:** `weather_ok` and `lab_ph_ok` were `not_needed` and made no clean-room call (room 2 calls 0, OpenAI cost $0). The other eight ran both rooms on `deepseek-chat` and `gpt-4o-mini`, with no skips.
 
+## Gate follow-up: the converse word list, and a stimulus-realism rule that the data does not support
+
+**`invented_converse` no longer reads "off" as a release word.** The bullet "While D3 is held LOW, force the beacon OFF and pause the blink schedule" holds the forced state, not a release, so `nav_beacon_byte_timer` a1 (a class B false alarm in dev_full4) is now left out. Offline sweep over the stored assertions of dev_full2, dev_full3 and dev_full4 (no LLM or sandbox call):
+
+| | dev_full2 | dev_full3 | dev_full4 |
+| --- | ---: | ---: | ---: |
+| Assertions marked / all | 9 / 188 | 11 / 192 | 11 / 187 |
+| Class B false alarms removed | 3 | 7 | 1 (`nav_beacon_byte_timer` a1; the other marks were already left out in that run) |
+| Planted bugs left with no matched check | 1 | 1 | 0 |
+
+The one planted bug that loses its matched check in dev_full2 and dev_full3 is `nav_beacon_byte_timer` b1, matched there only through a1, and both are **hollow** detections: a1 fails on the reference in every scenario, so it would flag a correct sketch equally. Honest recall is unchanged in all three runs. In dev_full4 the detection of that bug rests on other checks and is untouched.
+
+**Stimulus realism (group G3): not built.** The idea: mark a failure that occurs only under a stimulus beyond what the spec states (bounce longer than the stated window, presses faster than a stated minimum, inputs outside a stated range). I checked it on the 5 class B false alarms left in dev_full4, using the stored scenarios and the reference replay:
+
+| Check | Group | Scenarios where the reference fails | Beyond a stated input limit | What the spec states about inputs |
+| --- | --- | ---: | ---: | --- |
+| blend_tank_sum_ovf a2 | G4 | 7 | 0 | nothing |
+| loft_fan_ok a1 | G6 | 2 | 0 | nothing |
+| loft_fan_ok a3 | G3 | 4 | 0 | nothing |
+| nav_beacon_byte_timer a1 | G2 | 14 | 0 | nothing |
+| spindle_rpm_prefix a3 | G2 | 3 | 0 | nothing |
+
+0 of 30 reference-failing scenarios exceed a stated limit. Only 4 of the 40 specs state any input limit (all "maximum bounce": `foyer_lamp_debounce`, `lobby_lamp_ok`, `panel_dual_debounce_edge`, `shop_estop_debounce`), and none of them has a class B false alarm. The stimuli that break `loft_fan_ok` a3 are 60 ms taps, 8 ms bounce repeated 7 times, and 30 edges in 8 s. The spec forbids none of them. The failure comes from two spec bullets colliding under those inputs ("force the fan ON while D4 is held LOW" against "no more than 2 changes in 5000 ms"), not from a stimulus the spec rules out. A rule keyed on stated input limits would never fire on these checks, so it is not built.
+
 ## Two-room run: what the 80% rule did
 Recovered as honest detections: `bench_led_miswire` and `cabin_heater_mul_ovf` (their checks fail on the uploaded sketch in scenarios where at least one clean room passes). `attic_vent_hyst` also became an honest detection. `drip_scheduler_u8` is detected again, but only through checks that fail on the reference too, so it is not an honest one.
 
