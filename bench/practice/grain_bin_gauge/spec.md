@@ -1,0 +1,5 @@
+- Level probe on A3 scaled at 1 mV per mm; high-level lamp on D5.
+- Take one sample every 30 ms and average the last 32 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.
+- Print `bin <mm> mm` every 1000 ms; the printed level must stay within ±40 mm of the injected level.
+- Drive D5 HIGH when the averaged level is at or above 4300 mm; otherwise LOW, within 1500 ms.
+- The probe reads up to 4800 mm.

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "accumulator_overflow",
+    "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+    "check_ids": [
+      "a_level",
+      "a_lamp"
+    ]
+  }
+]

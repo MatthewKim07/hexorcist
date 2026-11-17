@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "blocking_wait",
+    "description": "The acknowledgement waits 300 ms inside delay(), so a heartbeat that falls due during it is printed up to 300 ms late; only presses that land shortly before a heartbeat show it",
+    "check_ids": [
+      "a_beat"
+    ]
+  }
+]

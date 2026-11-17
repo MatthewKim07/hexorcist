@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "noise_filter",
+    "description": "The count of consecutive high samples is reset only by a sample at or below the clear level, so spikes between 8.0 and 12.0 C add up across time and eventually raise the alarm",
+    "check_ids": [
+      "a_spikes"
+    ]
+  }
+]

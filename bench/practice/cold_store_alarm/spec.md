@@ -1,0 +1,6 @@
+- Cold-store probe on A1 at 10 mV/°C; alarm relay on D10.
+- Sample the probe every 20 ms.
+- Raise the alarm (D10 HIGH) once three consecutive samples are at or above 12.0 °C, within 300 ms of the third.
+- A sample below 12.0 °C ends a run of consecutive high samples, so isolated spikes never raise the alarm.
+- Clear the alarm (D10 LOW) within 300 ms of a sample at or below 8.0 °C.
+- Print `cold <temp> C alarm=<0|1>` every 500 ms with one decimal place.

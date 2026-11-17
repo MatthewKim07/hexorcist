@@ -1,0 +1,5 @@
+- Mixer relay on D6; hold switch on D3 with internal pull-up (active LOW).
+- Run the mixer (D6 HIGH) for 2000 ms out of every 5000 ms, the first run starting 5000 ms after power-up.
+- Print `mix <n>` when each run starts, once per 5000 ms ±250 ms.
+- While D3 is held LOW, keep D6 LOW. The runs are still counted and printed.
+- The mixer must not change state more than 2 times in any 5000 ms window.

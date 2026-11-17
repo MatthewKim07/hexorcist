@@ -1,0 +1,19 @@
+[
+  {
+    "pin": "D9",
+    "role": "Stair light relay",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D2",
+    "role": "Push button",
+    "type": "digital_input",
+    "active_low": true
+  },
+  {
+    "pin": "D3",
+    "role": "Mode switch",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

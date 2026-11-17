@@ -1,0 +1,83 @@
+{
+  "assertions": [
+    {
+      "id": "a_horn",
+      "type": "timed_pulse",
+      "pin": "D12",
+      "trigger": {"pin": "D4", "op": "==", "value": 0},
+      "duration_ms": 60,
+      "tolerance_ms": 30,
+      "within_ms": 100,
+      "min_trigger_ms": 30,
+      "active_level": 1,
+      "during_pulse": "ignore",
+      "description": "A press sounds the horn for 60 ms",
+      "covers": "A settled press on D4 sounds the horn: D12 HIGH for 60 ms, starting within 100 ms of the press."
+    },
+    {
+      "id": "a_beat",
+      "type": "serial_period",
+      "pattern": "^dock \\d+$",
+      "period_ms": 500,
+      "tolerance_ms": 150,
+      "description": "Heartbeat every 500 ms",
+      "covers": "Print `dock <n>` every 500 ms ±150 ms, with n counting the lines printed."
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_quiet",
+      "name": "No presses",
+      "seed": 1,
+      "duration_ms": 4000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": []}
+      ]
+    },
+    {
+      "id": "s_bounce",
+      "name": "Presses with contact bounce",
+      "seed": 2,
+      "duration_ms": 5000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1020, "value": 0, "bounce_ms": 8, "bounce_count": 4},
+          {"t_ms": 1120, "value": 1, "bounce_ms": 8, "bounce_count": 4}
+        ]}
+      ]
+    },
+    {
+      "id": "s_held",
+      "name": "Press held long after the horn stops",
+      "seed": 3,
+      "duration_ms": 5000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 2500, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_before_beat",
+      "name": "Presses just before a heartbeat",
+      "seed": 4,
+      "duration_ms": 6000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1450, "value": 0},
+          {"t_ms": 1550, "value": 1},
+          {"t_ms": 2440, "value": 0},
+          {"t_ms": 2540, "value": 1},
+          {"t_ms": 3470, "value": 0},
+          {"t_ms": 3570, "value": 1}
+        ]}
+      ]
+    }
+  ]
+}

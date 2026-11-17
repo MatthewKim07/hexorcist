@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D6",
+    "role": "Mixer relay",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D3",
+    "role": "Hold switch",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

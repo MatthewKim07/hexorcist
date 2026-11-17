@@ -1,0 +1,80 @@
+{
+  "assertions": [
+    {
+      "id": "a_chime",
+      "type": "timed_pulse",
+      "pin": "D7",
+      "trigger": {"pin": "D4", "op": "==", "value": 0},
+      "duration_ms": 300,
+      "tolerance_ms": 80,
+      "within_ms": 120,
+      "min_trigger_ms": 40,
+      "active_level": 1,
+      "during_pulse": "ignore",
+      "description": "A press of 40 ms or more sounds the chime for 300 ms",
+      "covers": "A settled press of at least 40 ms on D4 sounds the chime: D7 HIGH for 300 ms, starting within 120 ms of the press."
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^chime n=\\d+$",
+      "period_ms": 1000,
+      "tolerance_ms": 150,
+      "description": "Status line once per second",
+      "covers": "Print `chime n=<count>` every 1000 ms."
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_long",
+      "name": "Ordinary presses",
+      "seed": 1,
+      "duration_ms": 6000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1200, "value": 1},
+          {"t_ms": 3000, "value": 0},
+          {"t_ms": 3250, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_ignored",
+      "name": "Press while the chime is sounding",
+      "seed": 2,
+      "duration_ms": 5000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1100, "value": 1},
+          {"t_ms": 1150, "value": 0},
+          {"t_ms": 1250, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_short",
+      "name": "Short presses at different moments",
+      "seed": 3,
+      "duration_ms": 12000,
+      "digital": [
+        {"pin": "D4", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0}, {"t_ms": 1045, "value": 1},
+          {"t_ms": 2013, "value": 0}, {"t_ms": 2058, "value": 1},
+          {"t_ms": 3026, "value": 0}, {"t_ms": 3071, "value": 1},
+          {"t_ms": 4039, "value": 0}, {"t_ms": 4084, "value": 1},
+          {"t_ms": 5052, "value": 0}, {"t_ms": 5097, "value": 1},
+          {"t_ms": 6065, "value": 0}, {"t_ms": 6110, "value": 1},
+          {"t_ms": 7078, "value": 0}, {"t_ms": 7123, "value": 1},
+          {"t_ms": 8091, "value": 0}, {"t_ms": 8136, "value": 1}
+        ]}
+      ]
+    }
+  ]
+}

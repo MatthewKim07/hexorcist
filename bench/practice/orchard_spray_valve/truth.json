@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "millis_rollover",
+    "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+    "check_ids": [
+      "a_burst"
+    ]
+  }
+]

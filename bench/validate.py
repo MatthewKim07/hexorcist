@@ -121,7 +121,7 @@ def main() -> None:
         "per_category": dict(sorted(cat_counts.items())),
         "rows": rows,
     }
-    out = _ROOT / "bench" / "results" / "validate_latest.json"
+    out = _ROOT / "bench" / "results" / ("validate_latest.json" if case_io.CASES_DIR == case_io.FROZEN_DIR else f"validate_{case_io.CASES_DIR.name}_latest.json")
     write_json(out, summary)
     print(f"\n{len(ok)} ok, {len(bad)} failed")
     print("per category:", json.dumps(summary["per_category"], indent=2))

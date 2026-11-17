@@ -1,0 +1,104 @@
+{
+  "assertions": [
+    {
+      "id": "a_raise",
+      "type": "output_follows",
+      "pin": "D10",
+      "high_when": {"pin": "A1", "op": ">=", "value": 12.0},
+      "within_ms": 300,
+      "mode": "level",
+      "description": "Sustained high reading raises the alarm",
+      "covers": "Raise the alarm (D10 HIGH) once three consecutive samples are at or above 12.0 °C, within 300 ms of the third."
+    },
+    {
+      "id": "a_spikes",
+      "type": "max_toggles",
+      "pin": "D10",
+      "max_toggles": 0,
+      "window_ms": 6000,
+      "description": "Isolated spikes never raise the alarm",
+      "covers": "A sample below 12.0 °C ends a run of consecutive high samples, so isolated spikes never raise the alarm."
+    },
+    {
+      "id": "a_clear",
+      "type": "output_follows",
+      "pin": "D10",
+      "low_when": {"pin": "A1", "op": "<=", "value": 8.0},
+      "within_ms": 300,
+      "mode": "level",
+      "description": "Low reading clears the alarm",
+      "covers": "Clear the alarm (D10 LOW) within 300 ms of a sample at or below 8.0 °C."
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^cold -?\\d+\\.\\d C alarm=[01]$",
+      "period_ms": 500,
+      "tolerance_ms": 100,
+      "description": "Status line every 500 ms",
+      "covers": "Print `cold <temp> C alarm=<0|1>` every 500 ms with one decimal place."
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_cycle",
+      "name": "Warm spell and recovery",
+      "seed": 1,
+      "duration_ms": 8000,
+      "analog": [
+        {"pin": "A1", "segments": [
+          {"t_ms": 0, "mv": 560},
+          {"t_ms": 1500, "mv": 560},
+          {"t_ms": 1600, "mv": 660},
+          {"t_ms": 4500, "mv": 660},
+          {"t_ms": 4600, "mv": 560},
+          {"t_ms": 8000, "mv": 560}
+        ], "noise_mv": 0, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_quiet_band",
+      "name": "Steady reading between the two levels",
+      "seed": 2,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A1", "segments": [{"t_ms": 0, "mv": 600}], "noise_mv": 0, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_spikes",
+      "name": "Brief spikes on a warm baseline",
+      "seed": 3,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A1", "segments": [{"t_ms": 0, "mv": 600}], "noise_mv": 0, "spikes": [
+          {"t_ms": 500, "width_ms": 25, "mv": 640},
+          {"t_ms": 1100, "width_ms": 25, "mv": 640},
+          {"t_ms": 1700, "width_ms": 25, "mv": 640},
+          {"t_ms": 2300, "width_ms": 25, "mv": 640},
+          {"t_ms": 2900, "width_ms": 25, "mv": 640},
+          {"t_ms": 3500, "width_ms": 25, "mv": 640}
+        ]}
+      ]
+    },
+    {
+      "id": "s_cold_spikes",
+      "name": "Brief spikes on a cold baseline",
+      "seed": 4,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A1", "segments": [{"t_ms": 0, "mv": 540}], "noise_mv": 0, "spikes": [
+          {"t_ms": 500, "width_ms": 25, "mv": 640},
+          {"t_ms": 1100, "width_ms": 25, "mv": 640},
+          {"t_ms": 1700, "width_ms": 25, "mv": 640},
+          {"t_ms": 2300, "width_ms": 25, "mv": 640}
+        ]}
+      ]
+    }
+  ]
+}

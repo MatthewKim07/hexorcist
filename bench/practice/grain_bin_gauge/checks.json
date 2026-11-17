@@ -1,0 +1,82 @@
+{
+  "assertions": [
+    {
+      "id": "a_level",
+      "type": "serial_value_matches",
+      "pattern": "^bin (-?\\d+) mm$",
+      "input_pin": "A3",
+      "tolerance": 40,
+      "max_lag_ms": 1500,
+      "description": "Printed level tracks the probe",
+      "covers": "Print `bin <mm> mm` every 1000 ms; the printed level must stay within ±40 mm of the injected level."
+    },
+    {
+      "id": "a_lamp",
+      "type": "output_follows",
+      "pin": "D5",
+      "high_when": {"pin": "A3", "op": ">=", "value": 4300},
+      "low_when": {"pin": "A3", "op": "<", "value": 4300},
+      "within_ms": 1500,
+      "mode": "level",
+      "description": "Lamp at 4300 mm",
+      "covers": "Drive D5 HIGH when the averaged level is at or above 4300 mm; otherwise LOW, within 1500 ms."
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_mid",
+      "name": "Half-full bin",
+      "seed": 1,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A3", "segments": [{"t_ms": 0, "mv": 2400}], "noise_mv": 0, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_high_normal",
+      "name": "High but under the lamp level",
+      "seed": 2,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A3", "segments": [{"t_ms": 0, "mv": 4000}], "noise_mv": 5, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_full",
+      "name": "Full bin",
+      "seed": 3,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A3", "segments": [{"t_ms": 0, "mv": 4600}], "noise_mv": 5, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_top",
+      "name": "Probe at the top of its range",
+      "seed": 4,
+      "duration_ms": 6000,
+      "analog": [
+        {"pin": "A3", "segments": [{"t_ms": 0, "mv": 4800}], "noise_mv": 0, "spikes": []}
+      ]
+    },
+    {
+      "id": "s_filling",
+      "name": "Bin filling past the lamp level",
+      "seed": 5,
+      "duration_ms": 14000,
+      "analog": [
+        {"pin": "A3", "segments": [
+          {"t_ms": 0, "mv": 3600},
+          {"t_ms": 4000, "mv": 3600},
+          {"t_ms": 4200, "mv": 4700},
+          {"t_ms": 14000, "mv": 4700}
+        ], "noise_mv": 0, "spikes": []}
+      ]
+    }
+  ]
+}

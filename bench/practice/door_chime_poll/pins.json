@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D7",
+    "role": "Chime driver",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Doorbell button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

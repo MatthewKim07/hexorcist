@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D10",
+    "role": "Zone valve relay",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D6",
+    "role": "Start button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

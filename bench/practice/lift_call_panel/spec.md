@@ -1,0 +1,6 @@
+- Call button on D5 with internal pull-up (active LOW); buzzer on D11.
+- A settled press on D5 sounds the buzzer: D11 HIGH for 300 ms, starting within 100 ms of the press.
+- Contact bounce up to 10 ms on press and release must not sound the buzzer twice.
+- Presses while the buzzer is sounding are ignored.
+- D11 stays LOW whenever no press has been accepted.
+- Print `alive <n>` every 500 ms ±120 ms, with n counting the lines printed.

@@ -1,0 +1,5 @@
+- Chime driver on D7; doorbell button on D4 with internal pull-up (active LOW).
+- A settled press of at least 40 ms on D4 sounds the chime: D7 HIGH for 300 ms, starting within 120 ms of the press.
+- Presses while the chime is sounding are ignored.
+- D7 stays LOW whenever no press has been accepted.
+- Print `chime n=<count>` every 1000 ms.

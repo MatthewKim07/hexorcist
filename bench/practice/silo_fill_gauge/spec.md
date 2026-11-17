@@ -1,0 +1,5 @@
+- Level probe on A2 scaled at 1 mV per mm; full-level lamp on D6.
+- Take one sample every 25 ms and average the last 40 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.
+- Print `level <mm> mm` every 1000 ms; the printed level must stay within ±40 mm of the injected level.
+- Drive D6 HIGH when the averaged level is at or above 4200 mm; otherwise LOW, within 1500 ms.
+- The probe reads up to 4800 mm.

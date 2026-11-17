@@ -1,0 +1,11 @@
+[
+  {
+    "id": "b1",
+    "category": "narrow_timer",
+    "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+    "check_ids": [
+      "a_start",
+      "a_rate"
+    ]
+  }
+]

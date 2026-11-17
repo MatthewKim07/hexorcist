@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D12",
+    "role": "Horn relay",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D4",
+    "role": "Dock button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

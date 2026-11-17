@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "feature_interaction",
+    "description": "Changing the mode switch while the light is on restarts the 3 s timer, so the light stays on longer than the press allows; the press and the mode switch are each correct on their own",
+    "check_ids": [
+      "a_light"
+    ]
+  }
+]

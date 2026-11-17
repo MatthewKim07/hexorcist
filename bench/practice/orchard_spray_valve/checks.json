@@ -1,0 +1,104 @@
+{
+  "assertions": [
+    {
+      "id": "a_burst",
+      "type": "timed_pulse",
+      "pin": "D8",
+      "trigger": {"pin": "D2", "op": "==", "value": 0},
+      "duration_ms": 400,
+      "tolerance_ms": 80,
+      "within_ms": 100,
+      "min_trigger_ms": 30,
+      "active_level": 1,
+      "during_pulse": "ignore",
+      "description": "A press opens the valve for 400 ms",
+      "covers": "A settled press on D2 opens the valve (D8 HIGH) for 400 ms, starting within 100 ms of the press."
+    },
+    {
+      "id": "a_status",
+      "type": "serial_period",
+      "pattern": "^spray n=\\d+ open=[01]$",
+      "period_ms": 1000,
+      "tolerance_ms": 150,
+      "description": "Status line once per second",
+      "covers": "Print `spray n=<count> open=<0|1>` every 1000 ms."
+    },
+    {
+      "id": "a_no_crash",
+      "type": "no_crash",
+      "description": "Firmware must not crash"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "s_single",
+      "name": "One press after power-on",
+      "seed": 1,
+      "duration_ms": 5000,
+      "digital": [
+        {"pin": "D2", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1150, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_bounce",
+      "name": "Presses with contact bounce",
+      "seed": 2,
+      "duration_ms": 6000,
+      "digital": [
+        {"pin": "D2", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0, "bounce_ms": 6, "bounce_count": 3},
+          {"t_ms": 1200, "value": 1, "bounce_ms": 6, "bounce_count": 3},
+          {"t_ms": 2600, "value": 0, "bounce_ms": 7, "bounce_count": 4},
+          {"t_ms": 2800, "value": 1, "bounce_ms": 7, "bounce_count": 4}
+        ]}
+      ]
+    },
+    {
+      "id": "s_overlap",
+      "name": "Press while the valve is open",
+      "seed": 3,
+      "duration_ms": 5000,
+      "digital": [
+        {"pin": "D2", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1080, "value": 1},
+          {"t_ms": 1200, "value": 0},
+          {"t_ms": 1280, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_hours_in",
+      "name": "After three hours of uptime",
+      "seed": 4,
+      "duration_ms": 5000,
+      "start_millis": 10800000,
+      "digital": [
+        {"pin": "D2", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1150, "value": 1}
+        ]}
+      ]
+    },
+    {
+      "id": "s_wrap",
+      "name": "Presses around the 32-bit millis rollover",
+      "seed": 5,
+      "duration_ms": 6000,
+      "start_millis": 4294965296,
+      "digital": [
+        {"pin": "D2", "initial": 1, "events": [
+          {"t_ms": 1000, "value": 0},
+          {"t_ms": 1150, "value": 1},
+          {"t_ms": 1700, "value": 0},
+          {"t_ms": 1850, "value": 1},
+          {"t_ms": 3200, "value": 0},
+          {"t_ms": 3350, "value": 1}
+        ]}
+      ]
+    }
+  ]
+}

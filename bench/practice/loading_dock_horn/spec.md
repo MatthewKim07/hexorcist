@@ -1,0 +1,6 @@
+- Horn relay on D12; dock button on D4 with internal pull-up (active LOW).
+- A settled press on D4 sounds the horn: D12 HIGH for 60 ms, starting within 100 ms of the press.
+- Contact bounce up to 10 ms on press and release must not sound the horn twice.
+- A press that is still held after the horn stops does not sound it again.
+- D12 stays LOW whenever no press has been accepted.
+- Print `dock <n>` every 500 ms ±150 ms, with n counting the lines printed.

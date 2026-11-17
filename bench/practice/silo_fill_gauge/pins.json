@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A2",
+    "role": "Level probe",
+    "type": "analog_input",
+    "scale": "1 mV/mm"
+  },
+  {
+    "pin": "D6",
+    "role": "Full-level lamp",
+    "type": "digital_output"
+  }
+]

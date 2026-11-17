@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "A1",
+    "role": "Cold-store probe",
+    "type": "analog_input",
+    "scale": "10 mV/°C + 500 mV"
+  },
+  {
+    "pin": "D10",
+    "role": "Alarm relay",
+    "type": "digital_output"
+  }
+]

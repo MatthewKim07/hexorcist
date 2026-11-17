@@ -1,0 +1,6 @@
+- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).
+- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.
+- Contact bounce up to 12 ms on press and release must not start a second burst.
+- Presses while the valve is open are ignored and do not extend it.
+- The valve stays closed (D10 LOW) whenever no press has been accepted.
+- Print `zone n=<count>` every 1000 ms.

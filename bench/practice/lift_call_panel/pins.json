@@ -1,0 +1,13 @@
+[
+  {
+    "pin": "D11",
+    "role": "Buzzer",
+    "type": "digital_output"
+  },
+  {
+    "pin": "D5",
+    "role": "Call button",
+    "type": "digital_input",
+    "active_low": true
+  }
+]

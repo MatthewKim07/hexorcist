@@ -1,0 +1,6 @@
+- Spray valve relay on D8; trigger button on D2 with internal pull-up (active LOW).
+- A settled press on D2 opens the valve (D8 HIGH) for 400 ms, starting within 100 ms of the press.
+- Contact bounce up to 8 ms on press and release must not start a second burst.
+- Presses while the valve is open are ignored and do not extend it.
+- The valve stays closed (D8 LOW) whenever no press has been accepted.
+- Print `spray n=<count> open=<0|1>` every 1000 ms.

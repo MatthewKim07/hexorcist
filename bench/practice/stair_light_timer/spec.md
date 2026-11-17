@@ -1,0 +1,6 @@
+- Stair light relay on D9; push button on D2 and mode switch on D3, both with internal pull-ups (active LOW).
+- A settled press on D2 turns D9 HIGH for 3000 ms, starting within 100 ms of the press.
+- A press on D2 while D9 is HIGH is ignored and does not extend the light.
+- Changing D3 has no effect on D9, whether the light is on or off.
+- D9 stays LOW whenever no press has been accepted.
+- Print `stair mode=<0|1> lit=<0|1>` every 1000 ms, where mode is the level of D3.

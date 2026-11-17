@@ -1,0 +1,10 @@
+[
+  {
+    "id": "b1",
+    "category": "press_vs_sample_period",
+    "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+    "check_ids": [
+      "a_chime"
+    ]
+  }
+]
