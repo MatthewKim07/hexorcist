@@ -4,6 +4,8 @@
 #   bench/run_dev.sh                                 all 40 cases
 #   bench/run_dev.sh --cases solenoid_ok,loft_fan_ok a few cases (comma or space separated)
 #   bench/run_dev.sh --list [--cases ...]            print what would run, then exit (touches nothing)
+#   bench/run_dev.sh --dir practice                  the practice set (bench/practice, 10 hidden-behaviour cases) instead of bench/cases
+#   bench/run_dev.sh --search [N]                    turn the stimulus search on for this run (N variants per case, default 30)
 #   RUN_ID=my_id bench/run_dev.sh                    force a run id
 #   KEEP_BENCH_LIMITS=1 bench/run_dev.sh             leave the raised rate limit in place when the script ends
 #
@@ -12,7 +14,10 @@
 # Same safeguards as run_all.sh: frozen-case check, DeepSeek and OpenAI endpoint pre-flights, health pre-flight, the
 # raised rate limit through the bench override only (restored when the script ends), resume per case, a DeepSeek cap
 # (0.60 USD) and an OpenAI cap (0.50 USD, for clean room 2), and a log in bench/results/run_dev.log.
-# Clean room 1 is written by DeepSeek, clean room 2 by the OPENAI_* model (gpt-4o-mini). The stimulus search is OFF.
+# Clean room 1 is written by DeepSeek, clean room 2 by the OPENAI_* model (gpt-4o-mini). The stimulus search is OFF unless
+# --search is given. It is switched on through the bench override (BENCH_SEARCH_VARIANTS), so .env is never touched, and it
+# keeps a finding only if it passes its three acceptance gates. The practice set is for tuning: it is not frozen, so --dir
+# practice skips the freeze check and only reports the set's fingerprint.
 # ALLOW_FALLBACK=1 lets the run go ahead with two DeepSeek rooms when OPENAI_* is not configured (the report says so).
 # This script never reads or prints .env (the Python runners load it themselves).
 # Exit 3 = budget stop or incomplete.
@@ -34,6 +39,8 @@ COMPOSE=(docker compose -f docker-compose.yml -f bench/docker-compose.bench.yml)
 # --- Arguments --------------------------------------------------------------------------------------
 SELECTED=()
 LIST_ONLY=0
+CASE_DIR="frozen"
+SEARCH_N=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --cases)
@@ -49,7 +56,15 @@ while [ "$#" -gt 0 ]; do
       [ "${#SELECTED[@]}" -gt 0 ] || { echo "--cases needs at least one case id" >&2; exit 2; }
       ;;
     --list) LIST_ONLY=1; shift ;;
-    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
+    --dir)
+      [ "$#" -ge 2 ] || { echo "--dir needs practice, frozen or a path" >&2; exit 2; }
+      CASE_DIR="$2"; shift 2 ;;
+    --search)
+      SEARCH_N=30
+      shift
+      if [ "$#" -gt 0 ] && [[ "$1" =~ ^[0-9]+$ ]]; then SEARCH_N="$1"; shift; fi
+      [ "$SEARCH_N" -ge 1 ] && [ "$SEARCH_N" -le 100 ] || { echo "--search takes 1 to 100 variants" >&2; exit 2; } ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -69,20 +84,32 @@ run_logged()
 
 # --- Which cases ------------------------------------------------------------------------------------
 ALL=()
-while IFS= read -r line; do ALL+=("$line"); done < <("$PY" -c 'from bench.case_io import list_case_ids; print("\n".join(list_case_ids()))')
-[ "${#ALL[@]}" -eq 40 ] || { echo "expected 40 cases in bench/cases, found ${#ALL[@]}" >&2; exit 1; }
+while IFS= read -r line; do ALL+=("$line"); done < <("$PY" -c 'import sys; from bench.case_io import list_case_ids, use_cases_dir; use_cases_dir(sys.argv[1]); print("\n".join(list_case_ids()))' "$CASE_DIR")
+FROZEN=0
+case "$CASE_DIR" in frozen|cases|bench/cases|bench/cases/) FROZEN=1 ;; esac
+if [ "$FROZEN" -eq 1 ]; then
+  [ "${#ALL[@]}" -eq 40 ] || { echo "expected 40 cases in bench/cases, found ${#ALL[@]}" >&2; exit 1; }
+else
+  [ "${#ALL[@]}" -gt 0 ] || { echo "no cases found in ${CASE_DIR}" >&2; exit 1; }
+fi
 
 if [ "${#SELECTED[@]}" -gt 0 ]; then
   for cid in "${SELECTED[@]}"; do
     found=0
     for known in "${ALL[@]}"; do [ "$known" = "$cid" ] && found=1; done
-    [ "$found" -eq 1 ] || { echo "unknown case id: $cid (see bench/cases/)" >&2; exit 2; }
+    [ "$found" -eq 1 ] || { echo "unknown case id: $cid (known: ${ALL[*]})" >&2; exit 2; }
   done
   CASES=("${SELECTED[@]}")
   KIND="smoke"
 else
   CASES=("${ALL[@]}")
   KIND="full"
+fi
+if [ "$FROZEN" -eq 0 ]; then
+  KIND="${CASE_DIR##*/}_${KIND}"
+fi
+if [ "$SEARCH_N" -gt 0 ]; then
+  KIND="${KIND}_search"
 fi
 TOTAL="${#CASES[@]}"
 
@@ -101,7 +128,8 @@ HEX_DIR="$RESULTS/${RUN_ID}_hexorcist_cases"
 
 if [ "$LIST_ONLY" -eq 1 ]; then
   echo "run id : ${RUN_ID} (${KIND})"
-  echo "cases  : ${TOTAL}"
+  echo "cases  : ${TOTAL} from ${CASE_DIR}"
+  echo "search : $([ "$SEARCH_N" -gt 0 ] && echo "ON, ${SEARCH_N} variants per case, three acceptance gates" || echo off)"
   printf '  %s\n' "${CASES[@]}"
   echo "cap    : DeepSeek \$${CAP_DS}, OpenAI \$${CAP_OA}"
   echo "log    : ${LOG}"
@@ -120,11 +148,16 @@ log "=== DEV-set run ${RUN_ID} (${KIND}, ${TOTAL} cases, Hexorcist only) ==="
 command -v docker >/dev/null || die "docker not on PATH"
 command -v curl >/dev/null || die "curl not on PATH"
 
-# Frozen cases must be identical to the freeze commit.
-if [ -n "$(git diff --stat "$FREEZE_COMMIT" HEAD -- bench/cases)" ] || [ -n "$(git status --short bench/cases)" ]; then
-  die "bench/cases differs from freeze commit ${FREEZE_COMMIT}. Cases are frozen."
+# Frozen cases must be identical to the freeze commit. The practice set is not frozen: only its fingerprint is reported.
+if [ "$FROZEN" -eq 1 ]; then
+  if [ -n "$(git diff --stat "$FREEZE_COMMIT" HEAD -- bench/cases)" ] || [ -n "$(git status --short bench/cases)" ]; then
+    die "bench/cases differs from freeze commit ${FREEZE_COMMIT}. Cases are frozen."
+  fi
+  log "freeze check ok: bench/cases unchanged since ${FREEZE_COMMIT}"
+else
+  log "case set: ${CASE_DIR} (not frozen, for tuning). $("$PY" bench/freeze_hash.py --dir "$CASE_DIR" 2>&1 | head -1)"
 fi
-log "freeze check ok: bench/cases unchanged since ${FREEZE_COMMIT}"
+log "stimulus search: $([ "$SEARCH_N" -gt 0 ] && echo "ON with ${SEARCH_N} variants per case (three acceptance gates)" || echo off)"
 
 # DeepSeek endpoint check. Prints only the model name and host, never a key.
 "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
@@ -177,7 +210,8 @@ restore_limits()
 }
 trap restore_limits EXIT
 
-log "docker compose up --build -d (bench override: RATE_LIMIT_PER_HOUR=1000). This builds the current agent code."
+export BENCH_SEARCH_VARIANTS="$SEARCH_N"
+log "docker compose up --build -d (bench override: RATE_LIMIT_PER_HOUR=1000, SEARCH_VARIANTS=${SEARCH_N}). This builds the current agent code."
 run_logged "${COMPOSE[@]}" up --build -d || die "docker compose up failed"
 
 HEALTH=""
@@ -188,9 +222,10 @@ for _ in $(seq 1 60); do
 done
 [ -n "$HEALTH" ] || die "no answer from $API/api/health after 120 s"
 
-HEALTH_JSON="$HEALTH" ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
+HEALTH_JSON="$HEALTH" ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" WANT_SEARCH="$SEARCH_N" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
 import json, os, sys
 h = json.loads(os.environ["HEALTH_JSON"])
+want_search = int(os.environ.get("WANT_SEARCH", "0"))
 lim = h.get("limits", {})
 agent = h.get("agent")
 print(f"health: ok={h.get('ok')} sandbox={h.get('sandbox')} llm_model={h.get('llm_model')} "
@@ -210,8 +245,8 @@ elif agent.get("cleanroom_samples") != 2:
     errs.append(f"this run is for two independent clean-room sketches, the stack has {agent.get('cleanroom_samples')}")
 elif not agent.get("cross_check"):
     errs.append(f"the cross-check is off in this stack: {agent}")
-elif agent.get("search_variants"):
-    errs.append(f"the stimulus search must be OFF for this run (SEARCH_VARIANTS=0), the stack has {agent.get('search_variants')}: {agent}")
+elif (agent.get("search_variants") or 0) != want_search:
+    errs.append(f"the stimulus search must be {'OFF' if not want_search else 'ON with ' + str(want_search) + ' variants'} for this run, the stack has {agent.get('search_variants')}: {agent}")
 elif not (agent.get("cleanroom2") or {}).get("mixed") and os.environ.get("ALLOW_FALLBACK") != "1":
     errs.append(f"clean room 2 is not on a second model (OPENAI_* missing or CLEANROOM_MIXED=0): {agent.get('cleanroom2')}")
 if h.get("passcode_required") and not os.environ.get("DEMO_PASSCODE"):
@@ -221,7 +256,7 @@ if errs:
     sys.exit(1)
 EOF
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "health pre-flight failed (see above)"
-log "stack current, app on deepseek-chat, search off, clean room 2 model: see agent settings above"
+log "stack current, app on deepseek-chat, search $([ "$SEARCH_N" -gt 0 ] && echo "on (${SEARCH_N} variants)" || echo off), clean room 2 model: see agent settings above"
 
 # --- Hexorcist, one case at a time --------------------------------------------------------------------
 hex_case_done()
@@ -294,7 +329,7 @@ for cid in "${CASES[@]}"; do
   fi
 
   log "hexorcist ${IDX}/${TOTAL} ${cid}: start (spent so far: DeepSeek \$${SPENT}, OpenAI \$${OA_SPENT})"
-  run_logged "$PY" -m bench.run_hexorcist --api "$API" --run-id "${RUN_ID}_hexorcist_cases/${cid}" "$cid"
+  run_logged "$PY" -m bench.run_hexorcist --api "$API" --dir "$CASE_DIR" --run-id "${RUN_ID}_hexorcist_cases/${cid}" "$cid"
   rc=$?
   if [ "$rc" -ne 0 ] || ! hex_case_done "$CASE_FILE"; then
     ERR_STREAK=$((ERR_STREAK + 1))

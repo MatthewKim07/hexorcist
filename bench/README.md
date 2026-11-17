@@ -36,6 +36,18 @@ bench/run_dev.sh                                          # no RUN_ID: resumes t
 
 Each per-case row also records what the new steps did: the checks the clean-room run left unconfirmed (with both measurements), bugs found by search, the search and clean-room usage (which model wrote each room), spec citations dropped, the tokens per step and per provider, and the cost per provider (`cost_deepseek_usd`, `cost_openai_usd`).
 
+### Practice set and the stimulus search
+
+`bench/practice/` holds ten hidden-behaviour cases (seven bugs, three decoys) in the same format, for tuning. It is not frozen and has its own fingerprint (`python bench/freeze_hash.py --dir practice --check`). See `bench/practice/README.md`. Every bench tool takes `--dir practice` (`lint_cases`, `validate`, `run_baseline`, `score`, `run_hexorcist`, `replay_run`), and `run_dev.sh` takes `--dir practice` too:
+
+```bash
+bench/run_dev.sh --list --dir practice                    # what would run
+RUN_ID="dev_practice_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh --dir practice
+RUN_ID="dev_practice_search_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh --dir practice --search   # stimulus search on, 30 variants per case
+```
+
+`--search [N]` switches the stimulus search on for that run only, through the bench override (`BENCH_SEARCH_VARIANTS`, which wins over `.env`; the default is 0). A finding is kept only if it passes the three acceptance gates (it fails again on the uploaded sketch, it passes on both clean rooms in that variant, and the variant is within the spec's stated ranges). When the firmware reads `millis()` or the spec describes timed behaviour, the search also starts the clock late (`start_millis`) so that a counter wraps inside the run, and the attack prompt offers the same to the model.
+
 ## Freeze rule
 
 **`bench/cases/` is frozen.** Do not add, edit, or delete cases to improve scores. Do not tune Hexorcist prompts, judges, or agent loops against these cases. If a case is wrong, document it and ship a later versioned dataset — never silently reshape the frozen set during a leaderboard run.

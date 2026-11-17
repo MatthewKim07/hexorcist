@@ -53,7 +53,8 @@ def freeze_hash(root: Path = CASES, skip: frozenset[str] = frozenset()) -> tuple
 
 
 def main() -> int:
-    which = "practice" if "--dir" in sys.argv and sys.argv[sys.argv.index("--dir") + 1:][:1] == ["practice"] else "frozen"
+    given = sys.argv[sys.argv.index("--dir") + 1:][:1] if "--dir" in sys.argv else []
+    which = "practice" if given and (given[0] == "practice" or Path(given[0]).resolve() == SETS["practice"][0].resolve()) else "frozen"
     root, readme = SETS[which]
     # The practice README lives inside the set and holds its own hash, so it cannot be part of what is hashed.
     digest, n = freeze_hash(root, frozenset({"README.md"}) if which == "practice" else frozenset())
