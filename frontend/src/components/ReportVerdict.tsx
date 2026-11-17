@@ -34,8 +34,13 @@ export function verdictText(report: Report | null, status: string, firstWarning:
       return { title: `${bugs}, ${fixed}`, detail: "" };
     case "clean": {
       const amb = s?.possible_ambiguities ?? 0;
-      const base = s ? `${s.assertions - amb} checks passed in ${s.scenarios} scenarios` : "";
-      return { title: "No bugs found", detail: amb ? `${base}. ${amb} possible spec ambiguit${amb === 1 ? "y" : "ies"}, listed below` : base };
+      const left = s?.ungrounded_requirements ?? 0;
+      const base = s ? `${s.assertions - amb - left} checks passed in ${s.scenarios} scenarios` : "";
+      const notes = [
+        amb ? `${amb} possible spec ambiguit${amb === 1 ? "y" : "ies"}` : "",
+        left ? `${left} check${left === 1 ? "" : "s"} left out for asking more than the spec states` : "",
+      ].filter(Boolean);
+      return { title: "No bugs found", detail: notes.length ? `${base}. ${notes.join(", ")}, listed below` : base };
     }
     case "partial":
       return { title: `${bugs}, ${v} fixed and verified`, detail: "The best patch still fails a check, so it is not claimed as a fix" };

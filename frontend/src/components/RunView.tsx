@@ -23,6 +23,7 @@ const BugList = lazy(() => import("./BugList").then((m) => ({ default: m.BugList
 const FirmwareCard = lazy(() => import("./FirmwareCard").then((m) => ({ default: m.FirmwareCard })));
 const ComparePanel = lazy(() => import("./ComparePanel").then((m) => ({ default: m.ComparePanel })));
 const SpecAmbiguity = lazy(() => import("./SpecAmbiguity").then((m) => ({ default: m.SpecAmbiguity })));
+const UngroundedRequirements = lazy(() => import("./UngroundedRequirements").then((m) => ({ default: m.UngroundedRequirements })));
 
 function ReplayChunkFallback() {
   return (
@@ -302,6 +303,8 @@ function FinishedReport({ runId, state, status }: { runId: string; state: Return
         )}
 
         {!contained && attacked && (report?.cross_check?.unconfirmed?.length ?? 0) > 0 && <SpecAmbiguity items={report!.cross_check!.unconfirmed} />}
+
+        {!contained && attacked && (report?.ungrounded?.length ?? 0) > 0 && <UngroundedRequirements items={report!.ungrounded!} />}
 
         {tabs.length > 0 && (
           <ReportTabs tabs={tabs} value={activeTab} onChange={setTab}>

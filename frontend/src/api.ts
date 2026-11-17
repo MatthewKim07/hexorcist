@@ -76,6 +76,22 @@ export interface AssertionDef extends Check {
   description: string;
   /** Fails on the uploaded firmware and on a clean-room implementation too: not a reported bug. */
   unconfirmed?: boolean;
+  /** Asks for more than the spec bullet it quotes: left out of bugs, fixes and verification. */
+  ungrounded?: boolean;
+}
+
+/** A check left out because it asks for more than the spec bullet it quotes. */
+export interface UngroundedCheck {
+  assertion_id: string;
+  assertion_type: string;
+  requirement: string;
+  spec_quote: string;
+  /** The rule it broke, such as rate_limit, hysteresis_band, debounce, range_bound or invented_converse. */
+  rule: string;
+  reason: string;
+  scenario_name: string;
+  your_firmware: string;
+  failing_scenarios: number;
 }
 
 /** A check that fails on the uploaded firmware and on an implementation written from the spec alone. */
@@ -233,7 +249,7 @@ export interface Report {
   warnings: string[];
   containment: { records: ContainmentRecord[]; total: number; removed: number; secrets_found: number; timeouts: number; oom_kills: number; network_none: boolean | null; violations: number };
   llm: { model: string; calls: number; repairs: number; prompt_tokens: number; completion_tokens: number };
-  score: { bugs_found: number; bugs_verified: number; scenarios: number; assertions: number; fix_attempts: number; checks_passed?: number; checks_total?: number; possible_ambiguities?: number };
+  score: { bugs_found: number; bugs_verified: number; scenarios: number; assertions: number; fix_attempts: number; checks_passed?: number; checks_total?: number; possible_ambiguities?: number; ungrounded_requirements?: number };
   fix?: { iteration: number; summary: string; patched_firmware: string; diff: { unified: string; added: number; removed: number }; all_passing: boolean; regressions: string[] };
   contained?: {
     contained: boolean;
@@ -250,6 +266,7 @@ export interface Report {
   spec_checked?: boolean;
   unexercised?: string[];
   cross_check?: CrossCheck;
+  ungrounded?: UngroundedCheck[];
   search?: SearchSummary;
   /** Model-written checks whose spec citation was not found in the spec were dropped. */
   grounding?: { checked: number; dropped: { type: string; description: string; quote: string; reason: string }[] };

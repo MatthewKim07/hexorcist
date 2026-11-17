@@ -2,11 +2,17 @@ import { Report } from "./api";
 
 export type StatTile = { key: string; value: string; label: string };
 
-/** Checks that fail on the uploaded firmware and on a clean-room one: possible spec ambiguities, not bugs. */
-export function unconfirmedIds(report: Pick<Report, "cross_check" | "assertions"> | null | undefined): Set<string> {
+/**
+ * Checks that are not counted as bugs: they fail on the uploaded firmware and on a clean-room one (possible spec
+ * ambiguities), or they ask for more than the spec bullet they quote (ungrounded requirements).
+ */
+export function unconfirmedIds(report: Pick<Report, "cross_check" | "assertions" | "ungrounded"> | null | undefined): Set<string> {
   const ids = new Set<string>((report?.cross_check?.unconfirmed ?? []).map((u) => u.assertion_id));
+  for (const u of report?.ungrounded ?? []) {
+    ids.add(u.assertion_id);
+  }
   for (const a of report?.assertions ?? []) {
-    if (a.unconfirmed) {
+    if (a.unconfirmed || a.ungrounded) {
       ids.add(a.id);
     }
   }
