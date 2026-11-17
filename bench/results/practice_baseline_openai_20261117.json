@@ -1,0 +1,263 @@
+{
+  "run_id": "practice_baseline_openai_20261117",
+  "system": "baseline",
+  "model": "gpt-4o-mini",
+  "endpoint": "openai",
+  "stopped": null,
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.005375,
+    "spent_strong": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 0.05,
+    "cap_strong": 2.0,
+    "calls": 10
+  },
+  "cases": [
+    {
+      "case_id": "cold_store_alarm",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Timing issue with alarm raising",
+          "category": "blocking_delay",
+          "description": "The alarm raising logic does not account for the timing requirement of 300 ms for the third consecutive sample. The current implementation could raise the alarm too early if samples are taken too quickly."
+        },
+        {
+          "id": "b2",
+          "title": "Missing timing check for alarm clearing",
+          "category": "blocking_delay",
+          "description": "The alarm clearing logic does not enforce the 300 ms timing requirement after a sample at or below 8.0 \u00b0C, which could lead to premature clearing of the alarm."
+        }
+      ],
+      "patched_sketch": "// Cold-store alarm: relay on D10 follows the probe on A1.\n// Three high samples in a row raise it, a clearly low sample clears it.\n\nconst int PROBE_PIN = A1;\nconst int ALARM_PIN = 10;\nconst float RAISE_C = 12.0;\nconst float CLEAR_C = 8.0;\nconst int RUN_NEEDED = 3;\nconst unsigned long SAMPLE_MS = 20;\nconst unsigned long REPORT_MS = 500;\nconst unsigned long ALARM_DELAY_MS = 300;\n\nfloat lastC = 0.0;\nint highRun = 0;\nbool alarmOn = false;\nunsigned long lastSample = 0;\nunsigned long lastReport = 0;\nunsigned long lastAlarmTime = 0;\n\nfloat readCelsius()\n{\n    int raw = analogRead(PROBE_PIN);\n    return (raw * 5000.0 / 1023.0 - 500.0) / 10.0;\n}\n\nvoid setAlarm(bool on)\n{\n    alarmOn = on;\n    digitalWrite(ALARM_PIN, on ? HIGH : LOW);\n}\n\nvoid evaluate(float c)\n{\n    lastC = c;\n    if (c >= RAISE_C)\n    {\n        if (highRun < RUN_NEEDED)\n        {\n            highRun++;\n        }\n        if (highRun >= RUN_NEEDED && !alarmOn && (millis() - lastAlarmTime >= ALARM_DELAY_MS))\n        {\n            setAlarm(true);\n            lastAlarmTime = millis();\n        }\n    }\n    else if (c <= CLEAR_C)\n    {\n        highRun = 0;\n        if (alarmOn && (millis() - lastAlarmTime >= ALARM_DELAY_MS))\n        {\n            setAlarm(false);\n        }\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"cold \");\n    Serial.print(lastC, 1);\n    Serial.print(\" C alarm=\");\n    Serial.println(alarmOn ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(ALARM_PIN, OUTPUT);\n    digitalWrite(ALARM_PIN, LOW);\n    Serial.begin(9600);\n    lastC = readCelsius();\n    lastSample = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        evaluate(readCelsius());\n    }\n    if (now - lastReport >= REPORT_MS)\n    {\n        lastReport = now;\n        report();\n    }\n}",
+      "wall_s": 13.21,
+      "llm_calls": 1,
+      "prompt_tokens": 945,
+      "completion_tokens": 783,
+      "cost_usd": 0.00061155,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "door_chime_poll",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing debounce for button press",
+          "category": "missing_debounce",
+          "description": "The button press is not debounced, which may lead to multiple detections of a single press due to mechanical bounce."
+        },
+        {
+          "id": "b2",
+          "title": "Chime not starting within 120 ms",
+          "category": "blocking_delay",
+          "description": "The chime may not start within 120 ms of the press due to the delay in the loop, which can exceed the required timing."
+        }
+      ],
+      "patched_sketch": "// Doorbell chime: a settled press sounds the chime for 300 ms.\n// Chime driver on D7, doorbell button on D4 (pull-up), status over UART.\n\nconst int CHIME_PIN = 7;\nconst int BUTTON_PIN = 4;\nconst unsigned long CHIME_MS = 300;\nconst unsigned long REPORT_MS = 1000;\nconst int POLL_MS = 30;\nconst int CONFIRM_SAMPLES = 2;\nconst unsigned long DEBOUNCE_MS = 50;\n\nint lowSamples = 0;\nbool armed = true;\nbool chiming = false;\nunsigned long chimeStart = 0;\nunsigned long lastReport = 0;\nunsigned int rings = 0;\nunsigned long lastButtonPressTime = 0;\n\nvoid startChime()\n{\n    chiming = true;\n    chimeStart = millis();\n    rings++;\n    digitalWrite(CHIME_PIN, HIGH);\n}\n\nvoid endChime()\n{\n    chiming = false;\n    digitalWrite(CHIME_PIN, LOW);\n}\n\nvoid pollButton()\n{\n    if (digitalRead(BUTTON_PIN) == LOW)\n    {\n        if (lowSamples < CONFIRM_SAMPLES)\n        {\n            lowSamples++;\n        }\n        if (lowSamples == CONFIRM_SAMPLES && armed)\n        {\n            armed = false;\n            if (!chiming)\n            {\n                startChime();\n            }\n        }\n    }\n    else\n    {\n        lowSamples = 0;\n        armed = true;\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"chime n=\");\n    Serial.println(rings);\n}\n\nvoid setup()\n{\n    pinMode(CHIME_PIN, OUTPUT);\n    pinMode(BUTTON_PIN, INPUT_PULLUP);\n    digitalWrite(CHIME_PIN, LOW);\n    Serial.begin(9600);\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    unsigned long currentMillis = millis();\n    pollButton();\n    if (chiming && currentMillis - chimeStart >= CHIME_MS)\n    {\n        endChime();\n    }\n    if (currentMillis - lastReport >= REPORT_MS)\n    {\n        lastReport = currentMillis;\n        report();\n    }\n    delay(POLL_MS);\n}",
+      "wall_s": 13.05,
+      "llm_calls": 1,
+      "prompt_tokens": 861,
+      "completion_tokens": 691,
+      "cost_usd": 0.00054375,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "grain_bin_gauge",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect averaging scale",
+          "category": "wrong_unit_scaling",
+          "description": "The averageMm function scales the total incorrectly; it should scale by 1000 instead of 5000 to match the 1 mV/mm scaling."
+        },
+        {
+          "id": "b2",
+          "title": "Lamp state timing issue",
+          "category": "blocking_delay",
+          "description": "The lamp state is updated immediately after taking a sample, which could lead to rapid toggling if the average level fluctuates around the threshold. This should be managed more smoothly."
+        }
+      ],
+      "patched_sketch": "// Grain bin gauge: running average of the level probe on A3.\n// High-level lamp on D5, level report over UART.\n\nconst int PROBE_PIN = A3;\nconst int LAMP_PIN = 5;\nconst int WINDOW = 32;\nconst long HIGH_MM = 4300;\nconst unsigned long SAMPLE_MS = 30;\nconst unsigned long REPORT_MS = 1000;\n\nint readings[WINDOW];\nint slot = 0;\nint total = 0;\nunsigned long lastSample = 0;\nunsigned long lastReport = 0;\n\nvoid takeSample()\n{\n    int raw = analogRead(PROBE_PIN);\n    total -= readings[slot];\n    readings[slot] = raw;\n    total += raw;\n    slot = (slot + 1) % WINDOW;\n}\n\nlong averageMm()\n{\n    return ((long)total * 1000L) / (1023L * WINDOW);\n}\n\nvoid showLamp()\n{\n    digitalWrite(LAMP_PIN, averageMm() >= HIGH_MM ? HIGH : LOW);\n}\n\nvoid report()\n{\n    Serial.print(\"bin \");\n    Serial.print(averageMm());\n    Serial.println(\" mm\");\n}\n\nvoid setup()\n{\n    pinMode(LAMP_PIN, OUTPUT);\n    digitalWrite(LAMP_PIN, LOW);\n    Serial.begin(9600);\n    for (int i = 0; i < WINDOW; i++)\n    {\n        readings[i] = 0;\n    }\n    for (int i = 0; i < WINDOW; i++)\n    {\n        takeSample();\n    }\n    lastSample = millis();\n    lastReport = millis();\n    showLamp();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        takeSample();\n    }\n    if (now - lastReport >= REPORT_MS)\n    {\n        lastReport = now;\n        report();\n        showLamp();\n    }\n}",
+      "wall_s": 9.47,
+      "llm_calls": 1,
+      "prompt_tokens": 868,
+      "completion_tokens": 640,
+      "cost_usd": 0.0005142,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "lift_call_panel",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing debounce for button press",
+          "category": "missing_debounce",
+          "description": "The button press may register multiple times due to contact bounce, as the debounce logic does not account for the full bounce duration of up to 10 ms."
+        },
+        {
+          "id": "b2",
+          "title": "Blocking delay in acknowledge function",
+          "category": "blocking_delay",
+          "description": "The delay in the acknowledge function blocks the loop, preventing the heartbeat from being printed during the buzzer sound duration."
+        }
+      ],
+      "patched_sketch": "// Lift call panel: buzzer acknowledges a press, a status line shows the\n// panel is alive. Buzzer on D11, call button on D5 (pull-up).\n\nconst int BUZZER_PIN = 11;\nconst int BUTTON_PIN = 5;\nconst unsigned long BUZZ_MS = 300;\nconst unsigned long SETTLE_MS = 15;\nconst unsigned long DEBOUNCE_MS = 10;\nconst unsigned long BEAT_MS = 500;\n\nint rawLevel = HIGH;\nbool held = false;\nbool buzzing = false;\nunsigned long rawChangedAt = 0;\nunsigned long lastBeat = 0;\nunsigned int beats = 0;\n\nvoid acknowledge()\n{\n    buzzing = true;\n    digitalWrite(BUZZER_PIN, HIGH);\n    delay(BUZZ_MS);\n    digitalWrite(BUZZER_PIN, LOW);\n    buzzing = false;\n}\n\nvoid scanButton()\n{\n    int level = digitalRead(BUTTON_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held && !buzzing)\n        {\n            acknowledge();\n        }\n        held = down;\n    }\n}\n\nvoid heartbeat()\n{\n    beats++;\n    Serial.print(\"alive \");\n    Serial.println(beats);\n}\n\nvoid setup()\n{\n    pinMode(BUZZER_PIN, OUTPUT);\n    pinMode(BUTTON_PIN, INPUT_PULLUP);\n    digitalWrite(BUZZER_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    scanButton();\n    if (millis() - lastBeat >= BEAT_MS)\n    {\n        lastBeat = millis();\n        heartbeat();\n    }\n}",
+      "wall_s": 9.7,
+      "llm_calls": 1,
+      "prompt_tokens": 822,
+      "completion_tokens": 618,
+      "cost_usd": 0.0004941,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "loading_dock_horn",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing debounce for button press",
+          "category": "missing_debounce",
+          "description": "The button press is not properly debounced, which could lead to multiple horn blasts due to contact bounce. The SETTLE_MS value is not sufficient to handle the maximum bounce time of 10 ms."
+        },
+        {
+          "id": "b2",
+          "title": "Blocking delay in horn blast",
+          "category": "blocking_delay",
+          "description": "The delay in the blast function blocks the loop, preventing the heartbeat from being printed during the horn blast duration, which could lead to missed beats."
+        }
+      ],
+      "patched_sketch": "// Loading dock horn: a short blast per settled press, plus a status line.\n// Horn relay on D12, dock button on D4 (pull-up).\n\nconst int HORN_PIN = 12;\nconst int BUTTON_PIN = 4;\nconst unsigned long HORN_MS = 60;\nconst unsigned long SETTLE_MS = 15;\nconst unsigned long BEAT_MS = 500;\n\nint rawLevel = HIGH;\nbool held = false;\nunsigned long rawChangedAt = 0;\nunsigned long lastBeat = 0;\nunsigned int beats = 0;\nunsigned long hornEndTime = 0;\n\nvoid blast()\n{\n    digitalWrite(HORN_PIN, HIGH);\n    hornEndTime = millis() + HORN_MS;\n}\n\nvoid scanButton()\n{\n    int level = digitalRead(BUTTON_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held)\n        {\n            blast();\n        }\n        held = down;\n    }\n}\n\nvoid heartbeat()\n{\n    beats++;\n    Serial.print(\"dock \");\n    Serial.println(beats);\n}\n\nvoid setup()\n{\n    pinMode(HORN_PIN, OUTPUT);\n    pinMode(BUTTON_PIN, INPUT_PULLUP);\n    digitalWrite(HORN_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    scanButton();\n    if (hornEndTime > millis()) {\n        // Horn is active, do not change state\n    } else {\n        digitalWrite(HORN_PIN, LOW);\n    }\n    if (millis() - lastBeat >= BEAT_MS)\n    {\n        lastBeat = millis();\n        heartbeat();\n    }\n}",
+      "wall_s": 10.11,
+      "llm_calls": 1,
+      "prompt_tokens": 810,
+      "completion_tokens": 632,
+      "cost_usd": 0.0005007,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "meadow_sprinkler_valve",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing debounce handling",
+          "category": "missing_debounce",
+          "description": "The sketch does not properly debounce the start button, allowing for multiple bursts to be triggered if the button is pressed and released quickly due to contact bounce."
+        },
+        {
+          "id": "b2",
+          "title": "Incorrect settle time",
+          "category": "blocking_delay",
+          "description": "The settle time is set to 20 ms, which is insufficient for the specified contact bounce of up to 12 ms, potentially allowing multiple bursts to be triggered."
+        }
+      ],
+      "patched_sketch": "// Meadow sprinkler zone: one 500 ms burst per start press.\n// Valve relay on D10, start button on D6 (pull-up), status over UART.\n\nconst int ZONE_PIN = 10;\nconst int START_PIN = 6;\nconst unsigned long BURST_MS = 500;\nconst unsigned long SETTLE_MS = 20;\nconst unsigned long REPORT_MS = 1000;\n\nbool zoneOpen = false;\nbool held = false;\nint rawLevel = HIGH;\nunsigned long rawChangedAt = 0;\nunsigned long closeAt = 0;\nunsigned long lastReport = 0;\nunsigned int bursts = 0;\n\nvoid openZone()\n{\n    zoneOpen = true;\n    closeAt = millis() + BURST_MS;\n    digitalWrite(ZONE_PIN, HIGH);\n    bursts++;\n}\n\nvoid closeZone()\n{\n    zoneOpen = false;\n    digitalWrite(ZONE_PIN, LOW);\n}\n\nbool closeDue()\n{\n    return (long)(millis() - closeAt) >= 0;\n}\n\nvoid scanStart()\n{\n    int level = digitalRead(START_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held && !zoneOpen)\n        {\n            openZone();\n        }\n        held = down;\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"zone n=\");\n    Serial.println(bursts);\n}\n\nvoid setup()\n{\n    pinMode(ZONE_PIN, OUTPUT);\n    pinMode(START_PIN, INPUT_PULLUP);\n    digitalWrite(ZONE_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    scanStart();\n    if (zoneOpen && closeDue())\n    {\n        closeZone();\n    }\n    if (millis() - lastReport >= REPORT_MS)\n    {\n        lastReport = millis();\n        report();\n    }\n}",
+      "wall_s": 9.81,
+      "llm_calls": 1,
+      "prompt_tokens": 893,
+      "completion_tokens": 678,
+      "cost_usd": 0.00054075,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "orchard_spray_valve",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect debounce timing",
+          "category": "missing_debounce",
+          "description": "The debounce time is set to 12 ms, which is insufficient to handle contact bounce of up to 8 ms. This could lead to multiple triggers being registered from a single press."
+        },
+        {
+          "id": "b2",
+          "title": "Timing issue with valve opening",
+          "category": "blocking_delay",
+          "description": "The valve opening logic does not account for the time taken to process the loop, which could lead to the valve opening later than 100 ms after the press."
+        }
+      ],
+      "patched_sketch": "// Orchard spray controller: one short burst per trigger press.\n// Valve relay on D8, trigger button on D2 (pull-up), status over UART.\n\nconst int VALVE_PIN = 8;\nconst int TRIGGER_PIN = 2;\nconst unsigned long OPEN_MS = 400;\nconst unsigned long SETTLE_MS = 20; // Increased debounce time\nconst unsigned long REPORT_MS = 1000;\n\nbool valveOpen = false;\nbool pressed = false;\nint rawLevel = HIGH;\nunsigned long rawChangedAt = 0;\nunsigned long valveDeadline = 0;\nunsigned long lastReport = 0;\nunsigned int bursts = 0;\n\nvoid openValve()\n{\n    valveOpen = true;\n    valveDeadline = millis() + OPEN_MS;\n    digitalWrite(VALVE_PIN, HIGH);\n    bursts++;\n}\n\nvoid closeValve()\n{\n    valveOpen = false;\n    digitalWrite(VALVE_PIN, LOW);\n}\n\nbool deadlineReached()\n{\n    return millis() >= valveDeadline;\n}\n\nvoid scanTrigger()\n{\n    int level = digitalRead(TRIGGER_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !pressed && !valveOpen)\n        {\n            openValve();\n        }\n        pressed = down;\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"spray n=\");\n    Serial.print(bursts);\n    Serial.print(\" open=\");\n    Serial.println(valveOpen ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(VALVE_PIN, OUTPUT);\n    pinMode(TRIGGER_PIN, INPUT_PULLUP);\n    digitalWrite(VALVE_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    scanTrigger();\n    if (valveOpen && deadlineReached())\n    {\n        closeValve();\n    }\n    if (millis() - lastReport >= REPORT_MS)\n    {\n        lastReport = millis();\n        report();\n    }\n}",
+      "wall_s": 10.0,
+      "llm_calls": 1,
+      "prompt_tokens": 916,
+      "completion_tokens": 709,
+      "cost_usd": 0.0005628,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "silo_fill_gauge",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect averaging calculation",
+          "category": "wrong_unit_scaling",
+          "description": "The averageMm function scales the total incorrectly by using 5000 instead of 1000, leading to an incorrect level reading in mm."
+        },
+        {
+          "id": "b2",
+          "title": "Potential integer overflow in averaging",
+          "category": "integer_overflow",
+          "description": "The total variable can exceed the maximum value of an int during accumulation, especially with high readings, which can lead to incorrect average calculations."
+        }
+      ],
+      "patched_sketch": "// Silo level gauge: running average of the level probe on A2.\n// Full-level lamp on D6, level report over UART.\n\nconst int PROBE_PIN = A2;\nconst int LAMP_PIN = 6;\nconst int WINDOW = 40;\nconst long FULL_MM = 4200;\nconst unsigned long SAMPLE_MS = 25;\nconst unsigned long REPORT_MS = 1000;\n\nlong readings[WINDOW]; // Changed to long to prevent overflow\nint slot = 0;\nlong total = 0; // Changed to long to prevent overflow\nunsigned long lastSample = 0;\nunsigned long lastReport = 0;\n\nvoid takeSample()\n{\n    int raw = analogRead(PROBE_PIN);\n    total -= readings[slot];\n    readings[slot] = raw;\n    total += raw;\n    slot = (slot + 1) % WINDOW;\n}\n\nlong averageMm()\n{\n    return ((long)total * 1000L) / (1023L * WINDOW); // Corrected scaling to 1000\n}\n\nvoid showLamp()\n{\n    digitalWrite(LAMP_PIN, averageMm() >= FULL_MM ? HIGH : LOW);\n}\n\nvoid report()\n{\n    Serial.print(\"level \");\n    Serial.print(averageMm());\n    Serial.println(\" mm\");\n}\n\nvoid setup()\n{\n    pinMode(LAMP_PIN, OUTPUT);\n    digitalWrite(LAMP_PIN, LOW);\n    Serial.begin(9600);\n    for (int i = 0; i < WINDOW; i++)\n    {\n        readings[i] = 0;\n    }\n    for (int i = 0; i < WINDOW; i++)\n    {\n        takeSample();\n    }\n    lastSample = millis();\n    lastReport = millis();\n    showLamp();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        takeSample();\n        showLamp();\n    }\n    if (now - lastReport >= REPORT_MS)\n    {\n        lastReport = now;\n        report();\n    }\n}",
+      "wall_s": 9.76,
+      "llm_calls": 1,
+      "prompt_tokens": 869,
+      "completion_tokens": 653,
+      "cost_usd": 0.00052215,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "stair_light_timer",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Missing debounce for button press",
+          "category": "missing_debounce",
+          "description": "The button press on D2 lacks proper debouncing, which may cause multiple triggers due to mechanical bounce, leading to unintended behavior."
+        },
+        {
+          "id": "b2",
+          "title": "Incorrect handling of mode switch state",
+          "category": "missing_volatile",
+          "description": "The variable 'lastMode' is not declared as volatile, which may lead to inconsistent readings of the mode switch state due to compiler optimizations."
+        }
+      ],
+      "patched_sketch": "// Stair light: one press lights the stairs for three seconds.\n// Relay on D9, push button on D2, mode switch on D3 (both pull-up).\n\nconst int LIGHT_PIN = 9;\nconst int BUTTON_PIN = 2;\nconst int MODE_PIN = 3;\nconst unsigned long LIT_MS = 3000;\nconst unsigned long SETTLE_MS = 15;\nconst unsigned long REPORT_MS = 1000;\n\nbool lit = false;\nbool held = false;\nint rawLevel = HIGH;\nvolatile int lastMode = HIGH;\nunsigned long rawChangedAt = 0;\nunsigned long litSince = 0;\nunsigned long lastReport = 0;\n\nvoid armTimer()\n{\n    litSince = millis();\n}\n\nvoid lightOn()\n{\n    lit = true;\n    armTimer();\n    digitalWrite(LIGHT_PIN, HIGH);\n}\n\nvoid lightOff()\n{\n    lit = false;\n    digitalWrite(LIGHT_PIN, LOW);\n}\n\nvoid onModeChange(int mode)\n{\n    lastMode = mode;\n    if (lit)\n    {\n        armTimer();\n    }\n}\n\nvoid scanButton()\n{\n    int level = digitalRead(BUTTON_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held && !lit)\n        {\n            lightOn();\n        }\n        held = down;\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"stair mode=\");\n    Serial.print(lastMode == HIGH ? 1 : 0);\n    Serial.print(\" lit=\");\n    Serial.println(lit ? 1 : 0);\n}\n\nvoid setup()\n{\n    pinMode(LIGHT_PIN, OUTPUT);\n    pinMode(BUTTON_PIN, INPUT_PULLUP);\n    pinMode(MODE_PIN, INPUT_PULLUP);\n    digitalWrite(LIGHT_PIN, LOW);\n    Serial.begin(9600);\n    lastMode = digitalRead(MODE_PIN);\n    rawChangedAt = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    scanButton();\n    int mode = digitalRead(MODE_PIN);\n    if (mode != lastMode)\n    {\n        onModeChange(mode);\n    }\n    if (lit && millis() - litSince >= LIT_MS)\n    {\n        lightOff();\n    }\n    if (millis() - lastReport >= REPORT_MS)\n    {\n        lastReport = millis();\n        report();\n    }\n}",
+      "wall_s": 11.4,
+      "llm_calls": 1,
+      "prompt_tokens": 1044,
+      "completion_tokens": 791,
+      "cost_usd": 0.0006312,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    },
+    {
+      "case_id": "tank_mixer_cycle",
+      "bugs": [
+        {
+          "id": "b1",
+          "title": "Incorrect timing for mixer runs",
+          "category": "off_by_one_timing",
+          "description": "The mixer can change state more than twice in a 5000 ms window because the next run is scheduled immediately after the current run ends, allowing for a potential overlap in timing."
+        }
+      ],
+      "patched_sketch": "// Tank mixer scheduler: 2 s of mixing in every 5 s cycle.\n// Relay on D6, hold switch on D3 (pull-up).\n\nconst int MIXER_PIN = 6;\nconst int HOLD_PIN = 3;\nconst uint16_t RUN_MS = 2000;\nconst uint16_t CYCLE_MS = 5000;\n\nuint16_t nextRunAt = 0;\nuint16_t stopRunAt = 0;\nbool running = false;\nunsigned int runCount = 0;\n\nuint16_t tickNow()\n{\n    return (uint16_t)millis();\n}\n\nvoid announceRun()\n{\n    Serial.print(\"mix \");\n    Serial.println(runCount);\n}\n\nvoid startRun(uint16_t now)\n{\n    running = true;\n    runCount++;\n    stopRunAt = now + RUN_MS;\n    // Schedule the next run after the current run ends plus the cycle time\n    nextRunAt = stopRunAt + (CYCLE_MS - RUN_MS);\n    announceRun();\n}\n\nvoid stopRun()\n{\n    running = false;\n}\n\nbool held()\n{\n    return digitalRead(HOLD_PIN) == LOW;\n}\n\nvoid drive()\n{\n    bool on = running && !held();\n    digitalWrite(MIXER_PIN, on ? HIGH : LOW);\n}\n\nvoid setup()\n{\n    pinMode(MIXER_PIN, OUTPUT);\n    pinMode(HOLD_PIN, INPUT_PULLUP);\n    digitalWrite(MIXER_PIN, LOW);\n    Serial.begin(9600);\n    nextRunAt = tickNow() + CYCLE_MS;\n}\n\nvoid loop()\n{\n    uint16_t now = tickNow();\n    if (running)\n    {\n        if (now >= stopRunAt)\n        {\n            stopRun();\n        }\n    }\n    else if (now >= nextRunAt)\n    {\n        startRun(now);\n    }\n    drive();\n}",
+      "wall_s": 9.0,
+      "llm_calls": 1,
+      "prompt_tokens": 816,
+      "completion_tokens": 552,
+      "cost_usd": 0.0004536,
+      "cached": false,
+      "model": "gpt-4o-mini"
+    }
+  ]
+}

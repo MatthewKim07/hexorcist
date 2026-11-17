@@ -1,0 +1,119 @@
+{
+  "case_id": "silo_fill_gauge",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect averaging calculation",
+      "description": "The averageMm function scales the total incorrectly by using 5000 instead of 1000, leading to an incorrect level reading in mm.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Potential integer overflow in averaging",
+      "description": "The total variable can exceed the maximum value of an int during accumulation, especially with high readings, which can lead to incorrect average calculations.",
+      "category": "integer_overflow"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_level",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+        },
+        {
+          "check_id": "a_lamp",
+          "type": "output_follows",
+          "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "silo_fill_gauge",
+    "spec": "- Level probe on A2 scaled at 1 mV per mm; full-level lamp on D6.\n- Take one sample every 25 ms and average the last 40 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.\n- Print `level <mm> mm` every 1000 ms; the printed level must stay within \u00b140 mm of the injected level.\n- Drive D6 HIGH when the averaged level is at or above 4200 mm; otherwise LOW, within 1500 ms.\n- The probe reads up to 4800 mm.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "accumulator_overflow",
+        "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+        "check_ids": [
+          "a_level",
+          "a_lamp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_level",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+          },
+          {
+            "check_id": "a_lamp",
+            "type": "output_follows",
+            "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect averaging calculation",
+        "description": "The averageMm function scales the total incorrectly by using 5000 instead of 1000, leading to an incorrect level reading in mm.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Potential integer overflow in averaging",
+        "description": "The total variable can exceed the maximum value of an int during accumulation, especially with high readings, which can lead to incorrect average calculations.",
+        "category": "integer_overflow"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"describes potential integer overflow which aligns with accumulator overflow\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"The first report about incorrect averaging calculation does not match any true bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "describes potential integer overflow which aligns with accumulator overflow"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "The first report about incorrect averaging calculation does not match any true bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 920,
+    "completion_tokens": 91,
+    "cost_usd": 0.0001926,
+    "cached": false
+  }
+}

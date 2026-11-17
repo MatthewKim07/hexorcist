@@ -1,0 +1,107 @@
+{
+  "case_id": "door_chime_poll",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce for button press",
+      "description": "The button press is not debounced, which may lead to multiple detections of a single press due to mechanical bounce.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Chime not starting within 120 ms",
+      "description": "The chime may not start within 120 ms of the press due to the delay in the loop, which can exceed the required timing.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "press_vs_sample_period",
+      "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+      "check_ids": [
+        "a_chime"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "press_vs_sample_period",
+      "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+      "check_ids": [
+        "a_chime"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chime",
+          "type": "timed_pulse",
+          "behaviour": "D7 pulse length around None ms (tolerance 80 ms) (A press of 40 ms or more sounds the chime for 300 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "door_chime_poll",
+    "spec": "- Chime driver on D7; doorbell button on D4 with internal pull-up (active LOW).\n- A settled press of at least 40 ms on D4 sounds the chime: D7 HIGH for 300 ms, starting within 120 ms of the press.\n- Presses while the chime is sounding are ignored.\n- D7 stays LOW whenever no press has been accepted.\n- Print `chime n=<count>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "press_vs_sample_period",
+        "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+        "check_ids": [
+          "a_chime"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chime",
+            "type": "timed_pulse",
+            "behaviour": "D7 pulse length around None ms (tolerance 80 ms) (A press of 40 ms or more sounds the chime for 300 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce for button press",
+        "description": "The button press is not debounced, which may lead to multiple detections of a single press due to mechanical bounce.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Chime not starting within 120 ms",
+        "description": "The chime may not start within 120 ms of the press due to the delay in the loop, which can exceed the required timing.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": false, \"reason\": \"describes a different issue (debounce) unrelated to the press sampling period\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"Both reported bugs do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": false,
+        "reason": "describes a different issue (debounce) unrelated to the press sampling period"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "Both reported bugs do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 811,
+    "completion_tokens": 95,
+    "cost_usd": 0.00017865,
+    "cached": false
+  }
+}

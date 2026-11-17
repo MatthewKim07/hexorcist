@@ -31,6 +31,29 @@ backend/.venv/bin/python bench/freeze_hash.py --dir practice --check
 
 Scenarios in `checks.json` may set `start_millis`, the clock fast-forward, so that a short run starts near a rollover or hours into uptime.
 
+## Plain-review baselines (reading only, no running)
+
+One call per case, the same prompt as the benchmark's plain-review baseline, then the usual judge (`gpt-4o-mini`). Run once on 2026-11-17 to see how much reading alone finds. The cases were not changed because of these numbers. Cost: DeepSeek $0.0064, `gpt-4o-mini` $0.0054, judge $0.0037.
+
+| Case | Planted bug | DeepSeek: found / false alarms | `gpt-4o-mini`: found / false alarms |
+| --- | --- | --- | --- |
+| `orchard_spray_valve` | rollover | yes / 1 | yes (a wrong reason, see below) / 1 |
+| `tank_mixer_cycle` | narrow timer | yes / 2 | no / 1 |
+| `door_chime_poll` | press vs sampling | yes (doubtful, see below) / 2 | no / 2 |
+| `cold_store_alarm` | noise filter | yes / 0 | no / 2 |
+| `lift_call_panel` | blocking wait | yes / 0 | yes / 1 |
+| `stair_light_timer` | two features | yes / 1 | no / 2 |
+| `silo_fill_gauge` | overflow | yes / 0 | yes / 1 |
+| `meadow_sprinkler_valve` | decoy | - / 2 | - / 2 |
+| `grain_bin_gauge` | decoy | - / 3 | - / 2 |
+| `loading_dock_horn` | decoy | - / 2 | - / 2 |
+| **Total** | 7 bugs | **7/7**, 6 false alarms on bugs, 7 on decoys | **3/7**, 10 false alarms on bugs, 6 on decoys |
+
+- Reading finds most of these. DeepSeek names the cause in plain words for `orchard_spray_valve` ("absolute millis comparison"), `tank_mixer_cycle` (16-bit wrap), `stair_light_timer` (mode change re-arms the timer), `silo_fill_gauge` (16-bit sum) and `cold_store_alarm` (count not reset). The set is therefore not "hard to find by reading" for that model, and a result on it does not show that running the firmware adds anything over reading. It does show whether the agent's executed evidence agrees.
+- Two matches the judge gave are not ones I would defend. DeepSeek's `door_chime_poll` report is about a press during the chime, not about a short press missed between samples. `gpt-4o-mini`'s `orchard_spray_valve` report is about debounce time, and the judge's own reason says it "relates to the millis() rollover". Counting only the defensible matches, DeepSeek found 6 of 7 and `gpt-4o-mini` 2 of 7.
+- Every decoy drew false alarms from both models (7 and 6 in all). None of the three decoys was left alone by either model.
+- One run per model and one judge pass, so a difference of one case is within noise.
+
 ## Fingerprint
 
 Computed by `bench/freeze_hash.py --dir practice` over every file except this README. Update it here whenever a case changes.

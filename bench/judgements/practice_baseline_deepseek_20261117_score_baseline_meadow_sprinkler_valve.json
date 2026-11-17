@@ -1,0 +1,60 @@
+{
+  "case_id": "meadow_sprinkler_valve",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Bounce can start a second burst after release",
+      "description": "The settle logic only debounces the raw level, but `held` is updated only when the level is stable; on release bounce the level flips HIGH/LOW and after 20 ms of a stable HIGH, `held` becomes false, then a subsequent bounce LOW that settles 20 ms re-triggers openZone, starting a second burst. The 12 ms bounce spec requires a proper debounce that ignores transitions within the bounce window and only accepts a press after a stable LOW following a stable HIGH.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Press during open can be accepted after close",
+      "description": "Because `held` is only cleared when the debounced level is HIGH, a press held through the burst keeps `held` true, but if the button is released and re-pressed during the burst, the release may not be registered before close, so a press during the open window can be accepted right after close, violating 'presses while open are ignored'.",
+      "category": "stuck_state_machine"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "meadow_sprinkler_valve",
+    "spec": "- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).\n- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.\n- Contact bounce up to 12 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D10 LOW) whenever no press has been accepted.\n- Print `zone n=<count>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Bounce can start a second burst after release",
+        "description": "The settle logic only debounces the raw level, but `held` is updated only when the level is stable; on release bounce the level flips HIGH/LOW and after 20 ms of a stable HIGH, `held` becomes false, then a subsequent bounce LOW that settles 20 ms re-triggers openZone, starting a second burst. The 12 ms bounce spec requires a proper debounce that ignores transitions within the bounce window and only accepts a press after a stable LOW following a stable HIGH.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Press during open can be accepted after close",
+        "description": "Because `held` is only cleared when the debounced level is HIGH, a press held through the burst keeps `held` true, but if the button is released and re-pressed during the burst, the release may not be registered before close, so a press during the open window can be accepted right after close, violating 'presses while open are ignored'.",
+        "category": "stuck_state_machine"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 816,
+    "completion_tokens": 57,
+    "cost_usd": 0.0001566,
+    "cached": false
+  }
+}

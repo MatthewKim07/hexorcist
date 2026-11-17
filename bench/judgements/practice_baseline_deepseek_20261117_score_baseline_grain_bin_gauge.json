@@ -1,0 +1,74 @@
+{
+  "case_id": "grain_bin_gauge",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Wrong ADC-to-mm scaling",
+      "description": "averageMm() maps 0..1023 to 0..5000 mm, but the probe is 1 mV/mm with a 5 V reference, so full scale is 5000 mm only if the ADC reference is 5 V and the probe spans 0-5 V; the stated probe range is 4800 mm, so the divisor should reflect 4800 mm full scale (or the actual Vref), otherwise every reported level is ~4% high and the 4300 mm threshold trips early.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Window not filled with real samples at power-up",
+      "description": "setup() zeroes readings[] then calls takeSample() 32 times, but total is never reset and the first 32 samples overwrite zeros correctly only because total starts at 0; however the initial fill happens back-to-back with no 30 ms spacing, so the 'first printed level' is a burst average, not a valid 32-sample window \u2014 and total is not cleared before filling, so any prior value would corrupt it.",
+      "category": "other"
+    },
+    {
+      "id": "b3",
+      "title": "Lamp update only on sample tick, not within 1500 ms guarantee",
+      "description": "showLamp() is only called inside the 30 ms sample branch, which is fine, but the lamp uses averageMm() recomputed each time; the real issue is the threshold comparison uses the same mis-scaled average, so the lamp can be wrong by the scaling error and may not assert until the window fully reflects the change (~960 ms), which is within 1500 ms but combined with scaling error can miss the spec.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "grain_bin_gauge",
+    "spec": "- Level probe on A3 scaled at 1 mV per mm; high-level lamp on D5.\n- Take one sample every 30 ms and average the last 32 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.\n- Print `bin <mm> mm` every 1000 ms; the printed level must stay within \u00b140 mm of the injected level.\n- Drive D5 HIGH when the averaged level is at or above 4300 mm; otherwise LOW, within 1500 ms.\n- The probe reads up to 4800 mm.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Wrong ADC-to-mm scaling",
+        "description": "averageMm() maps 0..1023 to 0..5000 mm, but the probe is 1 mV/mm with a 5 V reference, so full scale is 5000 mm only if the ADC reference is 5 V and the probe spans 0-5 V; the stated probe range is 4800 mm, so the divisor should reflect 4800 mm full scale (or the actual Vref), otherwise every reported level is ~4% high and the 4300 mm threshold trips early.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Window not filled with real samples at power-up",
+        "description": "setup() zeroes readings[] then calls takeSample() 32 times, but total is never reset and the first 32 samples overwrite zeros correctly only because total starts at 0; however the initial fill happens back-to-back with no 30 ms spacing, so the 'first printed level' is a burst average, not a valid 32-sample window \u2014 and total is not cleared before filling, so any prior value would corrupt it.",
+        "category": "other"
+      },
+      {
+        "id": "b3",
+        "title": "Lamp update only on sample tick, not within 1500 ms guarantee",
+        "description": "showLamp() is only called inside the 30 ms sample branch, which is fine, but the lamp uses averageMm() recomputed each time; the real issue is the threshold comparison uses the same mis-scaled average, so the lamp can be wrong by the scaling error and may not assert until the window fully reflects the change (~960 ms), which is within 1500 ms but combined with scaling error can miss the spec.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1, 2],\n  \"unique_false_alarm_indices\": [0, 1, 2],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1,
+      2
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 980,
+    "completion_tokens": 64,
+    "cost_usd": 0.0001854,
+    "cached": false
+  }
+}

@@ -1,0 +1,322 @@
+{
+  "run_id": "practice_baseline_openai_20261117_score",
+  "created_at": "2026-11-17T21:55:36.899595+00:00",
+  "systems": [
+    {
+      "system": "baseline",
+      "cases": 10,
+      "detection_recall": 0.42857142857142855,
+      "bugs_detected": 3,
+      "bugs_truth": 7,
+      "false_alarms": 16,
+      "compile_rate": 1.0,
+      "fix_rate": 0.2,
+      "per_category": {
+        "accumulator_overflow": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "blocking_wait": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "correct": {
+          "cases": 3,
+          "truth_bugs": 0,
+          "false_alarms": 6,
+          "fixed": 2,
+          "compiles": 3
+        },
+        "feature_interaction": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "millis_rollover": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "narrow_timer": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "noise_filter": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "press_vs_sample_period": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 1
+        }
+      },
+      "rows": [
+        {
+          "case_id": "cold_store_alarm",
+          "categories": [
+            "noise_filter"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_spikes"
+          ],
+          "wall_s": 13.21,
+          "llm_calls": 1,
+          "prompt_tokens": 945,
+          "completion_tokens": 783,
+          "cost_usd": 0.00061155,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "door_chime_poll",
+          "categories": [
+            "press_vs_sample_period"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_chime"
+          ],
+          "wall_s": 13.05,
+          "llm_calls": 1,
+          "prompt_tokens": 861,
+          "completion_tokens": 691,
+          "cost_usd": 0.00054375,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "grain_bin_gauge",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_lamp",
+            "a_level"
+          ],
+          "wall_s": 9.47,
+          "llm_calls": 1,
+          "prompt_tokens": 868,
+          "completion_tokens": 640,
+          "cost_usd": 0.0005142,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "lift_call_panel",
+          "categories": [
+            "blocking_wait"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_beat"
+          ],
+          "wall_s": 9.7,
+          "llm_calls": 1,
+          "prompt_tokens": 822,
+          "completion_tokens": 618,
+          "cost_usd": 0.0004941,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "loading_dock_horn",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 10.11,
+          "llm_calls": 1,
+          "prompt_tokens": 810,
+          "completion_tokens": 632,
+          "cost_usd": 0.0005007,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "meadow_sprinkler_valve",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 9.81,
+          "llm_calls": 1,
+          "prompt_tokens": 893,
+          "completion_tokens": 678,
+          "cost_usd": 0.00054075,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "orchard_spray_valve",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_burst"
+          ],
+          "wall_s": 10.0,
+          "llm_calls": 1,
+          "prompt_tokens": 916,
+          "completion_tokens": 709,
+          "cost_usd": 0.0005628,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "silo_fill_gauge",
+          "categories": [
+            "accumulator_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_lamp",
+            "a_level"
+          ],
+          "wall_s": 9.76,
+          "llm_calls": 1,
+          "prompt_tokens": 869,
+          "completion_tokens": 653,
+          "cost_usd": 0.00052215,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "stair_light_timer",
+          "categories": [
+            "feature_interaction"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 2,
+          "false_alarms": 2,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_light"
+          ],
+          "wall_s": 11.4,
+          "llm_calls": 1,
+          "prompt_tokens": 1044,
+          "completion_tokens": 791,
+          "cost_usd": 0.0006312,
+          "model": "gpt-4o-mini"
+        },
+        {
+          "case_id": "tank_mixer_cycle",
+          "categories": [
+            "narrow_timer"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 1,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_rate",
+            "a_start"
+          ],
+          "wall_s": 9.0,
+          "llm_calls": 1,
+          "prompt_tokens": 816,
+          "completion_tokens": 552,
+          "cost_usd": 0.0004536,
+          "model": "gpt-4o-mini"
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.001768,
+    "spent_strong": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 0.05,
+    "cap_strong": 2.0,
+    "calls": 10
+  }
+}

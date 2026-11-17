@@ -1,0 +1,67 @@
+{
+  "case_id": "loading_dock_horn",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Blocking delay in blast() stalls heartbeat and button scan",
+      "description": "blast() uses delay(60), which blocks loop() so the 500 ms heartbeat can slip past its \u00b1150 ms window and button scanning pauses during the blast, violating the timing spec.",
+      "category": "blocking_delay"
+    },
+    {
+      "id": "b2",
+      "title": "Horn pulse length not guaranteed / re-trigger during hold",
+      "description": "Because the horn is driven synchronously with delay, the 60 ms pulse is fine in isolation, but the blocking design means a press arriving during the blast is missed and the heartbeat drifts; the pulse should be non-blocking to keep D12 timing and serial cadence independent.",
+      "category": "timed_pulse_length"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loading_dock_horn",
+    "spec": "- Horn relay on D12; dock button on D4 with internal pull-up (active LOW).\n- A settled press on D4 sounds the horn: D12 HIGH for 60 ms, starting within 100 ms of the press.\n- Contact bounce up to 10 ms on press and release must not sound the horn twice.\n- A press that is still held after the horn stops does not sound it again.\n- D12 stays LOW whenever no press has been accepted.\n- Print `dock <n>` every 500 ms \u00b1150 ms, with n counting the lines printed.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Blocking delay in blast() stalls heartbeat and button scan",
+        "description": "blast() uses delay(60), which blocks loop() so the 500 ms heartbeat can slip past its \u00b1150 ms window and button scanning pauses during the blast, violating the timing spec.",
+        "category": "blocking_delay"
+      },
+      {
+        "id": "b2",
+        "title": "Horn pulse length not guaranteed / re-trigger during hold",
+        "description": "Because the horn is driven synchronously with delay, the 60 ms pulse is fine in isolation, but the blocking design means a press arriving during the blast is missed and the heartbeat drifts; the pulse should be non-blocking to keep D12 timing and serial cadence independent.",
+        "category": "timed_pulse_length"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 747,
+    "completion_tokens": 92,
+    "cost_usd": 0.00016725,
+    "cached": false
+  }
+}

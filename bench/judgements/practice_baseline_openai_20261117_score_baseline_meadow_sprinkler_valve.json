@@ -1,0 +1,67 @@
+{
+  "case_id": "meadow_sprinkler_valve",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Missing debounce handling",
+      "description": "The sketch does not properly debounce the start button, allowing for multiple bursts to be triggered if the button is pressed and released quickly due to contact bounce.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b2",
+      "title": "Incorrect settle time",
+      "description": "The settle time is set to 20 ms, which is insufficient for the specified contact bounce of up to 12 ms, potentially allowing multiple bursts to be triggered.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "meadow_sprinkler_valve",
+    "spec": "- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).\n- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.\n- Contact bounce up to 12 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D10 LOW) whenever no press has been accepted.\n- Print `zone n=<count>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Missing debounce handling",
+        "description": "The sketch does not properly debounce the start button, allowing for multiple bursts to be triggered if the button is pressed and released quickly due to contact bounce.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b2",
+        "title": "Incorrect settle time",
+        "description": "The settle time is set to 20 ms, which is insufficient for the specified contact bounce of up to 12 ms, potentially allowing multiple bursts to be triggered.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 693,
+    "completion_tokens": 92,
+    "cost_usd": 0.00015915,
+    "cached": false
+  }
+}

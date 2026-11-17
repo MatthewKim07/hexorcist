@@ -1,0 +1,67 @@
+{
+  "case_id": "grain_bin_gauge",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect averaging scale",
+      "description": "The averageMm function scales the total incorrectly; it should scale by 1000 instead of 5000 to match the 1 mV/mm scaling.",
+      "category": "wrong_unit_scaling"
+    },
+    {
+      "id": "b2",
+      "title": "Lamp state timing issue",
+      "description": "The lamp state is updated immediately after taking a sample, which could lead to rapid toggling if the average level fluctuates around the threshold. This should be managed more smoothly.",
+      "category": "blocking_delay"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "grain_bin_gauge",
+    "spec": "- Level probe on A3 scaled at 1 mV per mm; high-level lamp on D5.\n- Take one sample every 30 ms and average the last 32 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.\n- Print `bin <mm> mm` every 1000 ms; the printed level must stay within \u00b140 mm of the injected level.\n- Drive D5 HIGH when the averaged level is at or above 4300 mm; otherwise LOW, within 1500 ms.\n- The probe reads up to 4800 mm.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect averaging scale",
+        "description": "The averageMm function scales the total incorrectly; it should scale by 1000 instead of 5000 to match the 1 mV/mm scaling.",
+        "category": "wrong_unit_scaling"
+      },
+      {
+        "id": "b2",
+        "title": "Lamp state timing issue",
+        "description": "The lamp state is updated immediately after taking a sample, which could lead to rapid toggling if the average level fluctuates around the threshold. This should be managed more smoothly.",
+        "category": "blocking_delay"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0, 1],\n  \"unique_false_alarm_indices\": [0, 1],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0,
+      1
+    ],
+    "unique_false_alarm_indices": [
+      0,
+      1
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 706,
+    "completion_tokens": 92,
+    "cost_usd": 0.0001611,
+    "cached": false
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "case_id": "tank_mixer_cycle",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "16-bit millis wrap breaks scheduling",
+      "description": "tickNow() truncates millis() to uint16_t and compares with >=, so every ~65.5 s the schedule breaks: after wrap, now is small while nextRunAt/stopRunAt are large, causing runs to be skipped or stuck until the timers wrap again. Use unsigned long and subtraction-based comparisons.",
+      "category": "millis_rollover"
+    },
+    {
+      "id": "b2",
+      "title": "Hold switch not debounced",
+      "description": "held() reads D3 directly each loop with no debounce, so contact bounce on the switch can toggle D6 rapidly, violating the max-2-transitions-per-5s rule and chattering the relay.",
+      "category": "missing_debounce"
+    },
+    {
+      "id": "b3",
+      "title": "Relay can toggle more than twice per 5 s window",
+      "description": "drive() recomputes on every loop from running && !held(); a bouncing or briefly released hold switch can flip D6 many times within a 5 s window, exceeding the stated 2-transition limit.",
+      "category": "other"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_start",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+        },
+        {
+          "check_id": "a_rate",
+          "type": "max_toggles",
+          "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "tank_mixer_cycle",
+    "spec": "- Mixer relay on D6; hold switch on D3 with internal pull-up (active LOW).\n- Run the mixer (D6 HIGH) for 2000 ms out of every 5000 ms, the first run starting 5000 ms after power-up.\n- Print `mix <n>` when each run starts, once per 5000 ms \u00b1250 ms.\n- While D3 is held LOW, keep D6 LOW. The runs are still counted and printed.\n- The mixer must not change state more than 2 times in any 5000 ms window.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "narrow_timer",
+        "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+        "check_ids": [
+          "a_start",
+          "a_rate"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_start",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+          },
+          {
+            "check_id": "a_rate",
+            "type": "max_toggles",
+            "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "16-bit millis wrap breaks scheduling",
+        "description": "tickNow() truncates millis() to uint16_t and compares with >=, so every ~65.5 s the schedule breaks: after wrap, now is small while nextRunAt/stopRunAt are large, causing runs to be skipped or stuck until the timers wrap again. Use unsigned long and subtraction-based comparisons.",
+        "category": "millis_rollover"
+      },
+      {
+        "id": "b2",
+        "title": "Hold switch not debounced",
+        "description": "held() reads D3 directly each loop with no debounce, so contact bounce on the switch can toggle D6 rapidly, violating the max-2-transitions-per-5s rule and chattering the relay.",
+        "category": "missing_debounce"
+      },
+      {
+        "id": "b3",
+        "title": "Relay can toggle more than twice per 5 s window",
+        "description": "drive() recomputes on every loop from running && !held(); a bouncing or briefly released hold switch can flip D6 many times within a 5 s window, exceeding the stated 2-transition limit.",
+        "category": "other"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause of the timer wrap issue.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1, 2],\n  \"unique_false_alarm_indices\": [1, 2],\n  \"notes\": \"The other reported bugs do not match any truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause of the timer wrap issue."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1,
+      2
+    ],
+    "unique_false_alarm_indices": [
+      1,
+      2
+    ],
+    "notes": "The other reported bugs do not match any truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1014,
+    "completion_tokens": 97,
+    "cost_usd": 0.0002103,
+    "cached": false
+  }
+}

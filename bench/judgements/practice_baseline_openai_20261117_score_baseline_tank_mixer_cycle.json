@@ -1,0 +1,107 @@
+{
+  "case_id": "tank_mixer_cycle",
+  "system": "baseline",
+  "reported": [
+    {
+      "id": "b1",
+      "title": "Incorrect timing for mixer runs",
+      "description": "The mixer can change state more than twice in a 5000 ms window because the next run is scheduled immediately after the current run ends, allowing for a potential overlap in timing.",
+      "category": "off_by_one_timing"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_start",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+        },
+        {
+          "check_id": "a_rate",
+          "type": "max_toggles",
+          "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "tank_mixer_cycle",
+    "spec": "- Mixer relay on D6; hold switch on D3 with internal pull-up (active LOW).\n- Run the mixer (D6 HIGH) for 2000 ms out of every 5000 ms, the first run starting 5000 ms after power-up.\n- Print `mix <n>` when each run starts, once per 5000 ms \u00b1250 ms.\n- While D3 is held LOW, keep D6 LOW. The runs are still counted and printed.\n- The mixer must not change state more than 2 times in any 5000 ms window.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "narrow_timer",
+        "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+        "check_ids": [
+          "a_start",
+          "a_rate"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_start",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+          },
+          {
+            "check_id": "a_rate",
+            "type": "max_toggles",
+            "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "b1",
+        "title": "Incorrect timing for mixer runs",
+        "description": "The mixer can change state more than twice in a 5000 ms window because the next run is scheduled immediately after the current run ends, allowing for a potential overlap in timing.",
+        "category": "off_by_one_timing"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": false, \"reason\": \"describes a timing issue but does not match the specific clock wrap bug\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"The reported bug does not match the true bug as it describes a different timing issue.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": false,
+        "reason": "describes a timing issue but does not match the specific clock wrap bug"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "The reported bug does not match the true bug as it describes a different timing issue."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 823,
+    "completion_tokens": 98,
+    "cost_usd": 0.00018225,
+    "cached": false
+  }
+}
