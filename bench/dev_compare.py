@@ -162,6 +162,8 @@ def summarize(run: str, replay: dict | None, old_replay: list | None = None) -> 
         out["cross_tokens"] = sum(v.get("prompt_tokens", 0) + v.get("completion_tokens", 0) for c in ids for k, v in (raw[c].get("llm_by_step") or {}).items() if k.startswith("cleanroom"))
         out["grounding_checked"] = sum((raw[c].get("grounding") or {}).get("checked") or 0 for c in ids)
         out["grounding_dropped"] = sum(len((raw[c].get("grounding") or {}).get("dropped") or []) for c in ids)
+        out["ungrounded_total"] = sum(len(raw[c].get("ungrounded") or []) for c in ids)
+        out["ungrounded_cases"] = sum(1 for c in ids if raw[c].get("ungrounded"))
     out.update(honest_recall(run, raw, score, replay, old_replay))
     if replay is not None:
         ref = lambda c, a: (replay.get(c, {}).get("assertions", {}).get(a) or {}).get("ref_fail")  # noqa: E731
@@ -171,6 +173,15 @@ def summarize(run: str, replay: dict | None, old_replay: list | None = None) -> 
             for u in raw[c].get("unconfirmed") or []:
                 f = ref(c, u["assertion_id"])
                 (unknown if f is None else right if f else wrong).append((c, u["assertion_id"], u["type"], bool(score[c]["truth_bugs"])))
+        # Checks the requirement gate left out: one that fails on the known-good reference was rightly left out, one that
+        # passes on it was a real check that is now missing.
+        left_out = [(c, u["assertion_id"], u.get("rule"), ref(c, u["assertion_id"])) for c in ids for u in raw[c].get("ungrounded") or []]
+        out["ungrounded_reference"] = {
+            "fails_on_reference": sum(1 for *_, f in left_out if f),
+            "passes_on_reference": sum(1 for *_, f in left_out if f is not None and not f),
+            "not_replayed": sum(1 for *_, f in left_out if f is None),
+        }
+        out["ungrounded_passes_reference"] = [(c, a, r) for c, a, r, f in left_out if f is not None and not f]
         out["unconfirmed_reference"] = {"fails_on_reference": len(right), "passes_on_reference": len(wrong), "not_replayed": len(unknown)}
         out["unconfirmed_passes_reference"] = wrong
         fa_rows = []

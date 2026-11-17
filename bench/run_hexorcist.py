@@ -145,6 +145,11 @@ def main() -> None:
                         {"assertion_id": u.get("assertion_id"), "type": u.get("assertion_type"), "requirement": u.get("requirement"), "your_firmware": u.get("your_firmware"), "clean_room": u.get("clean_room"), "failing_scenarios": u.get("failing_scenarios"), "shared_scenarios": u.get("shared_scenarios")}
                         for u in (report.get("cross_check") or {}).get("unconfirmed", [])
                     ],
+                    # Checks left out because they ask for more than the spec bullet they quote (backend/app/requirements.py).
+                    "ungrounded": [
+                        {k: u.get(k) for k in ("assertion_id", "assertion_type", "rule", "reason", "spec_quote", "failing_scenarios")}
+                        for u in report.get("ungrounded") or []
+                    ],
                     "cross_check": {
                         **{k: v for k, v in (report.get("cross_check") or {}).items() if k in ("status", "reason", "rule", "usage", "model_diversity")},
                         # Per room, without the sketch itself: which model wrote it, whether it built, what it cost.

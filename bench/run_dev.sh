@@ -265,7 +265,7 @@ import json, sys
 c = json.loads(open(sys.argv[1]).read())["cases"][0]
 cc = c.get("cross_check") or {}
 rooms = " | ".join(f"room{r.get('index')} {r.get('model')} {r.get('status')}" for r in cc.get("rooms", [])) or "no rooms"
-print(f"status={c.get('status')} rule={cc.get('rule')} {rooms} cost ds=${c.get('cost_deepseek_usd')} oa=${c.get('cost_openai_usd')}")
+print(f"status={c.get('status')} rule={cc.get('rule')} {rooms} left_out={len(c.get('ungrounded') or [])} cost ds=${c.get('cost_deepseek_usd')} oa=${c.get('cost_openai_usd')}")
 EOF
 }
 
