@@ -105,10 +105,19 @@ Segments are points joined by straight lines. Only use input pins from the pin m
 Reply with ONLY one JSON object, no commentary: {{"scenarios":[ ...6 to 10 scenarios... ]}}"""
 
 
-def attack_user(firmware: str, spec: DeviceSpec, assertions: list[dict], builtin_names: list[str]) -> str:
+CLOCK_OFFER = """CLOCK FAST-FORWARD. This firmware reads millis() or micros(), or the spec describes timed behaviour, so a scenario may start with the clock already running: add "start_millis" (integer ms, default 0, at most 4294967295). A normal scenario starts at power-on and never reaches what happens after long uptime. Set start_millis a few seconds before a counter wraps, so that the wrap falls inside the scenario:
+- 4294967296 minus about 40% of duration_ms, for the 32-bit millis() rollover (49.7 days): a deadline stored as millis() + N and compared with >=, an elapsed time computed in a signed type, a millis() copied into a narrow variable.
+- 196608 minus about 40% of duration_ms, for a 16-bit timestamp or unsigned int that wraps every 65.5 s.
+- 32768000 minus about 40% of duration_ms, for a signed 16-bit seconds counter (9.1 hours); 256000 minus about 40% of duration_ms for an 8-bit seconds counter.
+Use it only where a variable, a type or a comparison in the code could break at such a point. Times inside the scenario stay relative to its start. Two or three such scenarios are enough."""
+
+
+def attack_user(firmware: str, spec: DeviceSpec, assertions: list[dict], builtin_names: list[str], clock: bool = False) -> str:
+    offer = f"{CLOCK_OFFER}\n\n" if clock else ""
     return (
         f"{spec_block(spec)}\n\nFIRMWARE (line numbers added):\n<firmware>\n{numbered(firmware)}\n</firmware>\n\n"
         f"ASSERTIONS being checked:\n{json.dumps(assertions, ensure_ascii=False)}\n\n"
+        f"{offer}"
         f"A built-in library already covers: {', '.join(builtin_names)}. Design scenarios specific to this code rather than repeating those.\n\nReturn the JSON object."
     )
 

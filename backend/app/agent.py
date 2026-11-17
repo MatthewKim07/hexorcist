@@ -21,6 +21,7 @@ from pydantic import TypeAdapter, ValidationError
 from . import prompts
 from .approach import Attempt, find_code_reversion, find_measured_reversion
 from .assertions import evaluate_all
+from .clock import clamp_start, uses_elapsed_time
 from .config import Settings
 from .crosscheck import Verdict, classify, unconfirmed_ids
 from .events import RunBus
@@ -266,6 +267,8 @@ def normalize_scenarios(raw: list[dict], spec: DeviceSpec, assertions: list) -> 
                     pin = None
                 if pin is not None:
                     d["initial"] = idle_level(pin)
+        if "start_millis" in data:
+            data["start_millis"] = clamp_start(data["start_millis"])
         try:
             data["duration_ms"] = min(float(data.get("duration_ms", 8000)), MAX_LLM_SCENARIO_MS)
             scenario = Scenario.model_validate(data)
@@ -328,6 +331,7 @@ class Pipeline:
         # Clean-room cross-check state (see crosscheck.py).
         self._room_tasks: list[asyncio.Task] = []
         self._rooms_wanted = False  # the cross-check is on and there is more than the crash check to compare
+        self._clock_logic = False  # the firmware or the spec has elapsed-time logic: start_millis is worth offering and searching
         self.rooms: Optional[list[CleanRoom]] = None  # every sample that was built, ready or skipped
         self.verdicts: dict[str, Verdict] = {}
         self.unconfirmed: set[str] = set()
@@ -653,7 +657,7 @@ class Pipeline:
         self.search_info = info
         meter = Meter()
         kinds: dict[str, str] = {}
-        variants = make_variants(scenarios, spec, assertions, self.settings.search_variants, self.settings.search_seed, kinds)
+        variants = make_variants(scenarios, spec, assertions, self.settings.search_variants, self.settings.search_seed, kinds, uptime=self._clock_logic)
         info["variants_planned"] = len(variants)
         for kind in kinds.values():
             info["mutations"][kind] = info["mutations"].get(kind, 0) + 1
@@ -894,13 +898,14 @@ class Pipeline:
         await bus.step("compile", "done", _sketch_size(built.log))
 
         # 3. ATTACK PLAN
+        self._clock_logic = uses_elapsed_time(firmware, spec.behaviour)
         await bus.step("attack", "running", "Designing adversarial scenarios")
         library = builtin_scenarios(spec, assertions)
         llm_scenarios: list[Scenario] = []
         try:
             plan = await self.llm.json(
                 prompts.ATTACK_SYSTEM,
-                prompts.attack_user(firmware, spec, [a.model_dump(exclude_none=True) for a in assertions], [s.name for s in library]),
+                prompts.attack_user(firmware, spec, [a.model_dump(exclude_none=True) for a in assertions], [s.name for s in library], clock=self._clock_logic),
                 prompts.AttackPlan,
                 "attack",
             )

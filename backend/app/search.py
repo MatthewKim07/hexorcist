@@ -6,8 +6,9 @@ of each scenario in small, physically plausible steps (threshold offsets, timing
 noise amplitude, press length, input ordering). It is plain Python with a fixed seed, so the same run makes the same
 variants. The orchestrator (agent.py) runs them in the sandbox and judges them with the usual assertion engine.
 
-Not used yet: long-uptime fast-forward (millis() near its 32-bit rollover, hours of runtime). The harness can now start a
-scenario at any millis() value (Scenario.start_millis), but the search does not vary it, so UNSUPPORTED says so.
+One more kind, "uptime", starts the clock late (Scenario.start_millis) so that a counter wraps inside the run: the 32-bit
+millis() rollover, a 16-bit timestamp, a signed 16-bit seconds counter. It is tried only when the firmware or the spec has
+elapsed-time logic (clock.uses_elapsed_time), because otherwise it only repeats the parent.
 """
 from __future__ import annotations
 
@@ -19,12 +20,16 @@ import time
 from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional
 
+from .clock import HOURS_IN_MS, WRAPS, start_before_wrap
 from .models import AnalogPoint, DeviceSpec, DigitalEvent, FloatingWindow, Scenario
 from .scenario_lib import VCC_MV, _thresholds_mv
 
-UNSUPPORTED = ["uptime fast-forward (millis() near rollover, hours of runtime): the harness can start the clock anywhere (start_millis), but the search does not vary it yet"]
+UNSUPPORTED = ["uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"]
 
 MUTATIONS = ("threshold", "timing", "bounce", "noise", "press", "order")
+# Added to the kinds only for firmware with elapsed-time logic.
+UPTIME_KIND = "uptime"
+UPTIME_FRACTIONS = (0.25, 0.4, 0.6)
 
 THRESHOLD_OFFSETS_MV = (-60, -30, -15, -8, -4, 4, 8, 15, 30, 60)
 NEAR_THRESHOLD_MV = (-12, -6, -3, 0, 3, 6, 12)
@@ -238,6 +243,20 @@ def m_order(s: Scenario, rng: random.Random, ctx: Context) -> Optional[tuple[Sce
     return None
 
 
+def m_uptime(s: Scenario, rng: random.Random, ctx: Context) -> Optional[tuple[Scenario, str]]:
+    """Start the clock so that a counter wraps (or a few hours have passed) inside the run."""
+    label, wrap = rng.choice(WRAPS + (("three hours of uptime", HOURS_IN_MS + 10 * 1000),))
+    if label == "three hours of uptime":
+        start = HOURS_IN_MS
+    else:
+        start = start_before_wrap(wrap, s.duration_ms, rng.choice(UPTIME_FRACTIONS))
+    if start == s.start_millis:
+        return None
+    out = _clone(s)
+    out.start_millis = start
+    return out, f"clock started at {start} ms ({label})"
+
+
 def _event(t_ms: float, value: int) -> DigitalEvent:
     return DigitalEvent(t_ms=t_ms, value=value)
 
@@ -249,18 +268,20 @@ MUTATE: dict[str, Callable[[Scenario, random.Random, Context], Optional[tuple[Sc
     "noise": m_noise,
     "press": m_press,
     "order": m_order,
+    UPTIME_KIND: m_uptime,
 }
 
 
-def make_variants(scenarios: list[Scenario], spec: DeviceSpec, assertions: list, count: int, seed: int, kinds: Optional[dict[str, str]] = None) -> list[Scenario]:
+def make_variants(scenarios: list[Scenario], spec: DeviceSpec, assertions: list, count: int, seed: int, kinds: Optional[dict[str, str]] = None, uptime: bool = False) -> list[Scenario]:
     """Up to `count` distinct variants, spread over the parents. The same inputs and seed give the same variants.
 
-    `kinds`, if given, is filled with each variant's mutation kind by id.
+    `kinds`, if given, is filled with each variant's mutation kind by id. `uptime` adds the clock fast-forward kind.
     """
     if count <= 0:
         return []
     rng = random.Random(seed)
     ctx = Context(spec, assertions)
+    allowed = MUTATIONS + ((UPTIME_KIND,) if uptime else ())
     parents = [s for s in scenarios if s.source in ("builtin", "llm") and not s.id.startswith(SKIP_PARENTS)]
     if not parents:
         return []
@@ -273,10 +294,10 @@ def make_variants(scenarios: list[Scenario], spec: DeviceSpec, assertions: list,
         if len(variants) >= count:
             break
         parent = order[attempt % len(order)]
-        left = [k for k in MUTATIONS if k not in used[parent.id]]
+        left = [k for k in allowed if k not in used[parent.id]]
         if not left:
             used[parent.id].clear()
-            left = list(MUTATIONS)
+            left = list(allowed)
         kind = rng.choice(left)
         used[parent.id].add(kind)
         made = MUTATE[kind](parent, rng, ctx)
