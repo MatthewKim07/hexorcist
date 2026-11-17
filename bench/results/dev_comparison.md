@@ -156,6 +156,25 @@ Rows (the quote equals the bullet in every row; reference share is the share of 
 
 What this means for a gate: G1 and G2 (11 rows) are checks whose structure goes beyond the bullet, and a deterministic comparison of the quote with the assertion can catch them (bounds in the quote versus bounds in the check, an opposite state the quote never states, an input named in the quote and absent from the check). G3 to G6 (11 rows) are faithful to the spec and fail on the reference for evaluator or scenario reasons, so no text gate can touch them.
 
+## Requirement gate: offline sweep over the stored dev assertions
+
+`backend/app/requirements.py` marks a check "ungrounded requirement" when it asks for more than the spec bullet it quotes, and leaves it out of bugs, the fix loop and verification (it still runs and is shown in the report). I applied it, without any LLM or sandbox call, to the stored assertions of the three dev runs. These are the same runs the rules were designed from, so this shows what the rules do on this set, not on unseen specs.
+
+| Rule | What it marks | dev_full | dev_full2 | dev_full3 |
+| --- | --- | ---: | ---: | ---: |
+| `range_bound` | "outside A to B" kept as one bound plus an "otherwise" on the far side (G1) | 6 | 6 | 6 |
+| `invented_converse` | a forcing bullet ("force the fan ON") checked for the released input too (G2) | 2 | 2 | 3 |
+| `rate_limit`, `hysteresis_band`, `debounce` | a toggle limit, a threshold band or a settle time the bullet does not state | 0 | 0 | 0 |
+| Assertions marked / all | | 8 / 188 | 8 / 188 | 9 / 192 |
+| Class B false alarms removed | | 0 | 3 | 7 |
+| Planted bugs left with no surviving matched check | | 0 | 0 | 0 |
+
+- In dev_full3 the 14 strict false alarms would have been 7 (the 7 removed are `weather_ok` a3 and a4, `weather_line_prefix` a4 and a5, `lab_ph_ok` a3 and a4, `cabin_heater_mul_ovf` a2). Left: `bench_led_miswire` a1, `blend_tank_sum_ovf` a2, `loft_fan_ok` a3, `workshop_kpa_scale` a3 (class B), plus the 3 not-B ones. Apart from `bench_led_miswire` (G2, see the removed rule below), those are G3 to G5: faithful to the spec, failing on the reference for evaluator or scenario reasons. A text gate cannot reach them.
+- The three behaviour-quality rules (toggle limit, band, debounce) mark nothing in 568 stored assertions, because every bullet in these specs states what its check asks for. They guard against invented chatter, hysteresis and debounce checks for specs that do not state them, and none of the 22 false alarms was one.
+- Marked checks that were already `unconfirmed` or reported as a duplicate of a planted bug (`yard_relay_miswire` a2) change nothing in the score.
+- A rule that marks a check whose quote names two input pins while the check uses one (`dropped_condition`) was tried and removed. It would have removed `bench_led_miswire` a1 in dev_full3 (a class B false alarm), and in dev_full2 the same check was the only one matched to the planted bug, so it cost a real detection.
+- Limit of the sweep: stored assertions carry every default, so the debounce rule's "only when the model chose the settle time" test could not be replayed. The smoke run below exercises it.
+
 ## Two-room run: what the 80% rule did
 Recovered as honest detections: `bench_led_miswire` and `cabin_heater_mul_ovf` (their checks fail on the uploaded sketch in scenarios where at least one clean room passes). `attic_vent_hyst` also became an honest detection. `drip_scheduler_u8` is detected again, but only through checks that fail on the reference too, so it is not an honest one.
 
