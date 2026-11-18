@@ -87,7 +87,7 @@ Recall counts the planted bugs that a report was matched to (matching is judged 
 
 ### What this shows
 
-Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 against 81 for DeepSeek and 53 for gpt-4o-mini, and 3 on the practice set against 13 and 16. Its verified-fix rate (90%) is about that of the DeepSeek review (93%) and well above gpt-4o-mini's (48%), and every fix it claims was checked by re-running the suite (22 of 22 claims passed the frozen checks), which a review cannot do. Its recall (94%) is now close to the plain DeepSeek review (100%) but not above it, on both sets.
+Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 against 81 for DeepSeek and 53 for gpt-4o-mini, and 3 on the practice set against 13 and 16. Its verified-fix rate (90%) is about that of the DeepSeek review (93%) and well above gpt-4o-mini's (48%), and every fix it claims was checked by re-running the suite (22 of 22 claims passed the frozen checks), which a review cannot do. Its recall (94%) is now close to the plain DeepSeek review (100%) but not above it, on both sets. The price is cost and time: about 7 times the cost of a plain review ($0.20 against $0.027 for the 40 cases) and roughly 100 seconds per case instead of a few seconds.
 
 ### Known limits
 
@@ -97,6 +97,7 @@ Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 agains
 - **Cases it still misses.** On v2, `hold_to_arm_late` and the second bug of `panel_dual_debounce_edge`. On the practice set, `cold_store_alarm` in the latest run, and `orchard_spray_valve` and `tank_mixer_cycle` only through checks that the reference also fails.
 - **The stimulus search found nothing.** In 300 variants on the practice set no variant broke a check that had not already failed. It is off by default. The clock fast-forward in the attack plan exposed two bugs in earlier runs, but whether it does depends on the model placing a press just before a wrap.
 - **Remaining false alarms** include two checks no correct firmware passes (`blend_tank_sum_ovf` a2, `loft_fan_ok` a3) and three where the reference passes the check.
+- **False alarms are counted against the planted-bug key.** A report about a real but unplanted problem still counts as a false alarm. The reference sketches pass every check, which limits that risk but does not remove it.
 
 ### Reproduce
 
