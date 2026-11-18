@@ -1,0 +1,308 @@
+{
+  "run_id": "dev_practice_20261118T002318Z_score",
+  "created_at": "2026-11-18T01:03:14.796454+00:00",
+  "systems": [
+    {
+      "system": "hexorcist",
+      "cases": 10,
+      "detection_recall": 0.7142857142857143,
+      "bugs_detected": 5,
+      "bugs_truth": 7,
+      "false_alarms": 2,
+      "compile_rate": 0.6,
+      "fix_rate": 0.5,
+      "per_category": {
+        "accumulator_overflow": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 0
+        },
+        "blocking_wait": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "correct": {
+          "cases": 3,
+          "truth_bugs": 0,
+          "false_alarms": 1,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "feature_interaction": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "millis_rollover": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        },
+        "narrow_timer": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 0,
+          "compiles": 1
+        },
+        "noise_filter": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "fixed": 0,
+          "compiles": 0
+        },
+        "press_vs_sample_period": {
+          "cases": 1,
+          "truth_bugs": 1,
+          "truth_bugs_cat": 1,
+          "detected": 1,
+          "fixed": 1,
+          "compiles": 1
+        }
+      },
+      "rows": [
+        {
+          "case_id": "cold_store_alarm",
+          "categories": [
+            "noise_filter"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 105.57,
+          "llm_calls": 5,
+          "prompt_tokens": 6205,
+          "completion_tokens": 4094,
+          "cost_usd": 0.00343715,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "door_chime_poll",
+          "categories": [
+            "press_vs_sample_period"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 107.14,
+          "llm_calls": 6,
+          "prompt_tokens": 8251,
+          "completion_tokens": 4083,
+          "cost_usd": 0.00403303,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "grain_bin_gauge",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 48.33,
+          "llm_calls": 2,
+          "prompt_tokens": 4097,
+          "completion_tokens": 2613,
+          "cost_usd": 0.00224462,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "lift_call_panel",
+          "categories": [
+            "blocking_wait"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 2,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 141.99,
+          "llm_calls": 7,
+          "prompt_tokens": 11363,
+          "completion_tokens": 4321,
+          "cost_usd": 0.00498954,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "loading_dock_horn",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 37.81,
+          "llm_calls": 2,
+          "prompt_tokens": 3828,
+          "completion_tokens": 2286,
+          "cost_usd": 0.00203196,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "meadow_sprinkler_valve",
+          "categories": [
+            "correct"
+          ],
+          "truth_bugs": 0,
+          "detected": 0,
+          "detection": {},
+          "reported": 1,
+          "false_alarms": 1,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 96.74,
+          "llm_calls": 6,
+          "prompt_tokens": 8253,
+          "completion_tokens": 4000,
+          "cost_usd": 0.00399842,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "orchard_spray_valve",
+          "categories": [
+            "millis_rollover"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 86.15,
+          "llm_calls": 6,
+          "prompt_tokens": 8497,
+          "completion_tokens": 4122,
+          "cost_usd": 0.00412967,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "silo_fill_gauge",
+          "categories": [
+            "accumulator_overflow"
+          ],
+          "truth_bugs": 1,
+          "detected": 0,
+          "detection": {
+            "b1": false
+          },
+          "reported": 0,
+          "false_alarms": 0,
+          "compiles": false,
+          "fixed": false,
+          "verify_failing": [],
+          "wall_s": 98.23,
+          "llm_calls": 5,
+          "prompt_tokens": 5938,
+          "completion_tokens": 3642,
+          "cost_usd": 0.00322216,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "stair_light_timer",
+          "categories": [
+            "feature_interaction"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": true,
+          "verify_failing": [],
+          "wall_s": 60.47,
+          "llm_calls": 6,
+          "prompt_tokens": 9890,
+          "completion_tokens": 3908,
+          "cost_usd": 0.00441683,
+          "model": "deepseek-chat"
+        },
+        {
+          "case_id": "tank_mixer_cycle",
+          "categories": [
+            "narrow_timer"
+          ],
+          "truth_bugs": 1,
+          "detected": 1,
+          "detection": {
+            "b1": true
+          },
+          "reported": 1,
+          "false_alarms": 0,
+          "compiles": true,
+          "fixed": false,
+          "verify_failing": [
+            "a_rate",
+            "a_start"
+          ],
+          "wall_s": 98.27,
+          "llm_calls": 6,
+          "prompt_tokens": 8577,
+          "completion_tokens": 3807,
+          "cost_usd": 0.00400754,
+          "model": "deepseek-chat"
+        }
+      ]
+    }
+  ],
+  "budget": {
+    "spent_deepseek": 0.0,
+    "spent_openai": 0.001422,
+    "spent_strong": 0.0,
+    "spent_other": 0.0,
+    "cap_deepseek": 0.8,
+    "cap_openai": 0.05,
+    "cap_strong": 2.0,
+    "calls": 8
+  }
+}

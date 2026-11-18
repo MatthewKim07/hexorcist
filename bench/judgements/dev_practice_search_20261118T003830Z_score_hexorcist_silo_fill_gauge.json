@@ -1,0 +1,89 @@
+{
+  "case_id": "silo_fill_gauge",
+  "system": "hexorcist",
+  "reported": [],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_level",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+        },
+        {
+          "check_id": "a_lamp",
+          "type": "output_follows",
+          "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "silo_fill_gauge",
+    "spec": "- Level probe on A2 scaled at 1 mV per mm; full-level lamp on D6.\n- Take one sample every 25 ms and average the last 40 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.\n- Print `level <mm> mm` every 1000 ms; the printed level must stay within \u00b140 mm of the injected level.\n- Drive D6 HIGH when the averaged level is at or above 4200 mm; otherwise LOW, within 1500 ms.\n- The probe reads up to 4800 mm.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "accumulator_overflow",
+        "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+        "check_ids": [
+          "a_level",
+          "a_lamp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_level",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+          },
+          {
+            "check_id": "a_lamp",
+            "type": "output_follows",
+            "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": []
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no reported bugs to match\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"No reported bugs, thus all are false alarms.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no reported bugs to match"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "No reported bugs, thus all are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 790,
+    "completion_tokens": 78,
+    "cost_usd": 0.0001653,
+    "cached": true
+  }
+}

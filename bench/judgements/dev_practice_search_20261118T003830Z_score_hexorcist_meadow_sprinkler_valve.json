@@ -1,0 +1,46 @@
+{
+  "case_id": "meadow_sprinkler_valve",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Settle filter can be starved by repeated short glitches, missing genuine presses",
+      "description": "In scanStart() the debounce timer rawChangedAt is reset on every raw level change (lines 41-45), and the press is only accepted once the level has been stable for SETTLE_MS (line 46). Repeated sub-20 ms LOW glitches every ~19 ms keep resetting rawChangedAt so the settled-down condition at line 49 never becomes true, and the measured evidence shows D10 missed 4 of 5 triggers, e.g. 'D10 did not start within 100 ms of the trigger at 530 ms'. D10 missed 4 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 530 ms.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "meadow_sprinkler_valve",
+    "spec": "- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).\n- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.\n- Contact bounce up to 12 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D10 LOW) whenever no press has been accepted.\n- Print `zone n=<count>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Settle filter can be starved by repeated short glitches, missing genuine presses",
+        "description": "In scanStart() the debounce timer rawChangedAt is reset on every raw level change (lines 41-45), and the press is only accepted once the level has been stable for SETTLE_MS (line 46). Repeated sub-20 ms LOW glitches every ~19 ms keep resetting rawChangedAt so the settled-down condition at line 49 never becomes true, and the measured evidence shows D10 missed 4 of 5 triggers, e.g. 'D10 did not start within 100 ms of the trigger at 530 ms'. D10 missed 4 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 530 ms.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 750,
+    "completion_tokens": 51,
+    "cost_usd": 0.0001431,
+    "cached": false
+  }
+}

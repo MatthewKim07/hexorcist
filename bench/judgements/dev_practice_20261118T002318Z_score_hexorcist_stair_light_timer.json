@@ -1,0 +1,90 @@
+{
+  "case_id": "stair_light_timer",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Mode switch changes extend the light pulse",
+      "description": "onModeChange() calls armTimer() whenever the light is lit (lines 40-43), resetting litSince so the 3000 ms timeout in loop() (line 94) restarts on every D3 edge. Measured pulses lasted 5878 ms and 5681 ms instead of 3000 \u00b1 150 ms when D3 toggled during the pulse, violating the fixed pulse length and the rule that D3 must not affect D9. 1 of 1 pulse(s) had the wrong length: pulse from 517 ms lasted 5681 ms, expected 3000 \u00b1 150 ms.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "feature_interaction",
+      "description": "Changing the mode switch while the light is on restarts the 3 s timer, so the light stays on longer than the press allows; the press and the mode switch are each correct on their own",
+      "check_ids": [
+        "a_light"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "feature_interaction",
+      "description": "Changing the mode switch while the light is on restarts the 3 s timer, so the light stays on longer than the press allows; the press and the mode switch are each correct on their own",
+      "check_ids": [
+        "a_light"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_light",
+          "type": "timed_pulse",
+          "behaviour": "D9 pulse length around None ms (tolerance 250 ms) (A press lights the stairs for 3 s)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "stair_light_timer",
+    "spec": "- Stair light relay on D9; push button on D2 and mode switch on D3, both with internal pull-ups (active LOW).\n- A settled press on D2 turns D9 HIGH for 3000 ms, starting within 100 ms of the press.\n- A press on D2 while D9 is HIGH is ignored and does not extend the light.\n- Changing D3 has no effect on D9, whether the light is on or off.\n- D9 stays LOW whenever no press has been accepted.\n- Print `stair mode=<0|1> lit=<0|1>` every 1000 ms, where mode is the level of D3.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "feature_interaction",
+        "description": "Changing the mode switch while the light is on restarts the 3 s timer, so the light stays on longer than the press allows; the press and the mode switch are each correct on their own",
+        "check_ids": [
+          "a_light"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_light",
+            "type": "timed_pulse",
+            "behaviour": "D9 pulse length around None ms (tolerance 250 ms) (A press lights the stairs for 3 s)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Mode switch changes extend the light pulse",
+        "description": "onModeChange() calls armTimer() whenever the light is lit (lines 40-43), resetting litSince so the 3000 ms timeout in loop() (line 94) restarts on every D3 edge. Measured pulses lasted 5878 ms and 5681 ms instead of 3000 \u00b1 150 ms when D3 toggled during the pulse, violating the fixed pulse length and the rule that D3 must not affect D9. 1 of 1 pulse(s) had the wrong length: pulse from 517 ms lasted 5681 ms, expected 3000 \u00b1 150 ms.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same issue of mode switch affecting light pulse duration.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same issue of mode switch affecting light pulse duration."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": ""
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 900,
+    "completion_tokens": 77,
+    "cost_usd": 0.0001812,
+    "cached": false
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "case_id": "tank_mixer_cycle",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Relay pulse length and start timing wrong",
+      "description": "The run is scheduled from the moment startRun() executes (line 30 sets nextRunAt = now + CYCLE_MS), and stopRunAt is computed from that same now (line 29), but the loop only checks `now >= stopRunAt` (line 64) and `now >= nextRunAt` (line 69) with 16-bit millis() values (line 16), so the pulse is cut short and runs drift. Measured evidence shows pulses lasting 201 ms and 500 ms instead of 2000 \u00b1 150 ms, and D6 missing 10 of 13 triggers. The 16-bit wrap in tickNow() also breaks the comparisons, so the first run does not reliably start 5000 ms after power-up. D6 missed 10 of 13 trigger(s): D6 did not start within 100 ms of the trigger at 952 ms. 8 of 8 pulse(s) had the wrong length: pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms.",
+      "category": "timed_pulse"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Serial 'mix <n>' not printed once per 5000 ms",
+      "description": "announceRun() is only called from startRun() (line 31), which is gated by the 16-bit wrap-prone comparison at line 69 and by nextRunAt being reset to now + CYCLE_MS at line 30 rather than a fixed schedule. Measured evidence shows 98 of 100 intervals out of tolerance with gaps of 2001 ms, 2000 ms and 8 ms, and one scenario with no matching line at all in 4.65 s. The schedule therefore does not hold the required 5000 \u00b1 250 ms period. Expected /^mix [0-9]+$/ every 5000 \u00b1 250 ms; 98 of 100 intervals were out of tolerance, worst gap 4927 ms.",
+      "category": "serial_period"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Relay toggles more than twice per 5000 ms window",
+      "description": "drive() (lines 46-47) recomputes the relay state from `running && !held()` on every loop pass with no debounce or edge latching, so each bounce or chatter on D3 toggles D6 immediately. Measured evidence shows 16, 22 and 7 toggles in a 5000 ms window against a limit of 2. The lack of any hysteresis or minimum-state-time in drive() lets contact bounce propagate straight to the relay. D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_start",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+        },
+        {
+          "check_id": "a_rate",
+          "type": "max_toggles",
+          "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "tank_mixer_cycle",
+    "spec": "- Mixer relay on D6; hold switch on D3 with internal pull-up (active LOW).\n- Run the mixer (D6 HIGH) for 2000 ms out of every 5000 ms, the first run starting 5000 ms after power-up.\n- Print `mix <n>` when each run starts, once per 5000 ms \u00b1250 ms.\n- While D3 is held LOW, keep D6 LOW. The runs are still counted and printed.\n- The mixer must not change state more than 2 times in any 5000 ms window.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "narrow_timer",
+        "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+        "check_ids": [
+          "a_start",
+          "a_rate"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_start",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+          },
+          {
+            "check_id": "a_rate",
+            "type": "max_toggles",
+            "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Relay pulse length and start timing wrong",
+        "description": "The run is scheduled from the moment startRun() executes (line 30 sets nextRunAt = now + CYCLE_MS), and stopRunAt is computed from that same now (line 29), but the loop only checks `now >= stopRunAt` (line 64) and `now >= nextRunAt` (line 69) with 16-bit millis() values (line 16), so the pulse is cut short and runs drift. Measured evidence shows pulses lasting 201 ms and 500 ms instead of 2000 \u00b1 150 ms, and D6 missing 10 of 13 triggers. The 16-bit wrap in tickNow() also breaks the comparisons, so the first run does not reliably start 5000 ms after power-up. D6 missed 10 of 13 trigger(s): D6 did not start within 100 ms of the trigger at 952 ms. 8 of 8 pulse(s) had the wrong length: pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms.",
+        "category": "timed_pulse"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Serial 'mix <n>' not printed once per 5000 ms",
+        "description": "announceRun() is only called from startRun() (line 31), which is gated by the 16-bit wrap-prone comparison at line 69 and by nextRunAt being reset to now + CYCLE_MS at line 30 rather than a fixed schedule. Measured evidence shows 98 of 100 intervals out of tolerance with gaps of 2001 ms, 2000 ms and 8 ms, and one scenario with no matching line at all in 4.65 s. The schedule therefore does not hold the required 5000 \u00b1 250 ms period. Expected /^mix [0-9]+$/ every 5000 \u00b1 250 ms; 98 of 100 intervals were out of tolerance, worst gap 4927 ms.",
+        "category": "serial_period"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Relay toggles more than twice per 5000 ms window",
+        "description": "drive() (lines 46-47) recomputes the relay state from `running && !held()` on every loop pass with no debounce or edge latching, so each bounce or chatter on D3 toggles D6 immediately. Measured evidence shows 16, 22 and 7 toggles in a 5000 ms window against a limit of 2. The lack of any hysteresis or minimum-state-time in drive() lets contact bounce propagate straight to the relay. D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the issue with timing and 16-bit wrap affecting run scheduling.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1},\n    {\"truth_id\": \"b1\", \"reported_index\": 3}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are related to the same underlying issue of the 16-bit clock wrap affecting timing and toggling behavior.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the issue with timing and 16-bit wrap affecting run scheduling."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      },
+      {
+        "truth_id": "b1",
+        "reported_index": 3
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are related to the same underlying issue of the 16-bit clock wrap affecting timing and toggling behavior."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1407,
+    "completion_tokens": 136,
+    "cost_usd": 0.00029265,
+    "cached": false
+  }
+}

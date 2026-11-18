@@ -1,0 +1,90 @@
+{
+  "case_id": "door_chime_poll",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Debounce sampling misses valid presses",
+      "description": "pollButton() requires CONFIRM_SAMPLES=2 consecutive LOW reads (lines 36-40) while loop() only samples every POLL_MS=30 ms plus execution time (line 83), so a press must span roughly two poll intervals to be confirmed. A press near the 40 ms minimum can fall between samples and never reach lowSamples==2, so the chime is never started; measured evidence shows \"D7 missed 1 of 2 trigger(s): D7 did not start within 120 ms of the trigger at 2.80 s.\" D7 missed 1 of 2 trigger(s): D7 did not start within 120 ms of the trigger at 2.80 s.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "press_vs_sample_period",
+      "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+      "check_ids": [
+        "a_chime"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "press_vs_sample_period",
+      "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+      "check_ids": [
+        "a_chime"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chime",
+          "type": "timed_pulse",
+          "behaviour": "D7 pulse length around None ms (tolerance 80 ms) (A press of 40 ms or more sounds the chime for 300 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "door_chime_poll",
+    "spec": "- Chime driver on D7; doorbell button on D4 with internal pull-up (active LOW).\n- A settled press of at least 40 ms on D4 sounds the chime: D7 HIGH for 300 ms, starting within 120 ms of the press.\n- Presses while the chime is sounding are ignored.\n- D7 stays LOW whenever no press has been accepted.\n- Print `chime n=<count>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "press_vs_sample_period",
+        "description": "The button is polled every 30 ms and two consecutive low samples are required, so a 45 ms press is missed unless it happens to cover two samples",
+        "check_ids": [
+          "a_chime"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chime",
+            "type": "timed_pulse",
+            "behaviour": "D7 pulse length around None ms (tolerance 80 ms) (A press of 40 ms or more sounds the chime for 300 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Debounce sampling misses valid presses",
+        "description": "pollButton() requires CONFIRM_SAMPLES=2 consecutive LOW reads (lines 36-40) while loop() only samples every POLL_MS=30 ms plus execution time (line 83), so a press must span roughly two poll intervals to be confirmed. A press near the 40 ms minimum can fall between samples and never reach lowSamples==2, so the chime is never started; measured evidence shows \"D7 missed 1 of 2 trigger(s): D7 did not start within 120 ms of the trigger at 2.80 s.\" D7 missed 1 of 2 trigger(s): D7 did not start within 120 ms of the trigger at 2.80 s.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the same root cause of missed presses due to polling frequency.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the same root cause of missed presses due to polling frequency."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": ""
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 868,
+    "completion_tokens": 77,
+    "cost_usd": 0.0001764,
+    "cached": false
+  }
+}

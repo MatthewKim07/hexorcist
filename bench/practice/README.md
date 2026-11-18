@@ -54,6 +54,43 @@ One call per case, the same prompt as the benchmark's plain-review baseline, the
 - Every decoy drew false alarms from both models (7 and 6 in all). None of the three decoys was left alone by either model.
 - One run per model and one judge pass, so a difference of one case is within noise.
 
+## Hexorcist on the practice set (2026-11-18)
+
+Two runs of the agent as of commit `6037a9c`, search off (`dev_practice_20261118T002318Z`) and search on with 30 variants per case (`dev_practice_search_20261118T003830Z`), scored with the same judge and replayed on the references. One run each, and the checks are regenerated every run, so single-case moves are within noise. No case was changed. "Honest" means a report the judge matched has a check that fails on the sketch in a scenario where the reference passes.
+
+| Case | Planted bug | DeepSeek reading | `gpt-4o-mini` reading | Hexorcist, search off | Hexorcist, search on |
+| --- | --- | --- | --- | --- | --- |
+| `orchard_spray_valve` | rollover | found, 1 FA | found*, 1 FA | **found, honest**, 0 FA | found but **hollow**, 0 FA |
+| `tank_mixer_cycle` | 16-bit wrap | found, 2 FA | missed, 1 FA | found but **hollow**, 0 FA | found but **hollow**, 0 FA (see below) |
+| `door_chime_poll` | press vs sampling | found*, 2 FA | missed, 2 FA | **found, honest**, 0 FA | missed, 0 FA |
+| `cold_store_alarm` | noise filter | found, 0 FA | missed, 2 FA | missed, 0 FA | found, honest (weak, see below), 0 FA |
+| `lift_call_panel` | blocking wait | found, 0 FA | found, 1 FA | **found, honest**, 1 FA | **found, honest**, 1 FA |
+| `stair_light_timer` | two features | found, 1 FA | missed, 2 FA | **found, honest**, 0 FA | **found, honest**, 0 FA |
+| `silo_fill_gauge` | overflow | found, 0 FA | found, 1 FA | missed, 0 FA | missed, 0 FA |
+| `meadow_sprinkler_valve` | decoy | 2 FA | 2 FA | 1 report, patched | 1 report, patched |
+| `grain_bin_gauge` | decoy | 3 FA | 2 FA | **nothing reported** | **nothing reported** |
+| `loading_dock_horn` | decoy | 2 FA | 2 FA | **nothing reported** | **nothing reported** |
+| **Total** | 7 bugs | 7/7 (6 defensible), 6 FA on bugs, 7 on decoys | 3/7 (2 defensible), 10 and 6 | 5/7, honest 4/7, FA 1 on bugs and 1 on decoys | 5/7, honest 3/7, FA 1 and 1 |
+
+\* A judge match that is not defensible, see the baseline notes above.
+
+Verified fix on the frozen checks: 4/7 in both runs. The search-off run claimed 6 `fixed` and 5 pass the frozen checks (the `tank_mixer_cycle` claim does not). The search run claimed 4 and 3 pass (`orchard_spray_valve` does not). Cost $0.037 and $0.047 for ten cases, 15 and 22 minutes in all, plus $0.003 for the judge. Both ran with mixed clean rooms (`deepseek-chat` and `gpt-4o-mini`, no fallback, no skipped room) in the cases that needed them: 8 and 7.
+
+**What the practice set shows.**
+- **False alarms are where running the firmware pays off here.** Against 13 (DeepSeek) and 16 (`gpt-4o-mini`) false alarms for plain reading, the agent reported 1 on the bugs and 1 on the decoys in each run. `grain_bin_gauge` and `loading_dock_horn` drew no report at all. The one decoy report in both runs, on `meadow_sprinkler_valve` (a class B check: the reference fails it), also led the agent to patch a correct sketch, so that decoy was not left alone.
+- **Reading found more of the bugs than running did.** DeepSeek named 6 or 7 of the 7. The agent found 5 of 7, of which 4 (search off) and 3 (search on) were honest.
+- **`silo_fill_gauge` is lost to the clean rooms in both runs.** Both rooms print about 859 mm where the probe reads 4200 mm: they print raw ADC counts and ignore "1 mV per mm". The two checks that catch the overflow (`a2`, `a3`) fail on both rooms the same way and are dropped as unconfirmed, although they pass on the reference. This is the same correlated clean-room error as `glue_solenoid_short`, across two different models.
+- **`tank_mixer_cycle`, search on:** the judge matched the planted bug to `a1`, a pulse check that the reference also fails (hollow). The run also reported `a2`, a print-period check that fails only in `llm-7` (`start_millis` 191808, where the 16-bit clock wraps) and passes on the reference. So the wrap was found honestly by the clock fast-forward, which the scorer's matching rule does not credit.
+
+- **`cold_store_alarm`, search on:** the honest detection rests on a pulse-length check that fails in one scenario (`llm-3`, "lasted 40 ms, expected 300"). It is a generous match to the planted spike-accumulation bug.
+
+**Search findings: none.** 300 variants ran (30 per case, none over budget). No variant broke a check that had not already failed, so nothing reached the gates: the three gate counts (a, b, c) are 0, 0, 0 in every case and nothing was rejected. In six cases some variants broke checks that were already failing (cold_store 10, lift_call 16, meadow 3, orchard 2, stair 14, tank_mixer 48); by design those are not findings.
+
+**Was any bug found only because of search or the clock fast-forward?**
+- **Search:** no bug.
+- **Clock fast-forward in the attack plan:** `orchard_spray_valve` in the search-off run. The check fails honestly in one scenario only, `llm-2`, which starts the clock at 4294967240. In the search run the model's clock scenarios started elsewhere, the planted check was already failing for an unrelated reason (an 8 ms press that the reference also misses), and the bug was missed. `tank_mixer_cycle` in the search run is the second case (`llm-7`, above). The model added `start_millis` scenarios in 9 of 10 cases without search and in all 10 with it, and none of the three decoys drew a false report from them.
+- **Search variants that start the clock late (`uptime`, 4 to 11 per case):** none exposed a bug. I replayed the 30 orchard variants offline: the `uptime` variant `search-9` only broke the already-failing 8 ms check. The variants move the wrap into the run but leave the presses where they were, so a burst falls in the 400 ms before the wrap only by chance. Whether to align the wrap with an input event is a change I have not made.
+
 ## Fingerprint
 
 Computed by `bench/freeze_hash.py --dir practice` over every file except this README. Update it here whenever a case changes.

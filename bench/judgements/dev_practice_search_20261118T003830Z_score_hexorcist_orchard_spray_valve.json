@@ -1,0 +1,90 @@
+{
+  "case_id": "orchard_spray_valve",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Settle filter rejects a valid 13 ms press at the acceptance boundary",
+      "description": "The debounce in scanTrigger() only accepts a level once it has been stable for SETTLE_MS (12 ms), measured from rawChangedAt, which is stamped when the change is first observed in loop() (lines 41-46). Because loop() polls asynchronously, a press lasting just over 12 ms can be sampled late and the stability window expires only after the button has already been released, so no burst is started; the measured evidence shows \"D8 missed 1 of 3 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s\" for the 13 ms glitch case. The filter therefore has no margin over the 8 ms bounce spec and drops legitimate presses near the boundary. D8 missed 1 of 3 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+      "check_ids": [
+        "a_burst"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+      "check_ids": [
+        "a_burst"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_burst",
+          "type": "timed_pulse",
+          "behaviour": "D8 pulse length around None ms (tolerance 80 ms) (A press opens the valve for 400 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "orchard_spray_valve",
+    "spec": "- Spray valve relay on D8; trigger button on D2 with internal pull-up (active LOW).\n- A settled press on D2 opens the valve (D8 HIGH) for 400 ms, starting within 100 ms of the press.\n- Contact bounce up to 8 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D8 LOW) whenever no press has been accepted.\n- Print `spray n=<count> open=<0|1>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+        "check_ids": [
+          "a_burst"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_burst",
+            "type": "timed_pulse",
+            "behaviour": "D8 pulse length around None ms (tolerance 80 ms) (A press opens the valve for 400 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Settle filter rejects a valid 13 ms press at the acceptance boundary",
+        "description": "The debounce in scanTrigger() only accepts a level once it has been stable for SETTLE_MS (12 ms), measured from rawChangedAt, which is stamped when the change is first observed in loop() (lines 41-46). Because loop() polls asynchronously, a press lasting just over 12 ms can be sampled late and the stability window expires only after the button has already been released, so no burst is started; the measured evidence shows \"D8 missed 1 of 3 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s\" for the 13 ms glitch case. The filter therefore has no margin over the 8 ms bounce spec and drops legitimate presses near the boundary. D8 missed 1 of 3 trigger(s): D8 did not start within 100 ms of the trigger at 1.00 s.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes a timing issue related to the pulse length and acceptance of button presses.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug matches the truth bug based on the observable behavior related to the timing of the pulse and acceptance of button presses.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes a timing issue related to the pulse length and acceptance of button presses."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug matches the truth bug based on the observable behavior related to the timing of the pulse and acceptance of button presses."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 933,
+    "completion_tokens": 104,
+    "cost_usd": 0.00020235,
+    "cached": false
+  }
+}
