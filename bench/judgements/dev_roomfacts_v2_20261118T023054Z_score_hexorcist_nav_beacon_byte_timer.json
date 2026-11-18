@@ -1,0 +1,103 @@
+{
+  "case_id": "nav_beacon_byte_timer",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Blink toggles twice as fast as specified",
+      "description": "The half-period constant HALF_MS is 500 (line 6), but the elapsed-time test on line 61 compares an 8-bit millis slice against HALF_MS, so a toggle fires every 500 ms and the lamp changes state twice per 1000 ms cycle. Measured evidence shows D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5) and 16 times over the 8.00 s run, i.e. a 250 ms half-period rather than 500 ms. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+      "check_ids": [
+        "a_period",
+        "a_max"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_period",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+        },
+        {
+          "check_id": "a_max",
+          "type": "max_toggles",
+          "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "nav_beacon_byte_timer",
+    "spec": "- Nav beacon LED on D12; quiet hold switch on D3 to ground with internal pull-up (active LOW).\n- Blink D12 with 500 ms HIGH and 500 ms LOW while quiet is released, forever.\n- Print the exact line `tick` on each rising edge of the beacon (once per 1000 ms \u00b1120 ms).\n- While D3 is held LOW, force the beacon OFF and pause the blink schedule.\n- Beacon must not change state more than 5 times in any 2000 ms window during free blink.\n- Every 2000 ms print `nav rises=<n> quiet=<0|1>` for operator telemetry.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "byte HALF_MS truncates 500 to 244 so blink period is too short",
+        "check_ids": [
+          "a_period",
+          "a_max"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_period",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^tick$' every 1000 ms (Rising edge every 1 s)"
+          },
+          {
+            "check_id": "a_max",
+            "type": "max_toggles",
+            "behaviour": "D12 must not toggle more than 5 times in any 2000 ms window (Blink rate cap)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Blink toggles twice as fast as specified",
+        "description": "The half-period constant HALF_MS is 500 (line 6), but the elapsed-time test on line 61 compares an 8-bit millis slice against HALF_MS, so a toggle fires every 500 ms and the lamp changes state twice per 1000 ms cycle. Measured evidence shows D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5) and 16 times over the 8.00 s run, i.e. a 250 ms half-period rather than 500 ms. D12 toggled 8 times in a 2000 ms window starting at 245 ms (limit 5), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same symptom of excessive toggling due to incorrect half-period constant.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same symptom of excessive toggling due to incorrect half-period constant."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": ""
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 943,
+    "completion_tokens": 80,
+    "cost_usd": 0.00018945,
+    "cached": false
+  }
+}

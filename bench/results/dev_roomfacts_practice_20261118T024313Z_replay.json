@@ -1,0 +1,142 @@
+{
+  "silo_fill_gauge": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 10
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "tank_mixer_cycle": {
+    "scenarios": 14,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-3",
+          "llm-4",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 10
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-pulse-length-d6"
+        ],
+        "ref_exercised": 14
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "builtin-pulse-length-d6",
+          "builtin-pulse-retrigger-d6",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-6",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "llm-1",
+          "llm-3",
+          "llm-4",
+          "llm-8",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      }
+    }
+  },
+  "meadow_sprinkler_valve": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-3"
+        ],
+        "ref_exercised": 15
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "grain_bin_gauge": {
+    "scenarios": 17,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 10
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      }
+    }
+  },
+  "loading_dock_horn": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-6"
+        ],
+        "ref_exercised": 15
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  }
+}

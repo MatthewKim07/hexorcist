@@ -1,0 +1,53 @@
+{
+  "case_id": "loading_dock_horn",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Horn blast blocks loop and delays button detection",
+      "description": "The blast() function uses a blocking delay(HORN_MS) at line 19, so during the 60 ms pulse the loop cannot call scanButton(). Combined with the 15 ms settle window at line 32, a press arriving just after a blast (or during the blocking delay) is not detected until the loop resumes, pushing the D12 HIGH edge past the 100 ms deadline. The measured evidence shows D12 did not start within 100 ms of the trigger at 2.01 s, missing 1 of 2 triggers. D12 missed 1 of 2 trigger(s): D12 did not start within 100 ms of the trigger at 2.01 s.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loading_dock_horn",
+    "spec": "- Horn relay on D12; dock button on D4 with internal pull-up (active LOW).\n- A settled press on D4 sounds the horn: D12 HIGH for 60 ms, starting within 100 ms of the press.\n- Contact bounce up to 10 ms on press and release must not sound the horn twice.\n- A press that is still held after the horn stops does not sound it again.\n- D12 stays LOW whenever no press has been accepted.\n- Print `dock <n>` every 500 ms \u00b1150 ms, with n counting the lines printed.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Horn blast blocks loop and delays button detection",
+        "description": "The blast() function uses a blocking delay(HORN_MS) at line 19, so during the 60 ms pulse the loop cannot call scanButton(). Combined with the 15 ms settle window at line 32, a press arriving just after a blast (or during the blocking delay) is not detected until the loop resumes, pushing the D12 HIGH edge past the 100 ms deadline. The measured evidence shows D12 did not start within 100 ms of the trigger at 2.01 s, missing 1 of 2 triggers. D12 missed 1 of 2 trigger(s): D12 did not start within 100 ms of the trigger at 2.01 s.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 746,
+    "completion_tokens": 85,
+    "cost_usd": 0.0001629,
+    "cached": false
+  }
+}

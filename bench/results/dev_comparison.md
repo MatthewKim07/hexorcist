@@ -283,6 +283,41 @@ The one planted bug that loses its matched check in dev_full2 and dev_full3 is `
 
 0 of 30 reference-failing scenarios exceed a stated limit. Only 4 of the 40 specs state any input limit (all "maximum bounce": `foyer_lamp_debounce`, `lobby_lamp_ok`, `panel_dual_debounce_edge`, `shop_estop_debounce`), and none of them has a class B false alarm. The stimuli that break `loft_fan_ok` a3 are 60 ms taps, 8 ms bounce repeated 7 times, and 30 edges in 8 s. The spec forbids none of them. The failure comes from two spec bullets colliding under those inputs ("force the fan ON while D4 is held LOW" against "no more than 2 changes in 5000 ms"), not from a stimulus the spec rules out. A rule keyed on stated input limits would never fire on these checks, so it is not built.
 
+## Clean rooms list the spec facts first (`dev_roomfacts_v2_20261118T023054Z`, `dev_roomfacts_practice_20261118T024313Z`)
+
+The room prompt now asks for a `// SPEC FACTS` block (each number, unit, scale, range, timing, pin role and peripheral, with how the code uses it) before the code. The checks and the drop rule are unchanged. Two small runs on the cases where both rooms had misread the spec, one run each, so single-case moves are within noise.
+
+**Audit.** Both runs: no error rows, nothing missing, mixed rooms with no fallback and no skipped room. In the 8 cross-checks that ran, room 1 was `deepseek-chat` and room 2 `gpt-4o-mini` on `api.openai.com`, ready every time. The 3 cases where no check failed (`weather_ok`, `lab_ph_ok`, `grain_bin_gauge`) made no room call. No search. Spend: v2 subset DeepSeek $0.0256 and OpenAI $0.0028, practice subset DeepSeek $0.0253 and OpenAI $0.0026, in all $0.056, plus about $0.0016 for the judge.
+
+**The two targeted cases are fixed.**
+
+| Case | Before | After |
+| --- | --- | --- |
+| `glue_solenoid_short` | `a1` unconfirmed (passes on the reference), missed in dev_full2, 3 and 4 | `a1` kept, bug detected and honest, status `fixed` |
+| `silo_fill_gauge` | `a2` and `a3` unconfirmed (pass on the reference), missed in both practice runs | both kept, bug detected and honest, status `fixed` |
+
+Every stored room sketch (8 rooms in 4 cases per run, 16 in all) calls `Serial.begin` and carries the `SPEC FACTS` block. Before, the two glue rooms had no `Serial.begin`; the two silo rooms did call it but ignored the scale, and now no longer fail the two silo checks.
+
+**Subset totals** (computed over the subset only):
+
+| | Bugs | Detected | Honest | False alarms (bugs / correct) | Unconfirmed | ...of which pass on the reference | Cost |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | ---: |
+| v2 subset, dev_full3 | 3 | 2 | 1 | 0 / 5 | 1 | 1 | $0.043 |
+| v2 subset, dev_full4 | 3 | 2 | 2 | 1 / 2 | 1 | 1 | $0.029 |
+| **v2 subset, room facts** | 3 | **3** | **3** | 0 / 1 | 2 | **0** | $0.028 |
+| practice subset, before | 2 | 1 | 0 | 0 / 1 | 5 | 2 | $0.016 |
+| **practice subset, room facts** | 2 | **2** | **2** | 1 / 2 | 2 | **0** | $0.028 |
+
+Left-out requirement checks in the v2 subset: 5 (same as dev_full4), all 5 fail on the reference.
+
+**Other cases.**
+- **No real check was dropped.** In both subsets 0 unconfirmed checks pass on the reference (2 before in practice, 1 in v2). The 4 unconfirmed checks that remain (`nav_beacon_byte_timer` a2, `loft_fan_ok` a1, `tank_mixer_cycle` a2 and a3) all fail on the reference.
+- **v2 subset: no new false alarm.** The only one is `loft_fan_ok` a3, the spec's own toggle limit that button bounce breaks on the reference (class B, in every run since dev_full).
+- **Practice subset: false alarms went from 1 to 3, all class B.** `meadow_sprinkler_valve` a1 was already there. New: `loading_dock_horn` a1 (a decoy that was clean before; the reference fails the check in 1 scenario, so the status is now `partial`) and `tank_mixer_cycle` a1 (the reference fails it in 10 of the 11 scenarios where the sketch does; the bug is now honest instead of hollow). Both are checks the model wrote that no correct firmware passes, and both reached the report, so the rooms did not fail them the way the sketch did. I cannot tell whether the room prompt caused them or the checks were regenerated differently, since the sets of checks differ from run to run.
+- **Cost.** The rooms write more (about 3.2k tokens per case that built rooms against 1.9k before), and the practice subset cost $0.028 against $0.016. The v2 subset cost the same as dev_full4.
+
+**Verdict.** Keep it: it fixed both misreads and dropped no real check, with no new false alarm in the v2 subset. The practice subset shows 2 more class B false alarms that I cannot rule out as an effect. To undo it, `git revert 6706139` (the prompt change and its test file only; checks, drop rule and gate are untouched).
+
 ## Two-room run: what the 80% rule did
 Recovered as honest detections: `bench_led_miswire` and `cabin_heater_mul_ovf` (their checks fail on the uploaded sketch in scenarios where at least one clean room passes). `attic_vent_hyst` also became an honest detection. `drip_scheduler_u8` is detected again, but only through checks that fail on the reference too, so it is not an honest one.
 

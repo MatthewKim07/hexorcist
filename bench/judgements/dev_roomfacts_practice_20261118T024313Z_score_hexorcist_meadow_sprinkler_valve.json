@@ -1,0 +1,46 @@
+{
+  "case_id": "meadow_sprinkler_valve",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Presses near the 20 ms settle threshold are missed",
+      "description": "The debounce in scanStart() only accepts a press once the raw level has been stable for SETTLE_MS (20 ms), and the check at line 46 uses `now - rawChangedAt >= SETTLE_MS` with rawChangedAt updated only when the sampled level changes (lines 41-45). Because the loop samples asynchronously, a press lasting about 18-22 ms can be released before a stable 20 ms window is ever observed, so openZone() at line 51 is never called; the engine measured \"D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms\" (also at 2.00 s and 4.00 s). The settle window is too close to the bounce/press duration, so legitimate presses are filtered out instead of only bounce being rejected. D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "meadow_sprinkler_valve",
+    "spec": "- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).\n- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.\n- Contact bounce up to 12 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D10 LOW) whenever no press has been accepted.\n- Print `zone n=<count>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Presses near the 20 ms settle threshold are missed",
+        "description": "The debounce in scanStart() only accepts a press once the raw level has been stable for SETTLE_MS (20 ms), and the check at line 46 uses `now - rawChangedAt >= SETTLE_MS` with rawChangedAt updated only when the sampled level changes (lines 41-45). Because the loop samples asynchronously, a press lasting about 18-22 ms can be released before a stable 20 ms window is ever observed, so openZone() at line 51 is never called; the engine measured \"D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms\" (also at 2.00 s and 4.00 s). The settle window is too close to the bounce/press duration, so legitimate presses are filtered out instead of only bounce being rejected. D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 812,
+    "completion_tokens": 51,
+    "cost_usd": 0.0001524,
+    "cached": false
+  }
+}

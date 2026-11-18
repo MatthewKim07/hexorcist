@@ -1,0 +1,775 @@
+{
+  "run_id": "dev_roomfacts_practice_20261118T024313Z_hexorcist",
+  "system": "hexorcist",
+  "api": "http://127.0.0.1:8080",
+  "missing": [],
+  "cases": [
+    {
+      "case_id": "silo_fill_gauge",
+      "run_id": "66ae3e05701b",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a2",
+          "title": "Running total overflows int, producing negative levels",
+          "description": "`total` is declared `int` on line 13, but it accumulates 40 ADC readings of up to 1023, so the sum can reach ~40920, far beyond the 32767 limit of a 16-bit int. The overflow wraps the sum negative, and averageMm() on line 28 then computes a large negative millimetre value, which is why the firmware printed -3856 mm while the injected level was ~4150 mm (off by ~8000 mm). Firmware printed -3856 mm at 1.02 s while the injected input was 4140.4 to 4169.8 mm: off by 7996.4 mm (tolerance \u00b140). 10 of 10 values were wrong.",
+          "assertion_type": "serial_value_matches",
+          "assertion_id": "a2",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "Firmware printed -3856 mm at 1.02 s while the injected input was 4140.4 to 4169.8 mm: off by 7996.4 mm (tolerance \u00b140). 10 of 10 values were wrong.",
+          "root_cause": "`total` is declared `int` on line 13, but it accumulates 40 ADC readings of up to 1023, so the sum can reach ~40920, far beyond the 32767 limit of a 16-bit int. The overflow wraps the sum negative, and averageMm() on line 28 then computes a large negative millimetre value, which is why the firmware printed -3856 mm while the injected level was ~4150 mm (off by ~8000 mm)."
+        },
+        {
+          "id": "bug-a3",
+          "title": "Lamp driven from overflowed average, so it never lights correctly",
+          "description": "showLamp() on line 33 compares averageMm() against FULL_MM, but averageMm() returns a negative value because of the int overflow in `total` (line 13/28). The comparison is therefore always false and D6 stays LOW even when the injected level is above 4200 mm, e.g. D6 was not HIGH for 1730 ms in the nominal ramp and 2420 ms in the max/min scenario. D6 was in the wrong state for 350 ms across 2 interval(s), first at 1.50 s: D6 was not HIGH for 180 ms while required (grace 1500 ms).",
+          "assertion_type": "output_follows",
+          "assertion_id": "a3",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D6 was in the wrong state for 350 ms across 2 interval(s), first at 1.50 s: D6 was not HIGH for 180 ms while required (grace 1500 ms).",
+          "root_cause": "showLamp() on line 33 compares averageMm() against FULL_MM, but averageMm() returns a negative value because of the int overflow in `total` (line 13/28). The comparison is therefore always false and D6 stays LOW even when the injected level is above 4200 mm, e.g. D6 was not HIGH for 1730 ms in the nominal ramp and 2420 ms in the max/min scenario."
+        }
+      ],
+      "patched_sketch": "// Silo level gauge: running average of the level probe on A2.\n// Full-level lamp on D6, level report over UART.\n\nconst int PROBE_PIN = A2;\nconst int LAMP_PIN = 6;\nconst int WINDOW = 40;\nconst long FULL_MM = 4200;\nconst unsigned long SAMPLE_MS = 25;\nconst unsigned long REPORT_MS = 1000;\n\nint readings[WINDOW];\nint slot = 0;\nlong total = 0;\nunsigned long lastSample = 0;\nunsigned long lastReport = 0;\n\nvoid takeSample()\n{\n    int raw = analogRead(PROBE_PIN);\n    total -= readings[slot];\n    readings[slot] = raw;\n    total += raw;\n    slot = (slot + 1) % WINDOW;\n}\n\nlong averageMm()\n{\n    return (total * 5000L) / (1024L * WINDOW);\n}\n\nvoid showLamp()\n{\n    digitalWrite(LAMP_PIN, averageMm() >= FULL_MM ? HIGH : LOW);\n}\n\nvoid report()\n{\n    Serial.print(\"level \");\n    Serial.print(averageMm());\n    Serial.println(\" mm\");\n}\n\nvoid setup()\n{\n    pinMode(LAMP_PIN, OUTPUT);\n    digitalWrite(LAMP_PIN, LOW);\n    Serial.begin(9600);\n    for (int i = 0; i < WINDOW; i++)\n    {\n        readings[i] = 0;\n    }\n    for (int i = 0; i < WINDOW; i++)\n    {\n        takeSample();\n    }\n    lastSample = millis();\n    lastReport = millis();\n    showLamp();\n}\n\nvoid loop()\n{\n    unsigned long now = millis();\n    if (now - lastSample >= SAMPLE_MS)\n    {\n        lastSample = now;\n        takeSample();\n        showLamp();\n    }\n    if (now - lastReport >= REPORT_MS)\n    {\n        lastReport = now;\n        report();\n    }\n}\n",
+      "wall_s": 145.13,
+      "llm_calls": 7,
+      "prompt_tokens": 13706,
+      "completion_tokens": 5777,
+      "cost_usd": 0.00625198,
+      "cost_deepseek_usd": 0.00497728,
+      "cost_openai_usd": 0.0012747,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 5,
+          "prompt_tokens": 11452,
+          "completion_tokens": 4216
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 2,
+          "prompt_tokens": 2254,
+          "completion_tokens": 1561
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 3,
+          "prompt_tokens": 2903,
+          "completion_tokens": 2381,
+          "sandbox_runs": 35,
+          "llm_s": 20.8,
+          "sandbox_s": 210.0,
+          "build_s": 28.0,
+          "repaired": true
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 649,
+            "completion_tokens": 820
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": true,
+            "llm_calls": 2,
+            "prompt_tokens": 2254,
+            "completion_tokens": 1561
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 3,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2055,
+          "completion_tokens": 595,
+          "seconds": 4.4
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2052,
+          "completion_tokens": 1991,
+          "seconds": 11.0
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 649,
+          "completion_tokens": 820,
+          "seconds": 4.9
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 3090,
+          "completion_tokens": 283,
+          "seconds": 2.6
+        },
+        "fix": {
+          "calls": 1,
+          "prompt_tokens": 3606,
+          "completion_tokens": 527,
+          "seconds": 2.7
+        },
+        "cleanroom2": {
+          "calls": 2,
+          "prompt_tokens": 2254,
+          "completion_tokens": 1561,
+          "seconds": 15.9
+        }
+      },
+      "assertion_ids": {
+        "bug-a2": "a2",
+        "bug-a3": "a3"
+      }
+    },
+    {
+      "case_id": "tank_mixer_cycle",
+      "run_id": "a8ed0d1c9420",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Relay run length collapses because drive() re-evaluates the hold switch every loop",
+          "description": "drive() at lines 46-47 recomputes the relay output from `running && !held()` on every loop iteration, so any read of D3 as LOW (bounce, chatter, or a floating input) immediately forces D6 LOW mid-run instead of letting the 2000 ms run complete. The measured evidence shows pulses of 514 ms, 67 ms, 46 ms and 201 ms instead of 2000 \u00b1 150 ms, and missed starts such as \"D6 did not start within 100 ms of the trigger at 5.20 s\". The run timer in startRun() (lines 29-30) is correct, but the output is gated by an unsynchronised input read rather than by the scheduled state. D6 missed 2 of 11 trigger(s): D6 did not start within 100 ms of the trigger at 6.21 s. 25 of 25 pulse(s) had the wrong length: pulse from 5.00 s lasted 514 ms, expected 2000 \u00b1 150 ms.",
+          "assertion_type": "timed_pulse",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": false,
+          "evidence": "D6 missed 2 of 11 trigger(s): D6 did not start within 100 ms of the trigger at 6.21 s. 25 of 25 pulse(s) had the wrong length: pulse from 5.00 s lasted 514 ms, expected 2000 \u00b1 150 ms.",
+          "root_cause": "drive() at lines 46-47 recomputes the relay output from `running && !held()` on every loop iteration, so any read of D3 as LOW (bounce, chatter, or a floating input) immediately forces D6 LOW mid-run instead of letting the 2000 ms run complete. The measured evidence shows pulses of 514 ms, 67 ms, 46 ms and 201 ms instead of 2000 \u00b1 150 ms, and missed starts such as \"D6 did not start within 100 ms of the trigger at 5.20 s\". The run timer in startRun() (lines 29-30) is correct, but the output is gated by an unsynchronised input read rather than by the scheduled state."
+        },
+        {
+          "id": "bug-a4",
+          "title": "No debounce or state latching on D3 causes relay chatter far above the 2-toggle limit",
+          "description": "held() at lines 39-42 reads the raw pin with no debounce, and drive() at lines 46-47 writes D6 on every loop pass, so each bounce edge on D3 toggles the relay directly. The measurements show 16 toggles in a 5000 ms window for button bounce, 6 for hold-then-release, and 28 for rapid chatter around the start, all against a limit of 2. Because the relay output is derived combinationally from the input rather than from a latched run state, contact chatter and mid-run release both produce extra transitions. D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+          "assertion_type": "max_toggles",
+          "assertion_id": "a4",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+          "root_cause": "held() at lines 39-42 reads the raw pin with no debounce, and drive() at lines 46-47 writes D6 on every loop pass, so each bounce edge on D3 toggles the relay directly. The measurements show 16 toggles in a 5000 ms window for button bounce, 6 for hold-then-release, and 28 for rapid chatter around the start, all against a limit of 2. Because the relay output is derived combinationally from the input rather than from a latched run state, contact chatter and mid-run release both produce extra transitions."
+        }
+      ],
+      "patched_sketch": "// Tank mixer scheduler: 2 s of mixing in every 5 s cycle.\n// Relay on D6, hold switch on D3 (pull-up).\n\nconst int MIXER_PIN = 6;\nconst int HOLD_PIN = 3;\nconst uint16_t RUN_MS = 2000;\nconst uint16_t CYCLE_MS = 5000;\nconst uint16_t HOLD_CONFIRM_MS = 50;\n\nuint16_t nextRunAt = 0;\nuint16_t stopRunAt = 0;\nbool running = false;\nunsigned int runCount = 0;\n\nbool heldState = false;\nbool heldCandidate = false;\nuint16_t heldCandidateSince = 0;\n\nuint16_t tickNow()\n{\n    return (uint16_t)millis();\n}\n\nvoid announceRun()\n{\n    Serial.print(\"mix \");\n    Serial.println(runCount);\n}\n\nvoid startRun(uint16_t now)\n{\n    running = true;\n    runCount++;\n    stopRunAt = now + RUN_MS;\n    nextRunAt = now + CYCLE_MS;\n    announceRun();\n}\n\nvoid stopRun()\n{\n    running = false;\n}\n\nbool held()\n{\n    return heldState;\n}\n\nvoid updateHeld(uint16_t now)\n{\n    bool raw = digitalRead(HOLD_PIN) == LOW;\n    if (raw != heldCandidate)\n    {\n        heldCandidate = raw;\n        heldCandidateSince = now;\n    }\n    else if (heldCandidate != heldState)\n    {\n        if ((uint16_t)(now - heldCandidateSince) >= HOLD_CONFIRM_MS)\n        {\n            heldState = heldCandidate;\n        }\n    }\n}\n\nvoid drive()\n{\n    bool on = running && !held();\n    digitalWrite(MIXER_PIN, on ? HIGH : LOW);\n}\n\nvoid setup()\n{\n    pinMode(MIXER_PIN, OUTPUT);\n    pinMode(HOLD_PIN, INPUT_PULLUP);\n    digitalWrite(MIXER_PIN, LOW);\n    Serial.begin(9600);\n    nextRunAt = tickNow() + CYCLE_MS;\n}\n\nvoid loop()\n{\n    uint16_t now = tickNow();\n    updateHeld(now);\n    if (running)\n    {\n        if (now >= stopRunAt)\n        {\n            stopRun();\n        }\n    }\n    else if (now >= nextRunAt)\n    {\n        startRun(now);\n    }\n    drive();\n}\n",
+      "wall_s": 145.09,
+      "llm_calls": 8,
+      "prompt_tokens": 16957,
+      "completion_tokens": 5442,
+      "cost_usd": 0.00705018,
+      "cost_deepseek_usd": 0.00662508,
+      "cost_openai_usd": 0.0004251,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 7,
+          "prompt_tokens": 16323,
+          "completion_tokens": 4892
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 634,
+          "completion_tokens": 550
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [
+        {
+          "assertion_id": "a2",
+          "type": "serial_period",
+          "requirement": "A 'mix <n>' line is printed once per 5000 ms \u00b1250 ms.",
+          "your_firmware": "Expected /^mix [0-9]+$/ every 5000 \u00b1 250 ms; 98 of 100 intervals were out of tolerance, worst gap 4927 ms.",
+          "clean_room": "Expected /^mix [0-9]+$/ every 5000 \u00b1 250 ms; 1 of 3 intervals were out of tolerance, worst gap 4999 ms.",
+          "failing_scenarios": 2,
+          "shared_scenarios": 2
+        },
+        {
+          "assertion_id": "a3",
+          "type": "output_follows",
+          "requirement": "While D3 is held LOW the relay is LOW; when not held it may be HIGH.",
+          "your_firmware": "D6 was in the wrong state for 3180 ms across 12 interval(s), first at 100 ms: D6 was not HIGH for 700 ms while required (grace 100 ms).",
+          "clean_room": "D6 was in the wrong state for 3180 ms across 12 interval(s), first at 100 ms: D6 was not HIGH for 700 ms while required (grace 100 ms).",
+          "failing_scenarios": 14,
+          "shared_scenarios": 13
+        }
+      ],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 1273,
+          "completion_tokens": 1212,
+          "sandbox_runs": 30,
+          "llm_s": 10.3,
+          "sandbox_s": 142.8,
+          "build_s": 14.3,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 639,
+            "completion_tokens": 662
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 634,
+            "completion_tokens": 550
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 4,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 1990,
+          "completion_tokens": 729,
+          "seconds": 4.5
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2093,
+          "completion_tokens": 1355,
+          "seconds": 9.5
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 639,
+          "completion_tokens": 662,
+          "seconds": 4.6
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 2716,
+          "completion_tokens": 395,
+          "seconds": 4.0
+        },
+        "fix": {
+          "calls": 3,
+          "prompt_tokens": 8885,
+          "completion_tokens": 1751,
+          "seconds": 9.9
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 634,
+          "completion_tokens": 550,
+          "seconds": 5.7
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1",
+        "bug-a4": "a4"
+      }
+    },
+    {
+      "case_id": "meadow_sprinkler_valve",
+      "run_id": "69e1f45760bc",
+      "status": "fixed",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Presses near the 20 ms settle threshold are missed",
+          "description": "The debounce in scanStart() only accepts a press once the raw level has been stable for SETTLE_MS (20 ms), and the check at line 46 uses `now - rawChangedAt >= SETTLE_MS` with rawChangedAt updated only when the sampled level changes (lines 41-45). Because the loop samples asynchronously, a press lasting about 18-22 ms can be released before a stable 20 ms window is ever observed, so openZone() at line 51 is never called; the engine measured \"D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms\" (also at 2.00 s and 4.00 s). The settle window is too close to the bounce/press duration, so legitimate presses are filtered out instead of only bounce being rejected. D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms.",
+          "assertion_type": "timed_pulse",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": true,
+          "evidence": "D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms.",
+          "root_cause": "The debounce in scanStart() only accepts a press once the raw level has been stable for SETTLE_MS (20 ms), and the check at line 46 uses `now - rawChangedAt >= SETTLE_MS` with rawChangedAt updated only when the sampled level changes (lines 41-45). Because the loop samples asynchronously, a press lasting about 18-22 ms can be released before a stable 20 ms window is ever observed, so openZone() at line 51 is never called; the engine measured \"D10 missed 3 of 5 trigger(s): D10 did not start within 100 ms of the trigger at 500 ms\" (also at 2.00 s and 4.00 s). The settle window is too close to the bounce/press duration, so legitimate presses are filtered out instead of only bounce being rejected."
+        }
+      ],
+      "patched_sketch": "// Meadow sprinkler zone: one 500 ms burst per start press.\n// Valve relay on D10, start button on D6 (pull-up), status over UART.\n\nconst int ZONE_PIN = 10;\nconst int START_PIN = 6;\nconst unsigned long BURST_MS = 500;\nconst unsigned long SETTLE_MS = 15;\nconst unsigned long REPORT_MS = 1000;\n\nbool zoneOpen = false;\nbool held = false;\nint rawLevel = HIGH;\nunsigned long rawChangedAt = 0;\nunsigned long closeAt = 0;\nunsigned long lastReport = 0;\nunsigned int bursts = 0;\n\nvoid openZone()\n{\n    zoneOpen = true;\n    closeAt = millis() + BURST_MS;\n    digitalWrite(ZONE_PIN, HIGH);\n    bursts++;\n}\n\nvoid closeZone()\n{\n    zoneOpen = false;\n    digitalWrite(ZONE_PIN, LOW);\n}\n\nbool closeDue()\n{\n    return (long)(millis() - closeAt) >= 0;\n}\n\nvoid scanStart()\n{\n    int level = digitalRead(START_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held && !zoneOpen)\n        {\n            openZone();\n        }\n        held = down;\n    }\n}\n\nvoid report()\n{\n    Serial.print(\"zone n=\");\n    Serial.println(bursts);\n}\n\nvoid setup()\n{\n    pinMode(ZONE_PIN, OUTPUT);\n    pinMode(START_PIN, INPUT_PULLUP);\n    digitalWrite(ZONE_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastReport = millis();\n}\n\nvoid loop()\n{\n    scanStart();\n    if (zoneOpen && closeDue())\n    {\n        closeZone();\n    }\n    if (millis() - lastReport >= REPORT_MS)\n    {\n        lastReport = millis();\n        report();\n    }\n}\n",
+      "wall_s": 120.95,
+      "llm_calls": 8,
+      "prompt_tokens": 13230,
+      "completion_tokens": 6264,
+      "cost_usd": 0.00633476,
+      "cost_deepseek_usd": 0.00596666,
+      "cost_openai_usd": 0.0003681,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 7,
+          "prompt_tokens": 12596,
+          "completion_tokens": 5809
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 634,
+          "completion_tokens": 455
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": true,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 1271,
+          "completion_tokens": 1158,
+          "sandbox_runs": 34,
+          "llm_s": 10.1,
+          "sandbox_s": 168.0,
+          "build_s": 6.9,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 637,
+            "completion_tokens": 703
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 634,
+            "completion_tokens": 455
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 3,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2102,
+          "completion_tokens": 667,
+          "seconds": 5.1
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1988,
+          "completion_tokens": 2551,
+          "seconds": 12.1
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 637,
+          "completion_tokens": 703,
+          "seconds": 4.8
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 1651,
+          "completion_tokens": 233,
+          "seconds": 2.5
+        },
+        "fix": {
+          "calls": 3,
+          "prompt_tokens": 6218,
+          "completion_tokens": 1655,
+          "seconds": 8.9
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 634,
+          "completion_tokens": 455,
+          "seconds": 5.3
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1"
+      }
+    },
+    {
+      "case_id": "grain_bin_gauge",
+      "run_id": "d0fbb5f02b7f",
+      "status": "clean",
+      "bugs": [],
+      "patched_sketch": "",
+      "wall_s": 43.91,
+      "llm_calls": 2,
+      "prompt_tokens": 4108,
+      "completion_tokens": 2356,
+      "cost_usd": 0.00213976,
+      "cost_deepseek_usd": 0.00213976,
+      "cost_openai_usd": 0.0,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 2,
+          "prompt_tokens": 4108,
+          "completion_tokens": 2356
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "not_needed",
+        "reason": "",
+        "rule": "none",
+        "usage": {
+          "llm_calls": 0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "sandbox_runs": 0,
+          "llm_s": 0,
+          "sandbox_s": 0,
+          "build_s": 0.0,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": []
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 3,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 2054,
+          "completion_tokens": 555,
+          "seconds": 3.9
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 2054,
+          "completion_tokens": 1801,
+          "seconds": 11.1
+        }
+      },
+      "assertion_ids": {}
+    },
+    {
+      "case_id": "loading_dock_horn",
+      "run_id": "e04c59364eea",
+      "status": "partial",
+      "bugs": [
+        {
+          "id": "bug-a1",
+          "title": "Horn blast blocks loop and delays button detection",
+          "description": "The blast() function uses a blocking delay(HORN_MS) at line 19, so during the 60 ms pulse the loop cannot call scanButton(). Combined with the 15 ms settle window at line 32, a press arriving just after a blast (or during the blocking delay) is not detected until the loop resumes, pushing the D12 HIGH edge past the 100 ms deadline. The measured evidence shows D12 did not start within 100 ms of the trigger at 2.01 s, missing 1 of 2 triggers. D12 missed 1 of 2 trigger(s): D12 did not start within 100 ms of the trigger at 2.01 s.",
+          "assertion_type": "timed_pulse",
+          "assertion_id": "a1",
+          "found_by_search": false,
+          "verified": false,
+          "evidence": "D12 missed 1 of 2 trigger(s): D12 did not start within 100 ms of the trigger at 2.01 s.",
+          "root_cause": "The blast() function uses a blocking delay(HORN_MS) at line 19, so during the 60 ms pulse the loop cannot call scanButton(). Combined with the 15 ms settle window at line 32, a press arriving just after a blast (or during the blocking delay) is not detected until the loop resumes, pushing the D12 HIGH edge past the 100 ms deadline. The measured evidence shows D12 did not start within 100 ms of the trigger at 2.01 s, missing 1 of 2 triggers."
+        }
+      ],
+      "patched_sketch": "// Loading dock horn: a short blast per settled press, plus a status line.\n// Horn relay on D12, dock button on D4 (pull-up).\n\nconst int HORN_PIN = 12;\nconst int BUTTON_PIN = 4;\nconst unsigned long HORN_MS = 60;\nconst unsigned long SETTLE_MS = 15;\nconst unsigned long BEAT_MS = 500;\n\nint rawLevel = HIGH;\nbool held = false;\nbool hornOn = false;\nunsigned long rawChangedAt = 0;\nunsigned long hornStartedAt = 0;\nunsigned long lastBeat = 0;\nunsigned int beats = 0;\n\nvoid startBlast()\n{\n    digitalWrite(HORN_PIN, HIGH);\n    hornOn = true;\n    hornStartedAt = millis();\n}\n\nvoid serviceHorn()\n{\n    if (hornOn && millis() - hornStartedAt >= HORN_MS)\n    {\n        digitalWrite(HORN_PIN, LOW);\n        hornOn = false;\n    }\n}\n\nvoid scanButton()\n{\n    int level = digitalRead(BUTTON_PIN);\n    unsigned long now = millis();\n    if (level != rawLevel)\n    {\n        rawLevel = level;\n        rawChangedAt = now;\n    }\n    if (now - rawChangedAt >= SETTLE_MS)\n    {\n        bool down = (rawLevel == LOW);\n        if (down && !held)\n        {\n            startBlast();\n        }\n        held = down;\n    }\n}\n\nvoid heartbeat()\n{\n    beats++;\n    Serial.print(\"dock \");\n    Serial.println(beats);\n}\n\nvoid setup()\n{\n    pinMode(HORN_PIN, OUTPUT);\n    pinMode(BUTTON_PIN, INPUT_PULLUP);\n    digitalWrite(HORN_PIN, LOW);\n    Serial.begin(9600);\n    rawChangedAt = millis();\n    lastBeat = millis();\n}\n\nvoid loop()\n{\n    scanButton();\n    serviceHorn();\n    if (millis() - lastBeat >= BEAT_MS)\n    {\n        lastBeat = millis();\n        heartbeat();\n    }\n}\n",
+      "wall_s": 146.63,
+      "llm_calls": 8,
+      "prompt_tokens": 12819,
+      "completion_tokens": 5816,
+      "cost_usd": 0.00607045,
+      "cost_deepseek_usd": 0.005572,
+      "cost_openai_usd": 0.00049845,
+      "cost_other_usd": 0.0,
+      "providers": [
+        {
+          "role": "agent",
+          "model": "deepseek-chat",
+          "host": "api.deepseek.com",
+          "calls": 7,
+          "prompt_tokens": 12184,
+          "completion_tokens": 5144
+        },
+        {
+          "role": "cleanroom2",
+          "model": "gpt-4o-mini",
+          "host": "api.openai.com",
+          "calls": 1,
+          "prompt_tokens": 635,
+          "completion_tokens": 672
+        }
+      ],
+      "model": "deepseek-chat",
+      "claimed_fixed": false,
+      "unconfirmed": [],
+      "ungrounded": [],
+      "cross_check": {
+        "status": "ran",
+        "reason": "",
+        "rule": "both",
+        "usage": {
+          "llm_calls": 2,
+          "prompt_tokens": 1273,
+          "completion_tokens": 1367,
+          "sandbox_runs": 34,
+          "llm_s": 12.0,
+          "sandbox_s": 137.8,
+          "build_s": 9.0,
+          "repaired": false
+        },
+        "model_diversity": {
+          "mixed": true,
+          "fallback": false,
+          "rooms": [
+            {
+              "index": 1,
+              "model": "deepseek-chat",
+              "host": "api.deepseek.com"
+            },
+            {
+              "index": 2,
+              "model": "gpt-4o-mini",
+              "host": "api.openai.com"
+            }
+          ],
+          "note": "Clean room 1 was written by deepseek-chat, clean room 2 by gpt-4o-mini (a different model)."
+        },
+        "rooms": [
+          {
+            "index": 1,
+            "model": "deepseek-chat",
+            "host": "api.deepseek.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 638,
+            "completion_tokens": 695
+          },
+          {
+            "index": 2,
+            "model": "gpt-4o-mini",
+            "host": "api.openai.com",
+            "status": "ready",
+            "reason": "",
+            "repaired": false,
+            "llm_calls": 1,
+            "prompt_tokens": 635,
+            "completion_tokens": 672
+          }
+        ]
+      },
+      "search": {
+        "enabled": false,
+        "unsupported": [
+          "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+        ]
+      },
+      "found_by_search": [],
+      "grounding": {
+        "checked": 3,
+        "dropped": []
+      },
+      "llm_by_step": {
+        "understand": {
+          "calls": 1,
+          "prompt_tokens": 1964,
+          "completion_tokens": 673,
+          "seconds": 5.2
+        },
+        "attack": {
+          "calls": 1,
+          "prompt_tokens": 1865,
+          "completion_tokens": 2031,
+          "seconds": 10.2
+        },
+        "cleanroom1": {
+          "calls": 1,
+          "prompt_tokens": 638,
+          "completion_tokens": 695,
+          "seconds": 3.7
+        },
+        "diagnose": {
+          "calls": 1,
+          "prompt_tokens": 1405,
+          "completion_tokens": 155,
+          "seconds": 2.0
+        },
+        "fix": {
+          "calls": 3,
+          "prompt_tokens": 6312,
+          "completion_tokens": 1590,
+          "seconds": 9.1
+        },
+        "cleanroom2": {
+          "calls": 1,
+          "prompt_tokens": 635,
+          "completion_tokens": 672,
+          "seconds": 8.3
+        }
+      },
+      "assertion_ids": {
+        "bug-a1": "a1"
+      }
+    }
+  ]
+}

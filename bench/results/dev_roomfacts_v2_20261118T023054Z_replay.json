@@ -1,0 +1,223 @@
+{
+  "glue_solenoid_short": {
+    "scenarios": 16,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 14
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 16
+      }
+    }
+  },
+  "nav_beacon_byte_timer": {
+    "scenarios": 13,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 13
+      },
+      "a2": {
+        "ref_fail": [
+          "builtin-bounce-d3",
+          "builtin-shortpress-d3",
+          "builtin-rapid-d3",
+          "builtin-floating-d3",
+          "llm-1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-5",
+          "llm-7",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 13
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 13
+      }
+    }
+  },
+  "rail_limit_invert": {
+    "scenarios": 18,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      },
+      "a3": {
+        "ref_fail": [],
+        "ref_exercised": 18
+      }
+    }
+  },
+  "weather_ok": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a0",
+          "builtin-hover-a0",
+          "builtin-spike-a0",
+          "builtin-disconnect-a0",
+          "builtin-extremes-a0",
+          "builtin-oscillation-a0",
+          "builtin-bounce-d5",
+          "builtin-shortpress-d5",
+          "builtin-rapid-d5",
+          "builtin-floating-d5",
+          "llm-4",
+          "llm-5"
+        ],
+        "ref_exercised": 19
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-hover-a0",
+          "builtin-extremes-a0",
+          "llm-1",
+          "llm-3",
+          "llm-5",
+          "llm-6",
+          "llm-8",
+          "llm-10"
+        ],
+        "ref_exercised": 14
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a6": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "loft_fan_ok": {
+    "scenarios": 21,
+    "assertions": {
+      "a1": {
+        "ref_fail": [
+          "llm-1"
+        ],
+        "ref_exercised": 11
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 3
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-bounce-d4",
+          "builtin-shortpress-d4",
+          "builtin-rapid-d4"
+        ],
+        "ref_exercised": 21
+      },
+      "a4": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 21
+      }
+    }
+  },
+  "lab_ph_ok": {
+    "scenarios": 17,
+    "assertions": {
+      "a1": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a2": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      },
+      "a3": {
+        "ref_fail": [
+          "builtin-ramp-a1",
+          "builtin-hover-a1",
+          "builtin-spike-a1",
+          "builtin-disconnect-a1",
+          "builtin-extremes-a1",
+          "builtin-oscillation-a1",
+          "llm-1",
+          "llm-3",
+          "llm-6",
+          "llm-8",
+          "llm-9",
+          "llm-10"
+        ],
+        "ref_exercised": 15
+      },
+      "a4": {
+        "ref_fail": [
+          "builtin-ramp-a1",
+          "builtin-hover-a1",
+          "builtin-extremes-a1",
+          "llm-2",
+          "llm-3",
+          "llm-4",
+          "llm-6",
+          "llm-8",
+          "llm-9"
+        ],
+        "ref_exercised": 15
+      },
+      "a5": {
+        "ref_fail": [],
+        "ref_exercised": 17
+      }
+    }
+  }
+}
