@@ -55,6 +55,73 @@ Three runs of each buggy preset through the live API on 2026-11-14, model `deeps
 | Alarm with blocking delay | Blocking `delay()` | 3 | 3/3 | 59 s |
 | Containment test | Hostile upload | — | 1/1 (11/11 checks) | 32 s |
 
+## Benchmark
+
+Hexorcist is measured on two sets of firmware cases, both in `bench/`:
+
+- **v2 (`bench/cases/`):** 40 frozen cases, 29 with planted bugs (32 bugs in all) and 11 correct sketches. Each has a plain-English spec and deterministic checks.
+- **Practice set (`bench/practice/`):** 10 cases with harder bugs that show up only under the right conditions (a clock near its rollover, a press at the wrong moment, a high reading): 7 with a planted bug and 3 correct decoys that look suspicious.
+
+**Both sets have been seen and tuned on. These are development numbers, not evidence about firmware the agent has not been shaped around.** A held-out set, written and frozen before the agent runs on it, is the next step and does not exist yet.
+
+### v2, 40 cases
+
+| System | Recall (32 bugs) | Honest recall | False alarms | Verified fix (29 buggy) | Cost of the 40 cases |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Plain review, DeepSeek | 32/32 (100%) | n/a | 81 | 27/29 (93%) | $0.027 |
+| Plain review, gpt-4o-mini | 28/32 (88%) | n/a | 53 | 14/29 (48%) | $0.024 |
+| Hexorcist, first run (2026-11-15) | 31/32 (97%) | 26/32 (81%) | 27 | 27/29 (93%) | $0.241 |
+| Hexorcist, latest (`dev_full5`, 2026-11-18) | 30/32 (94%) | 28/32 (88%) | 5 | 26/29 (90%) | $0.201 |
+
+Recall counts the planted bugs that a report was matched to (matching is judged by `gpt-4o-mini`). Honest recall counts a detection only if the matched check fails on the buggy sketch in a scenario where the known-good reference passes, so a check that no correct firmware passes does not count. It is computed for Hexorcist only. False alarms are strict: every report that matches no planted bug, on all 40 cases. Verified fix is the share of the 29 buggy cases whose patch passes the frozen checks. The plain reviews make no fix claim of their own, so theirs is the result of the patch they wrote. Hexorcist runs `deepseek-chat`, plus `gpt-4o-mini` for the second clean room. Cost leaves out the judge, about $0.006 per scoring.
+
+### Practice set, 10 cases
+
+| System | Recall (7 bugs) | Honest recall | False alarms (7 bugs + 3 decoys) | Verified fix (7 buggy) | Cost of the 10 cases |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Plain review, DeepSeek | 7/7 (6 defensible) | n/a | 13 | 5/7 | $0.0064 |
+| Plain review, gpt-4o-mini | 3/7 (2 defensible) | n/a | 16 | 0/7 | $0.0054 |
+| Hexorcist, latest (`dev_practice2`) | 6/7 | 4/7 | 3 | 4/7 | $0.052 |
+
+"Defensible" leaves out judge matches whose report does not name the planted cause (`bench/practice/README.md` lists them).
+
+### What this shows
+
+Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 against 81 for DeepSeek and 53 for gpt-4o-mini, and 3 on the practice set against 13 and 16. Its verified-fix rate (90%) is about that of the DeepSeek review (93%) and well above gpt-4o-mini's (48%), and every fix it claims was checked by re-running the suite (22 of 22 claims passed the frozen checks), which a review cannot do. Its recall (94%) is now close to the plain DeepSeek review (100%) but not above it, on both sets.
+
+### Known limits
+
+- **One run per column.** The checks are regenerated from the spec on every run, so single cases move from run to run with no change to the agent; treat a difference of one or two cases as noise.
+- **Honest recall exists only for Hexorcist.** The plain-review recall is as the judge matched it and was not checked against the reference; on the practice set two of those matches do not name the planted cause.
+- **Correlated clean-room errors.** The clean rooms are two sketches written from the spec alone; when both misread the same spec fact they drop a real check. This happened on `glue_solenoid_short` and `silo_fill_gauge`, and a prompt change (each room lists the spec facts first) fixed both. It can happen again on a spec fact the list does not catch.
+- **Cases it still misses.** On v2, `hold_to_arm_late` and the second bug of `panel_dual_debounce_edge`. On the practice set, `cold_store_alarm` in the latest run, and `orchard_spray_valve` and `tank_mixer_cycle` only through checks that the reference also fails.
+- **The stimulus search found nothing.** In 300 variants on the practice set no variant broke a check that had not already failed. It is off by default. The clock fast-forward in the attack plan exposed two bugs in earlier runs, but whether it does depends on the model placing a press just before a wrap.
+- **Remaining false alarms** include two checks no correct firmware passes (`blend_tank_sum_ovf` a2, `loft_fan_ok` a3) and three where the reference passes the check.
+
+### Reproduce
+
+Runs need a DeepSeek key (`LLM_*`) and an OpenAI key (`OPENAI_*`, for clean room 2 and the judge) in `.env`, and Docker. `bench/run_dev.sh` rebuilds the stack, refuses to start if it is set up differently, and resumes the last run unless `RUN_ID` is given.
+
+```bash
+RUN_ID="dev_full_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh                  # all 40 v2 cases: about $0.20, about 80 minutes
+RUN_ID="dev_practice_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh --dir practice   # the practice set: about $0.05, about 17 minutes
+RUN_ID="dev_practice_search_$(date -u +%Y%m%dT%H%M%SZ)" bench/run_dev.sh --dir practice --search   # the same with the stimulus search on
+```
+
+Then score, replay on the references and compare (add `--dir practice` for the practice set):
+
+```bash
+backend/.venv/bin/python -m bench.score --run-id RUN_score --hexorcist bench/results/RUN_hexorcist.json
+backend/.venv/bin/python -m bench.replay_run RUN
+backend/.venv/bin/python -m bench.dev_compare dev_full5_20261118T051737Z RUN
+```
+
+The plain reviews: `backend/.venv/bin/python -m bench.run_baseline --endpoint llm` (DeepSeek) and `--endpoint openai` (gpt-4o-mini), scored with `bench.score --baseline`. Results and the run-by-run comparison are in `bench/results/dev_comparison.md`.
+
+### Related work
+
+LLM-driven firmware testing in an emulator is not new. [arXiv 2509.09970](https://arxiv.org/abs/2509.09970) has LLMs generate firmware, tests it in QEMU with fuzzing, static analysis and runtime monitoring, and loops patches back through the model; its focus is security flaws (buffer overflows, races, denial of service). [EmbedBench](https://arxiv.org/abs/2506.11003) (the EmbedAgent paper) benchmarks how well LLMs write, design and migrate embedded code, scored by pass@1 on 126 cases. [Wokwi](https://wokwi.com) and [simavr](https://github.com/buserror/simavr) are simulators that run firmware you test with checks you write; Hexorcist runs on simavr. What Hexorcist adds is behaviour checks derived from a plain-English spec and judged in plain Python, with analog noise and contact bounce injected into the emulated pins, a clean-room oracle (firmware written from the spec alone) to tell a bug from a check no correct firmware passes, fixes accepted only after the whole suite re-runs, and a benchmark that counts false alarms and compares against the known-good reference. It has not been run against those systems, and none of this shows it finds more bugs than they do.
+
 ## Sandbox
 
 Every compile and every scenario run gets a fresh container that is always removed afterwards. Limits (from `backend/app/sandbox.py` and `backend/app/config.py`):
