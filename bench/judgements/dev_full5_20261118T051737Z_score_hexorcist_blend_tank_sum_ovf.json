@@ -1,0 +1,106 @@
+{
+  "case_id": "blend_tank_sum_ovf",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "ADC accumulator overflows int, producing wildly wrong percent",
+      "description": "`sum` is declared `int` (line 11) and accumulates up to WINDOW=50 raw ADC readings (lines 54-55) before averaging at line 59. With 10-bit readings up to 1023, the sum can reach ~51150, exceeding the signed 16-bit int maximum of 32767 and wrapping negative, so `avg` and the resulting percent are garbage. The measured evidence confirms this: printed -297.7 % and -140.3 % where the injected value was 350.0 % and 500.0 % respectively, and the glitch scenario printed 162.3 % for a 150.0 % input because a single spike pushed the window sum over the limit. Firmware printed -297.7 % at 4.00 s while the injected input was 350.0 to 350.0 %: off by 647.7 % (tolerance \u00b13). 7 of 7 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Blocking delay in button handler stretches pct: period",
+      "description": "The button check at lines 65-69 calls `delay(30)` every loop iteration while D5 is held LOW, and the main loop already has `delay(IDLE_MS)` (20 ms) at line 79, so each iteration takes ~50 ms instead of 20 ms. Because the pct print only occurs when the window fills (lines 57-63), the extra per-iteration delay stretches the interval between prints well beyond the 1000 ms \u00b1150 ms budget. The measured evidence shows gaps of 1246 ms, 1337 ms and 1733 ms in the button-bounce, rapid-press and floating-input scenarios. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "integer_overflow",
+      "description": "int accumulator of ADC samples overflows on AVR",
+      "check_ids": [
+        "a_val"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_val",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "blend_tank_sum_ovf",
+    "spec": "- Concentration probe on A4 at 10 mV per percent; force-sample button on D5 (pull-up, active LOW).\n- Average a rolling window of ADC samples and print `pct: <value>` about once per second.\n- Printed percent must stay within \u00b13.0 of the injected probe value.\n- Lines matching `pct: ` must appear every 1000 ms \u00b1150 ms.\n- Holding D5 LOW may emit a `blend force last=<n>` note without replacing the periodic `pct:` stream.\n- Every 1000 ms also print `blend batches=<n>` for batch accounting.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "integer_overflow",
+        "description": "int accumulator of ADC samples overflows on AVR",
+        "check_ids": [
+          "a_val"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_val",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for 'pct: (-?[0-9.]+)' match the stimulus (tolerance 3.0) (percent correct)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "ADC accumulator overflows int, producing wildly wrong percent",
+        "description": "`sum` is declared `int` (line 11) and accumulates up to WINDOW=50 raw ADC readings (lines 54-55) before averaging at line 59. With 10-bit readings up to 1023, the sum can reach ~51150, exceeding the signed 16-bit int maximum of 32767 and wrapping negative, so `avg` and the resulting percent are garbage. The measured evidence confirms this: printed -297.7 % and -140.3 % where the injected value was 350.0 % and 500.0 % respectively, and the glitch scenario printed 162.3 % for a 150.0 % input because a single spike pushed the window sum over the limit. Firmware printed -297.7 % at 4.00 s while the injected input was 350.0 to 350.0 %: off by 647.7 % (tolerance \u00b13). 7 of 7 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Blocking delay in button handler stretches pct: period",
+        "description": "The button check at lines 65-69 calls `delay(30)` every loop iteration while D5 is held LOW, and the main loop already has `delay(IDLE_MS)` (20 ms) at line 79, so each iteration takes ~50 ms instead of 20 ms. Because the pct print only occurs when the window fills (lines 57-63), the extra per-iteration delay stretches the interval between prints well beyond the 1000 ms \u00b1150 ms budget. The measured evidence shows gaps of 1246 ms, 1337 ms and 1733 ms in the button-bounce, rapid-press and floating-input scenarios. Expected /^pct: / every 1000 \u00b1 150 ms; 4 of 7 intervals were out of tolerance, worst gap 1246 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes integer overflow in ADC accumulator, matching the root cause.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes integer overflow in ADC accumulator, matching the root cause."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1155,
+    "completion_tokens": 92,
+    "cost_usd": 0.00022845,
+    "cached": false
+  }
+}

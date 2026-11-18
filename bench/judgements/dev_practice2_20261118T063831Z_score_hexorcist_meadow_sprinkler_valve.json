@@ -1,0 +1,46 @@
+{
+  "case_id": "meadow_sprinkler_valve",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Debounce settle logic misses valid presses",
+      "description": "scanStart() only accepts a press once rawLevel has been stable for SETTLE_MS (20 ms) at line 46, and it resets rawChangedAt on every edge at lines 41-45. A press that is interrupted by a bounce edge, or that arrives while a prior spike train keeps rawChangedAt fresh, never reaches the stable window, so openZone() at line 51 is never called; measured evidence shows D10 did not start within 100 ms of the trigger at 3.00 s, 1.02 s, and 1.00 s. Because the debounce requires a full 20 ms of uninterrupted stability before acting, presses near the settle boundary or with bounce spaced under 20 ms are dropped entirely rather than accepted. D10 missed 1 of 4 trigger(s): D10 did not start within 100 ms of the trigger at 3.00 s.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "meadow_sprinkler_valve",
+    "spec": "- Zone valve relay on D10; start button on D6 with internal pull-up (active LOW).\n- A settled press on D6 opens the valve (D10 HIGH) for 500 ms, starting within 100 ms of the press.\n- Contact bounce up to 12 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D10 LOW) whenever no press has been accepted.\n- Print `zone n=<count>` every 1000 ms.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Debounce settle logic misses valid presses",
+        "description": "scanStart() only accepts a press once rawLevel has been stable for SETTLE_MS (20 ms) at line 46, and it resets rawChangedAt on every edge at lines 41-45. A press that is interrupted by a bounce edge, or that arrives while a prior spike train keeps rawChangedAt fresh, never reaches the stable window, so openZone() at line 51 is never called; measured evidence shows D10 did not start within 100 ms of the trigger at 3.00 s, 1.02 s, and 1.00 s. Because the debounce requires a full 20 ms of uninterrupted stability before acting, presses near the settle boundary or with bounce spaced under 20 ms are dropped entirely rather than accepted. D10 missed 1 of 4 trigger(s): D10 did not start within 100 ms of the trigger at 3.00 s.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"No truth bugs present, all reported bugs are false alarms.\"\n}",
+  "judgement": {
+    "matches": [],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "No truth bugs present, all reported bugs are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 787,
+    "completion_tokens": 51,
+    "cost_usd": 0.00014865,
+    "cached": false
+  }
+}

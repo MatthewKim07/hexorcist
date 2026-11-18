@@ -1,0 +1,76 @@
+{
+  "case_id": "cold_store_alarm",
+  "system": "hexorcist",
+  "reported": [],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "noise_filter",
+      "description": "The count of consecutive high samples is reset only by a sample at or below the clear level, so spikes between 8.0 and 12.0 C add up across time and eventually raise the alarm",
+      "check_ids": [
+        "a_spikes"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "noise_filter",
+      "description": "The count of consecutive high samples is reset only by a sample at or below the clear level, so spikes between 8.0 and 12.0 C add up across time and eventually raise the alarm",
+      "check_ids": [
+        "a_spikes"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_spikes",
+          "type": "max_toggles",
+          "behaviour": "D10 must not toggle more than 0 times in any 6000 ms window (Isolated spikes never raise the alarm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "cold_store_alarm",
+    "spec": "- Cold-store probe on A1 at 10 mV/\u00b0C; alarm relay on D10.\n- Sample the probe every 20 ms.\n- Raise the alarm (D10 HIGH) once three consecutive samples are at or above 12.0 \u00b0C, within 300 ms of the third.\n- A sample below 12.0 \u00b0C ends a run of consecutive high samples, so isolated spikes never raise the alarm.\n- Clear the alarm (D10 LOW) within 300 ms of a sample at or below 8.0 \u00b0C.\n- Print `cold <temp> C alarm=<0|1>` every 500 ms with one decimal place.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "noise_filter",
+        "description": "The count of consecutive high samples is reset only by a sample at or below the clear level, so spikes between 8.0 and 12.0 C add up across time and eventually raise the alarm",
+        "check_ids": [
+          "a_spikes"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_spikes",
+            "type": "max_toggles",
+            "behaviour": "D10 must not toggle more than 0 times in any 6000 ms window (Isolated spikes never raise the alarm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": []
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no reported bugs to match\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"No reported bugs, all are false alarms.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no reported bugs to match"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "No reported bugs, all are false alarms."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 739,
+    "completion_tokens": 77,
+    "cost_usd": 0.00015705,
+    "cached": true
+  }
+}

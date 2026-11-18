@@ -1,0 +1,53 @@
+{
+  "case_id": "loft_fan_ok",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "Fan toggles far exceed the 2-per-5s limit on button activity",
+      "description": "The boost button is read directly with digitalRead(BOOST_PIN) at line 62 with no debounce and no edge detection, so every bounce or rapid press immediately calls driveFan(true) at line 66 and the fan is driven again on each 50 ms sample. Because the boost branch bypasses the hysteresis hold counters and there is no rate limiter anywhere in driveFan (lines 29-33), measured D5 toggled 7 times in a 5000 ms window starting at 1.00 s in the bounce scenario and 26 times starting at 1.10 s in the rapid-press scenario, against a limit of 2. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [],
+  "truth_for_judge": [],
+  "judge_input": {
+    "case_id": "loft_fan_ok",
+    "spec": "- Temperature probe on A3 at 10 mV/\u00b0C; loft fan relay on D5; boost pushbutton on D4 to ground with internal pull-up (active LOW).\n- Turn the fan ON at 36.0 \u00b0C or above; turn it OFF at 32.0 \u00b0C or below.\n- While D4 is held LOW, force the fan ON.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print `loft: <temp> C fan=ON` or `loft: <temp> C fan=OFF` every 1000 ms.\n- Apply fan changes within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "Fan toggles far exceed the 2-per-5s limit on button activity",
+        "description": "The boost button is read directly with digitalRead(BOOST_PIN) at line 62 with no debounce and no edge detection, so every bounce or rapid press immediately calls driveFan(true) at line 66 and the fan is driven again on each 50 ms sample. Because the boost branch bypasses the hysteresis hold counters and there is no rate limiter anywhere in driveFan (lines 29-33), measured D5 toggled 7 times in a 5000 ms window starting at 1.00 s in the bounce scenario and 26 times starting at 1.10 s in the rapid-press scenario, against a limit of 2. D5 toggled 7 times in a 5000 ms window starting at 1.00 s (limit 2), and 8 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": -1, \"matched\": false, \"reason\": \"no truth bugs to match against\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"All reported bugs are false alarms as there are no truth bugs.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": -1,
+        "matched": false,
+        "reason": "no truth bugs to match against"
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "All reported bugs are false alarms as there are no truth bugs."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 821,
+    "completion_tokens": 86,
+    "cost_usd": 0.00017475,
+    "cached": false
+  }
+}

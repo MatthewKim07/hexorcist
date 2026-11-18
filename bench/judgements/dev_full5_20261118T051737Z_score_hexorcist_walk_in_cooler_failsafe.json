@@ -1,0 +1,90 @@
+{
+  "case_id": "walk_in_cooler_failsafe",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a3",
+      "title": "No out-of-range or floating-sensor fault handling",
+      "description": "The loop only compares tempC against the 8.0/4.0 \u00b0C band (lines 70-95) and never checks for readings below 0.0 \u00b0C or above 60.0 \u00b0C, so an out-of-range or floating probe value is treated as a valid temperature. With a floating A3 the measured D7 was not LOW for 1140 ms (allowed 500 ms), including a 620 ms violation from 7380-8000 ms, because a drifting mid-scale reading >= 8.0 \u00b0C drives the compressor ON via lines 88-90. There is no fault branch to force the relay OFF within 500 ms. During the fault, D7 was not in safe state LOW for 1140 ms (allowed 500 ms to react).",
+      "category": "safe_state_on_fault"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_failsafe",
+      "description": "No safe-OFF on floating/out-of-range probe",
+      "check_ids": [
+        "a_fault"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_fault",
+          "type": "safe_state_on_fault",
+          "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "walk_in_cooler_failsafe",
+    "spec": "- Cabinet probe on A3 at 10 mV/\u00b0C; compressor relay on D7; service stop on D4 (pull-up, active LOW).\n- Turn the compressor ON when temperature reaches 8.0 \u00b0C or above, and OFF when temperature falls to 4.0 \u00b0C or below.\n- If the sensor is floating, or temperature reads below 0.0 \u00b0C or above 60.0 \u00b0C, force the compressor OFF within 500 ms.\n- While D4 is held LOW, keep the compressor OFF for service.\n- Print `cooler: <temp> C comp=ON` or `cooler: <temp> C comp=OFF` every 1000 ms.\n- Reach the commanded compressor state within 500 ms of a sustained in-range band crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_failsafe",
+        "description": "No safe-OFF on floating/out-of-range probe",
+        "check_ids": [
+          "a_fault"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_fault",
+            "type": "safe_state_on_fault",
+            "behaviour": "D7 must stay 0 during sensor fault ({'pin': 'A3', 'op': '>', 'value': 60}) (Overrange forces OFF)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a3",
+        "title": "No out-of-range or floating-sensor fault handling",
+        "description": "The loop only compares tempC against the 8.0/4.0 \u00b0C band (lines 70-95) and never checks for readings below 0.0 \u00b0C or above 60.0 \u00b0C, so an out-of-range or floating probe value is treated as a valid temperature. With a floating A3 the measured D7 was not LOW for 1140 ms (allowed 500 ms), including a 620 ms violation from 7380-8000 ms, because a drifting mid-scale reading >= 8.0 \u00b0C drives the compressor ON via lines 88-90. There is no fault branch to force the relay OFF within 500 ms. During the fault, D7 was not in safe state LOW for 1140 ms (allowed 500 ms to react).",
+        "category": "safe_state_on_fault"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same fault handling issue for out-of-range and floating sensor.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug directly addresses the missing failsafe for the floating/out-of-range probe, matching the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same fault handling issue for out-of-range and floating sensor."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug directly addresses the missing failsafe for the floating/out-of-range probe, matching the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 981,
+    "completion_tokens": 101,
+    "cost_usd": 0.00020775,
+    "cached": false
+  }
+}

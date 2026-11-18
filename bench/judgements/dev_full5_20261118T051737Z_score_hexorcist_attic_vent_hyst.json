@@ -1,0 +1,107 @@
+{
+  "case_id": "attic_vent_hyst",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "No hysteresis: fan turns off immediately below 42 \u00b0C instead of holding until 38 \u00b0C",
+      "description": "The control logic uses a single trip point: line 66 turns the fan on at >=42.0 \u00b0C and the else branch at lines 70-73 turns it off for any temperature below 42.0 \u00b0C, so the required 38.0 \u00b0C release threshold is never implemented. This makes the fan drop out in the 38-42 \u00b0C band, and the measured evidence shows D8 not LOW for 399 ms while required (first violation at 500.92 ms) and 1051 ms in the bouncy-override scenario. The override release path at lines 58-74 also re-evaluates temperature instantly with no debounce or hold, so a released button at cold temperature forces the fan off contrary to the commanded state. D8 was in the wrong state for 2001 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 399 ms while required (grace 500 ms).",
+      "category": "output_follows"
+    },
+    {
+      "id": "bug-a3",
+      "title": "No filtering or hysteresis causes relay chatter on noise and threshold hover",
+      "description": "Every 50 ms sample is acted on directly (lines 53-56) with no averaging, debounce, or minimum dwell time, and the single-threshold comparison at line 66 flips the output on any sample crossing 42.0 \u00b0C. The measured evidence shows 57 toggles in a 5000 ms window during threshold hover and 8 toggles during a brief glitch spike, far above the limit of 2. Because applyFan (lines 25-29) is called unconditionally each sample, sensor noise and button bounce translate directly into relay state changes. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "missing_hysteresis",
+      "description": "Single 42 C trip point chatters under sensor noise",
+      "check_ids": [
+        "a_chatter"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_chatter",
+          "type": "max_toggles",
+          "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "attic_vent_hyst",
+    "spec": "- LM35 temperature probe on A0 scaled at 10 mV/\u00b0C; ridge-vent relay on D8; override pushbutton on D3 to ground with internal pull-up (active LOW).\n- Turn the vent fan ON when attic temperature reaches 42.0 \u00b0C or above, and turn it OFF when temperature falls to 38.0 \u00b0C or below.\n- While D3 is held LOW, force the fan ON regardless of temperature.\n- Fan must not change state more than 2 times in any 5000 ms window.\n- Print one status line every 1000 ms in the form `attic: <temp> C fan=ON` or `attic: <temp> C fan=OFF` with temperature to one decimal place.\n- Reach the commanded fan state within 500 ms of a sustained threshold crossing.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "missing_hysteresis",
+        "description": "Single 42 C trip point chatters under sensor noise",
+        "check_ids": [
+          "a_chatter"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_chatter",
+            "type": "max_toggles",
+            "behaviour": "D8 must not toggle more than 2 times in any 5000 ms window (Fan switching limit)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "No hysteresis: fan turns off immediately below 42 \u00b0C instead of holding until 38 \u00b0C",
+        "description": "The control logic uses a single trip point: line 66 turns the fan on at >=42.0 \u00b0C and the else branch at lines 70-73 turns it off for any temperature below 42.0 \u00b0C, so the required 38.0 \u00b0C release threshold is never implemented. This makes the fan drop out in the 38-42 \u00b0C band, and the measured evidence shows D8 not LOW for 399 ms while required (first violation at 500.92 ms) and 1051 ms in the bouncy-override scenario. The override release path at lines 58-74 also re-evaluates temperature instantly with no debounce or hold, so a released button at cold temperature forces the fan off contrary to the commanded state. D8 was in the wrong state for 2001 ms across 5 interval(s), first at 501 ms: D8 was not LOW for 399 ms while required (grace 500 ms).",
+        "category": "output_follows"
+      },
+      {
+        "id": "bug-a3",
+        "title": "No filtering or hysteresis causes relay chatter on noise and threshold hover",
+        "description": "Every 50 ms sample is acted on directly (lines 53-56) with no averaging, debounce, or minimum dwell time, and the single-threshold comparison at line 66 flips the output on any sample crossing 42.0 \u00b0C. The measured evidence shows 57 toggles in a 5000 ms window during threshold hover and 8 toggles during a brief glitch spike, far above the limit of 2. Because applyFan (lines 25-29) is called unconditionally each sample, sensor noise and button bounce translate directly into relay state changes. D8 toggled 57 times in a 5000 ms window starting at 900 ms (limit 2), and 77 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the lack of hysteresis causing immediate fan state change.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"Both reported bugs relate to the same underlying issue of missing hysteresis, with the first report being the most comprehensive.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the lack of hysteresis causing immediate fan state change."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "Both reported bugs relate to the same underlying issue of missing hysteresis, with the first report being the most comprehensive."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1227,
+    "completion_tokens": 117,
+    "cost_usd": 0.00025425,
+    "cached": false
+  }
+}

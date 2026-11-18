@@ -91,6 +91,41 @@ Verified fix on the frozen checks: 4/7 in both runs. The search-off run claimed 
 - **Clock fast-forward in the attack plan:** `orchard_spray_valve` in the search-off run. The check fails honestly in one scenario only, `llm-2`, which starts the clock at 4294967240. In the search run the model's clock scenarios started elsewhere, the planted check was already failing for an unrelated reason (an 8 ms press that the reference also misses), and the bug was missed. `tank_mixer_cycle` in the search run is the second case (`llm-7`, above). The model added `start_millis` scenarios in 9 of 10 cases without search and in all 10 with it, and none of the three decoys drew a false report from them.
 - **Search variants that start the clock late (`uptime`, 4 to 11 per case):** none exposed a bug. I replayed the 30 orchard variants offline: the `uptime` variant `search-9` only broke the already-failing 8 ms check. The variants move the wrap into the run but leave the presses where they were, so a burst falls in the 400 ms before the wrap only by chance. Whether to align the wrap with an input event is a change I have not made.
 
+## Hexorcist with the room-facts prompt, all ten cases (`dev_practice2_20261118T063831Z`, 2026-11-18)
+
+The full practice set with the clean rooms writing a `// SPEC FACTS` block first (search off), against the two earlier runs. One run each, no case changed.
+
+**Audit.** No error rows, nothing missing, mixed rooms with no fallback. Cross-check ran in 8 cases with room 1 on `deepseek-chat` and room 2 on `gpt-4o-mini`, ready every time (16 of 16 rooms carry the `SPEC FACTS` block and call `Serial.begin`). 2 cases needed no room (0 calls, $0 OpenAI). Spend: DeepSeek $0.0485, OpenAI $0.0037, in all $0.052, plus about $0.0014 for the judge.
+
+| Case | Planted bug | Search off (earlier run) | Search on (earlier run) | **Room facts, search off** |
+| --- | --- | --- | --- | --- |
+| `orchard_spray_valve` | rollover | honest | hollow | hollow, status `partial` |
+| `tank_mixer_cycle` | 16-bit wrap | hollow | hollow | hollow, 1 false alarm |
+| `door_chime_poll` | press vs sampling | honest | missed | honest |
+| `cold_store_alarm` | noise filter | missed (`a1` unconfirmed) | honest (weak) | missed (`a1` unconfirmed, fails on the reference) |
+| `lift_call_panel` | blocking wait | honest, 1 false alarm | honest, 1 | honest, 1 (`partial`) |
+| `stair_light_timer` | two features | honest | honest | honest |
+| `silo_fill_gauge` | overflow | missed (`a2`, `a3` unconfirmed, pass on the reference) | missed (same) | **honest, `fixed`** |
+| `meadow_sprinkler_valve` | decoy | 1 report | 1 report | 1 report |
+| `grain_bin_gauge` | decoy | nothing | nothing | nothing |
+| `loading_dock_horn` | decoy | nothing | nothing | nothing |
+
+| | Search off | Search on | Room facts |
+| --- | ---: | ---: | ---: |
+| Recall | 5/7 | 5/7 | **6/7** |
+| Honest recall | 4/7 | 3/7 | 4/7 |
+| False alarms (bugs + decoys) | 1 + 1 | 1 + 1 | 2 + 1 |
+| Verified fix on frozen checks | 4/7 | 4/7 | 4/7 |
+| `fixed` claims that pass the frozen checks | 5/6 | 3/4 | 4/4 |
+| Unconfirmed checks | 6 | 3 | 3 |
+| ...of which pass on the reference | 2 | 2 | **0** |
+| Cost / time | $0.037, 15 min | $0.047, 22 min | $0.052, 17 min |
+
+- **`silo_fill_gauge` is found and fixed** now that the rooms convert the scale, and no unconfirmed check passes on the reference any more. This is the targeted effect, and it held at full-set scale.
+- **`orchard_spray_valve` is fragile.** It was found honestly only in the run whose model-written clock scenario started at 4294967240, and is hollow in the other two. `tank_mixer_cycle` stays hollow in all three. The rooms do not change either: they depend on whether the model's `start_millis` scenarios land a press just before the wrap.
+- **False alarms:** the three are all class B (`lift_call_panel` a1, `meadow_sprinkler_valve` a1, `tank_mixer_cycle` a4). The `loading_dock_horn` false alarm of the five-case room-facts run did not come back here, so that one was regenerated-check noise, not the prompt. `tank_mixer_cycle` drew a class B false alarm in both room-facts runs (a1, then a4) and in neither earlier run, so that case may be a real side effect of the prompt, or chance; two runs cannot tell.
+- **Decoys:** `grain_bin_gauge` and `loading_dock_horn` drew no report; `meadow_sprinkler_valve` drew one and was patched, as in every run.
+
 ## Fingerprint
 
 Computed by `bench/freeze_hash.py --dir practice` over every file except this README. Update it here whenever a case changes.

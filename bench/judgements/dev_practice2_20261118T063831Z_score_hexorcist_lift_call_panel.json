@@ -1,0 +1,106 @@
+{
+  "case_id": "lift_call_panel",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Short glitches accepted as presses due to settle timing",
+      "description": "The debounce in scanButton() only compares the raw level against rawLevel and resets rawChangedAt on any change (lines 27-31), then accepts the level once it has been stable for SETTLE_MS (lines 32-38). A 5 ms LOW glitch that happens to be sampled at the boundary can be treated as settled, and the blocking acknowledge() call (lines 18-20) then prevents further sampling, so subsequent real presses are missed. Measured: 'D11 missed 3 of 4 trigger(s): D11 did not start within 100 ms of the trigger at 1.00 s.' D11 missed 3 of 4 trigger(s): D11 did not start within 100 ms of the trigger at 1.00 s.",
+      "category": "timed_pulse"
+    },
+    {
+      "id": "bug-a2",
+      "title": "Blocking buzzer delay stalls the 500 ms heartbeat",
+      "description": "acknowledge() uses delay(BUZZ_MS) for 300 ms (line 19), which blocks loop() so the heartbeat check at lines 63-67 cannot run on schedule. Because lastBeat is reset to millis() after the delay, the missed interval is not caught up, producing gaps well over the 620 ms upper bound. Measured: '5 of 13 intervals were out of tolerance, worst gap 798 ms.' Expected /^alive [0-9]+$/ every 500 \u00b1 120 ms; 5 of 13 intervals were out of tolerance, worst gap 798 ms.",
+      "category": "serial_period"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "blocking_wait",
+      "description": "The acknowledgement waits 300 ms inside delay(), so a heartbeat that falls due during it is printed up to 300 ms late; only presses that land shortly before a heartbeat show it",
+      "check_ids": [
+        "a_beat"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "blocking_wait",
+      "description": "The acknowledgement waits 300 ms inside delay(), so a heartbeat that falls due during it is printed up to 300 ms late; only presses that land shortly before a heartbeat show it",
+      "check_ids": [
+        "a_beat"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_beat",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^alive \\\\d+$' every 500 ms (Heartbeat every 500 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "lift_call_panel",
+    "spec": "- Call button on D5 with internal pull-up (active LOW); buzzer on D11.\n- A settled press on D5 sounds the buzzer: D11 HIGH for 300 ms, starting within 100 ms of the press.\n- Contact bounce up to 10 ms on press and release must not sound the buzzer twice.\n- Presses while the buzzer is sounding are ignored.\n- D11 stays LOW whenever no press has been accepted.\n- Print `alive <n>` every 500 ms \u00b1120 ms, with n counting the lines printed.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "blocking_wait",
+        "description": "The acknowledgement waits 300 ms inside delay(), so a heartbeat that falls due during it is printed up to 300 ms late; only presses that land shortly before a heartbeat show it",
+        "check_ids": [
+          "a_beat"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_beat",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^alive \\\\d+$' every 500 ms (Heartbeat every 500 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Short glitches accepted as presses due to settle timing",
+        "description": "The debounce in scanButton() only compares the raw level against rawLevel and resets rawChangedAt on any change (lines 27-31), then accepts the level once it has been stable for SETTLE_MS (lines 32-38). A 5 ms LOW glitch that happens to be sampled at the boundary can be treated as settled, and the blocking acknowledge() call (lines 18-20) then prevents further sampling, so subsequent real presses are missed. Measured: 'D11 missed 3 of 4 trigger(s): D11 did not start within 100 ms of the trigger at 1.00 s.' D11 missed 3 of 4 trigger(s): D11 did not start within 100 ms of the trigger at 1.00 s.",
+        "category": "timed_pulse"
+      },
+      {
+        "id": "bug-a2",
+        "title": "Blocking buzzer delay stalls the 500 ms heartbeat",
+        "description": "acknowledge() uses delay(BUZZ_MS) for 300 ms (line 19), which blocks loop() so the heartbeat check at lines 63-67 cannot run on schedule. Because lastBeat is reset to millis() after the delay, the missed interval is not caught up, producing gaps well over the 620 ms upper bound. Measured: '5 of 13 intervals were out of tolerance, worst gap 798 ms.' Expected /^alive [0-9]+$/ every 500 \u00b1 120 ms; 5 of 13 intervals were out of tolerance, worst gap 798 ms.",
+        "category": "serial_period"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1, \"matched\": true, \"reason\": \"Blocking buzzer delay stalls the 500 ms heartbeat matches the heartbeat delay issue.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [0],\n  \"unique_false_alarm_indices\": [0],\n  \"notes\": \"The first reported bug about glitches is unrelated to the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1,
+        "matched": true,
+        "reason": "Blocking buzzer delay stalls the 500 ms heartbeat matches the heartbeat delay issue."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      0
+    ],
+    "unique_false_alarm_indices": [
+      0
+    ],
+    "notes": "The first reported bug about glitches is unrelated to the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1068,
+    "completion_tokens": 96,
+    "cost_usd": 0.0002178,
+    "cached": false
+  }
+}

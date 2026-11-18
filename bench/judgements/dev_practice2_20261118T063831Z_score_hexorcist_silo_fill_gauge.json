@@ -1,0 +1,120 @@
+{
+  "case_id": "silo_fill_gauge",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a2",
+      "title": "Running total overflows int, producing negative levels",
+      "description": "`total` is declared as `int` on line 13, but it accumulates 40 ADC readings of up to 1023, so the sum can reach ~40920, which overflows the 16-bit signed int (max 32767). The overflowed negative total is then converted in averageMm() on line 28, yielding the measured printed values of -3811 mm, -3810 mm and -3816 mm while the injected level was ~4200 mm (off by ~8000 mm). Firmware printed -3811 mm at 3.02 s while the injected input was 4146.9 to 4254.6 mm: off by 7957.9 mm (tolerance \u00b140). 9 of 9 values were wrong.",
+      "category": "serial_value_matches"
+    },
+    {
+      "id": "bug-a3",
+      "title": "Lamp driven from overflowed average, never reaches threshold",
+      "description": "showLamp() on line 33 compares averageMm() against FULL_MM, but averageMm() returns a negative value because of the int overflow of `total` (line 13/28). As a result D6 stays LOW even when the probe is at or above 4200 mm, as measured: D6 was not HIGH for 1730 ms on the nominal ramp and 2420 ms at max range, exceeding the 1500 ms grace. D6 was in the wrong state for 2000 ms across 2 interval(s), first at 1.50 s: D6 was not HIGH for 500 ms while required (grace 1500 ms).",
+      "category": "output_follows"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "accumulator_overflow",
+      "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+      "check_ids": [
+        "a_level",
+        "a_lamp"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_level",
+          "type": "serial_value_matches",
+          "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+        },
+        {
+          "check_id": "a_lamp",
+          "type": "output_follows",
+          "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "silo_fill_gauge",
+    "spec": "- Level probe on A2 scaled at 1 mV per mm; full-level lamp on D6.\n- Take one sample every 25 ms and average the last 40 into a level in millimetres. Fill the window at power-up so the first printed level is already valid.\n- Print `level <mm> mm` every 1000 ms; the printed level must stay within \u00b140 mm of the injected level.\n- Drive D6 HIGH when the averaged level is at or above 4200 mm; otherwise LOW, within 1500 ms.\n- The probe reads up to 4800 mm.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "accumulator_overflow",
+        "description": "The running sum of 40 ADC readings is a 16-bit int, which overflows once the level is above about 4000 mm, so the printed level turns negative and the lamp never lights",
+        "check_ids": [
+          "a_level",
+          "a_lamp"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_level",
+            "type": "serial_value_matches",
+            "behaviour": "serial values for '^level (-?\\\\d+) mm$' match the stimulus (tolerance 40) (Printed level tracks the probe)"
+          },
+          {
+            "check_id": "a_lamp",
+            "type": "output_follows",
+            "behaviour": "D6 must follow its stimulus; HIGH when A2 >= 4200; LOW when A2 < 4200; within 1500 ms (Lamp at 4200 mm)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a2",
+        "title": "Running total overflows int, producing negative levels",
+        "description": "`total` is declared as `int` on line 13, but it accumulates 40 ADC readings of up to 1023, so the sum can reach ~40920, which overflows the 16-bit signed int (max 32767). The overflowed negative total is then converted in averageMm() on line 28, yielding the measured printed values of -3811 mm, -3810 mm and -3816 mm while the injected level was ~4200 mm (off by ~8000 mm). Firmware printed -3811 mm at 3.02 s while the injected input was 4146.9 to 4254.6 mm: off by 7957.9 mm (tolerance \u00b140). 9 of 9 values were wrong.",
+        "category": "serial_value_matches"
+      },
+      {
+        "id": "bug-a3",
+        "title": "Lamp driven from overflowed average, never reaches threshold",
+        "description": "showLamp() on line 33 compares averageMm() against FULL_MM, but averageMm() returns a negative value because of the int overflow of `total` (line 13/28). As a result D6 stays LOW even when the probe is at or above 4200 mm, as measured: D6 was not HIGH for 1730 ms on the nominal ramp and 2420 ms at max range, exceeding the 1500 ms grace. D6 was in the wrong state for 2000 ms across 2 interval(s), first at 1.50 s: D6 was not HIGH for 500 ms while required (grace 1500 ms).",
+        "category": "output_follows"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes the same root cause of accumulator overflow leading to negative printed levels.\"}\n  ],\n  \"duplicate_of_truth\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 1}\n  ],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"All reported bugs are matched to the truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes the same root cause of accumulator overflow leading to negative printed levels."
+      }
+    ],
+    "duplicate_of_truth": [
+      {
+        "truth_id": "b1",
+        "reported_index": 1
+      }
+    ],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "All reported bugs are matched to the truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1178,
+    "completion_tokens": 107,
+    "cost_usd": 0.0002409,
+    "cached": false
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "case_id": "orchard_spray_valve",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Presses during an open valve are dropped, so later presses never start a burst",
+      "description": "In scanTrigger() line 49 the acceptance condition requires !valveOpen, so any settled press that arrives while the valve is open is discarded and pressed is still updated on line 53. When the valve closes at line 80, the button is already held-down state and no new edge occurs, so the press never produces a pulse; the engine measured \"D8 missed 2 of 5 trigger(s): D8 did not start within 100 ms of the trigger at 500 ms\" and again at 1.50 s. The spec only requires ignoring presses during the pulse, not losing presses that arrive near the end of it, and the 12 ms settle window on line 46 combined with this gating makes the miss reproducible. D8 missed 2 of 5 trigger(s): D8 did not start within 100 ms of the trigger at 500 ms.",
+      "category": "timed_pulse"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+      "check_ids": [
+        "a_burst"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "millis_rollover",
+      "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+      "check_ids": [
+        "a_burst"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_burst",
+          "type": "timed_pulse",
+          "behaviour": "D8 pulse length around None ms (tolerance 80 ms) (A press opens the valve for 400 ms)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "orchard_spray_valve",
+    "spec": "- Spray valve relay on D8; trigger button on D2 with internal pull-up (active LOW).\n- A settled press on D2 opens the valve (D8 HIGH) for 400 ms, starting within 100 ms of the press.\n- Contact bounce up to 8 ms on press and release must not start a second burst.\n- Presses while the valve is open are ignored and do not extend it.\n- The valve stays closed (D8 LOW) whenever no press has been accepted.\n- Print `spray n=<count> open=<0|1>` every 1000 ms.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "millis_rollover",
+        "description": "The close time is stored as an absolute millis() value, so a burst that starts within 400 ms of the 32-bit rollover closes at once",
+        "check_ids": [
+          "a_burst"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_burst",
+            "type": "timed_pulse",
+            "behaviour": "D8 pulse length around None ms (tolerance 80 ms) (A press opens the valve for 400 ms)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Presses during an open valve are dropped, so later presses never start a burst",
+        "description": "In scanTrigger() line 49 the acceptance condition requires !valveOpen, so any settled press that arrives while the valve is open is discarded and pressed is still updated on line 53. When the valve closes at line 80, the button is already held-down state and no new edge occurs, so the press never produces a pulse; the engine measured \"D8 missed 2 of 5 trigger(s): D8 did not start within 100 ms of the trigger at 500 ms\" and again at 1.50 s. The spec only requires ignoring presses during the pulse, not losing presses that arrive near the end of it, and the 12 ms settle window on line 46 combined with this gating makes the miss reproducible. D8 missed 2 of 5 trigger(s): D8 did not start within 100 ms of the trigger at 500 ms.",
+        "category": "timed_pulse"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Describes the observable behavior of missed triggers due to valve being open, which relates to the close time issue.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [],\n  \"unique_false_alarm_indices\": [],\n  \"notes\": \"The reported bug accurately describes a symptom related to the true bug's behavior.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Describes the observable behavior of missed triggers due to valve being open, which relates to the close time issue."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [],
+    "unique_false_alarm_indices": [],
+    "notes": "The reported bug accurately describes a symptom related to the true bug's behavior."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 934,
+    "completion_tokens": 100,
+    "cost_usd": 0.0002001,
+    "cached": false
+  }
+}

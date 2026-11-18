@@ -1,0 +1,119 @@
+{
+  "case_id": "tank_mixer_cycle",
+  "system": "hexorcist",
+  "reported": [
+    {
+      "id": "bug-a1",
+      "title": "Relay pulse length wrong and runs mistimed",
+      "description": "The run is scheduled with a single-shot nextRunAt that is only advanced inside startRun (line 30), and the stop check at line 64 uses a 16-bit millis() comparison; the measured evidence shows pulses of 201 ms and 500 ms instead of 2000 ms (e.g. \"pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms\"). Because the schedule is not re-armed relative to the cycle and the hold switch gates the output in drive() (line 46) without pausing the timer, the relay is cut short whenever D3 is LOW, so the 2000 ms run is never delivered. D6 missed 10 of 13 trigger(s): D6 did not start within 100 ms of the trigger at 952 ms. 8 of 8 pulse(s) had the wrong length: pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms.",
+      "category": "timed_pulse"
+    },
+    {
+      "id": "bug-a4",
+      "title": "Relay chatters on bouncy hold input",
+      "description": "held() at line 41 reads D3 directly with no debounce, and drive() at lines 46-47 writes the relay every loop iteration based on that raw reading, so contact bounce produces many edges (measured \"16 toggles\" in a 5000 ms window, limit 2). The bounce at the run boundary also toggles D6 repeatedly because running stays true while held() flickers, giving \"10 toggles\" starting at 5.15 s. D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+      "category": "max_toggles"
+    }
+  ],
+  "truth": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ]
+    }
+  ],
+  "truth_for_judge": [
+    {
+      "id": "b1",
+      "category": "narrow_timer",
+      "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+      "check_ids": [
+        "a_start",
+        "a_rate"
+      ],
+      "exposing_checks": [
+        {
+          "check_id": "a_start",
+          "type": "serial_period",
+          "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+        },
+        {
+          "check_id": "a_rate",
+          "type": "max_toggles",
+          "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+        }
+      ]
+    }
+  ],
+  "judge_input": {
+    "case_id": "tank_mixer_cycle",
+    "spec": "- Mixer relay on D6; hold switch on D3 with internal pull-up (active LOW).\n- Run the mixer (D6 HIGH) for 2000 ms out of every 5000 ms, the first run starting 5000 ms after power-up.\n- Print `mix <n>` when each run starts, once per 5000 ms \u00b1250 ms.\n- While D3 is held LOW, keep D6 LOW. The runs are still counted and printed.\n- The mixer must not change state more than 2 times in any 5000 ms window.",
+    "truth_bugs": [
+      {
+        "id": "b1",
+        "category": "narrow_timer",
+        "description": "The 16-bit clock is compared with absolute deadlines, so the schedule breaks whenever the clock wraps, every 65.5 s of uptime",
+        "check_ids": [
+          "a_start",
+          "a_rate"
+        ],
+        "exposing_checks": [
+          {
+            "check_id": "a_start",
+            "type": "serial_period",
+            "behaviour": "serial lines matching '^mix \\\\d+$' every 5000 ms (A run starts every 5 s)"
+          },
+          {
+            "check_id": "a_rate",
+            "type": "max_toggles",
+            "behaviour": "D6 must not toggle more than 2 times in any 5000 ms window (Mixer switching rate)"
+          }
+        ]
+      }
+    ],
+    "reported_bugs": [
+      {
+        "id": "bug-a1",
+        "title": "Relay pulse length wrong and runs mistimed",
+        "description": "The run is scheduled with a single-shot nextRunAt that is only advanced inside startRun (line 30), and the stop check at line 64 uses a 16-bit millis() comparison; the measured evidence shows pulses of 201 ms and 500 ms instead of 2000 ms (e.g. \"pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms\"). Because the schedule is not re-armed relative to the cycle and the hold switch gates the output in drive() (line 46) without pausing the timer, the relay is cut short whenever D3 is LOW, so the 2000 ms run is never delivered. D6 missed 10 of 13 trigger(s): D6 did not start within 100 ms of the trigger at 952 ms. 8 of 8 pulse(s) had the wrong length: pulse from 5.00 s lasted 201 ms, expected 2000 \u00b1 150 ms.",
+        "category": "timed_pulse"
+      },
+      {
+        "id": "bug-a4",
+        "title": "Relay chatters on bouncy hold input",
+        "description": "held() at line 41 reads D3 directly with no debounce, and drive() at lines 46-47 writes the relay every loop iteration based on that raw reading, so contact bounce produces many edges (measured \"16 toggles\" in a 5000 ms window, limit 2). The bounce at the run boundary also toggles D6 repeatedly because running stays true while held() flickers, giving \"10 toggles\" starting at 5.15 s. D6 toggled 16 times in a 5000 ms window starting at 5.00 s (limit 2), and 16 times over the whole 8.00 s run.",
+        "category": "max_toggles"
+      }
+    ]
+  },
+  "raw": "{\n  \"matches\": [\n    {\"truth_id\": \"b1\", \"reported_index\": 0, \"matched\": true, \"reason\": \"Reported bug describes incorrect timing and missed runs due to clock wrap.\"}\n  ],\n  \"duplicate_of_truth\": [],\n  \"unmatched_reported\": [1],\n  \"unique_false_alarm_indices\": [1],\n  \"notes\": \"The second reported bug about relay chatter does not match any truth bug.\"\n}",
+  "judgement": {
+    "matches": [
+      {
+        "truth_id": "b1",
+        "reported_index": 0,
+        "matched": true,
+        "reason": "Reported bug describes incorrect timing and missed runs due to clock wrap."
+      }
+    ],
+    "duplicate_of_truth": [],
+    "unmatched_reported": [
+      1
+    ],
+    "unique_false_alarm_indices": [
+      1
+    ],
+    "notes": "The second reported bug about relay chatter does not match any truth bug."
+  },
+  "usage": {
+    "model": "gpt-4o-mini",
+    "prompt_tokens": 1180,
+    "completion_tokens": 94,
+    "cost_usd": 0.0002334,
+    "cached": false
+  }
+}
