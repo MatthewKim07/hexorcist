@@ -62,7 +62,7 @@ Hexorcist is measured on two sets of firmware cases, both in `bench/`:
 - **v2 (`bench/cases/`):** 40 frozen cases, 29 with planted bugs (32 bugs in all) and 11 correct sketches. Each has a plain-English spec and deterministic checks.
 - **Practice set (`bench/practice/`):** 10 cases with harder bugs that show up only under the right conditions (a clock near its rollover, a press at the wrong moment, a high reading): 7 with a planted bug and 3 correct decoys that look suspicious.
 
-**Both sets have been seen and tuned on. These are development numbers, not evidence about firmware the agent has not been shaped around.** A held-out set, written and frozen before the agent runs on it, is the next step and does not exist yet.
+**Both sets have been seen and tuned on. These are development numbers, not evidence about firmware the agent has not been shaped around.** A held-out set, written and frozen before the agent runs on it, is the next step and does not exist yet. The cases and answer keys were written with an AI coding assistant, then checked with a lint (no hint words in comments, every check tied to a spec bullet) and by running each reference sketch through every check.
 
 ### v2, 40 cases
 
@@ -87,7 +87,7 @@ Recall counts the planted bugs that a report was matched to (matching is judged 
 
 ### What this shows
 
-Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 against 81 for DeepSeek and 53 for gpt-4o-mini, and 3 on the practice set against 13 and 16. Its verified-fix rate (90%) is about that of the DeepSeek review (93%) and well above gpt-4o-mini's (48%), and every fix it claims was checked by re-running the suite (22 of 22 claims passed the frozen checks), which a review cannot do. Its recall (94%) is now close to the plain DeepSeek review (100%) but not above it, on both sets. The price is cost and time: about 7 times the cost of a plain review ($0.20 against $0.027 for the 40 cases) and roughly 100 seconds per case instead of a few seconds.
+Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 against 81 for DeepSeek and 53 for gpt-4o-mini, and 3 on the practice set against 13 and 16. Its verified-fix rate (90%) is about that of the DeepSeek review (93%) and well above gpt-4o-mini's (48%), and every fix it claims was checked by re-running the suite (22 of 22 claims passed the frozen checks), which a review cannot do. Its recall (94%) is now close to the plain DeepSeek review (100%) but not above it, on both sets. The price is cost and time: about 7 times the cost of a plain review ($0.20 against $0.027 for the 40 cases) and roughly 100 seconds per case instead of 4 to 10 seconds.
 
 ### Known limits
 
