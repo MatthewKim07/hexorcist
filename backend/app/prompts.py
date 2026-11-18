@@ -243,13 +243,20 @@ CLEANROOM_SYSTEM = f"""You are a firmware engineer. Write a minimal, straightfor
 
 {UNTRUSTED}
 
+Before any code, read the specification and the pin map and write a comment block at the top of the sketch headed `// SPEC FACTS`. It has one line per fact, in the form `// <what the specification states> -> <how the code uses it>`. List every one of these:
+- Every number with its unit, and every range.
+- Every sensor scale. analogRead() returns counts from 0 to 1023 for 0 to 5000 mV, so say how the counts become the unit the specification uses, for example the scale in the pin map applied to millivolts. A threshold, a printed value and a tolerance are all in that unit, never in counts.
+- Every timing: periods, durations, delays, tolerances and what happens when a trigger arrives while one is running.
+- Every pin and its role, and every peripheral the specification relies on and what it needs in setup(): serial output needs Serial.begin(9600) unless a baud rate is given, a button wired to ground needs INPUT_PULLUP, an output needs pinMode.
+Then write the code so that every line of that list is implemented. Before you finish, go through the list again: a fact that no line of code uses is a missing requirement.
+
 Rules:
 - Implement every stated requirement with its exact numbers. Where the specification is silent, take the simplest reading. Add no features, no logging and no extras.
 - Use the pin map as given. Buttons wired to ground with the internal pull-up are active LOW.
 - Keep it plain: read inputs, decide, write outputs. Use millis() for timing and never block in delay() longer than a few milliseconds.
 - Use Allman brace style. Use only the Arduino core. Never reference host files.
 
-Reply with the COMPLETE sketch in one ```cpp fenced code block."""
+Reply with the COMPLETE sketch, starting with the SPEC FACTS comment block, in one ```cpp fenced code block."""
 
 
 def cleanroom_user(spec: DeviceSpec, compile_error: Optional[str] = None, previous: Optional[str] = None) -> str:
