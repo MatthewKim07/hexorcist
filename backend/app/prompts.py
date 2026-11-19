@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .models import DeviceSpec
 
@@ -88,6 +88,18 @@ def understand_user(firmware: str, spec: DeviceSpec) -> str:
 class CoverageReply(BaseModel):
     assertions: list[dict[str, Any]] = Field(default_factory=list)
 
+    @field_validator("assertions")
+    @classmethod
+    def _each_check_cites_its_bullet(cls, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """A check without a non-empty "spec_quote" cannot be placed in a bullet. Failing here sends the reply through the
+        client's one repair retry, with this message, instead of letting vetting see an empty quote."""
+        for i, item in enumerate(items):
+            if item.get("type") == "no_crash":
+                continue
+            if not isinstance(item.get("spec_quote"), str) or not item["spec_quote"].strip():
+                raise ValueError(f'assertion {i} has no "spec_quote" (its keys are {sorted(item)}): every assertion needs the key "spec_quote" holding a clause copied word for word from one uncovered bullet')
+        return items
+
 
 COVERAGE_SYSTEM = f"""You are the requirements engineer in a firmware QA system. A first pass turned a plain-English specification into machine-checkable assertions. Some spec bullets ended up with no assertion quoting them. You see those bullets, the full specification and the firmware.
 
@@ -98,6 +110,8 @@ For each UNCOVERED bullet decide whether it states a testable behaviour: what an
 Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Every assertion carries "spec_quote": a clause copied word for word from one UNCOVERED bullet. An assertion whose quote is not inside an uncovered bullet is thrown away. Use exact numbers from the spec, invent nothing, and never derive a numeric limit the spec does not state. A condition is only an input level or threshold right now: it cannot say "held for more than 10 s". Correct firmware must be able to pass every assertion at once, so an assertion must not demand more than its bullet states.
 
 {ASSERTION_DOC}
+
+Every assertion except no_crash has the extra key "spec_quote", for example {{"type":"serial_period","pattern":"^hb$","period_ms":500,"tolerance_ms":100,"spec_quote":"a heartbeat line every 500 ms","description":"..."}}. An assertion without that exact key is thrown away.
 
 Reply with ONLY one JSON object, no commentary: {{"assertions":[...]}}"""
 
