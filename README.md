@@ -27,7 +27,7 @@ It finds about as many planted bugs as a plain DeepSeek review, not more (30 of 
 ## What it does
 
 - Finds bugs by compiling the sketch and running it under adversarial conditions on an emulated ATmega328P.
-- Reports measured evidence from the emulator trace, for example `D9 toggled 23 times in a 5000 ms window (limit 2)`.
+- Reports measured evidence from the emulator trace: pin toggle counts, timings and serial output, not opinions.
 - Writes a minimal patch and only calls the run fixed after re-running the full scenario suite with nothing new broken.
 - Write firmware mode: generates a sketch from a description, then has to survive the same attacks before it is accepted.
 
@@ -109,6 +109,16 @@ Against a plain review, Hexorcist reports far fewer false alarms: 5 on v2 agains
 - **The stimulus search found nothing.** In 300 variants on the practice set no variant broke a check that had not already failed. It is off by default. The clock fast-forward in the attack plan exposed two bugs in earlier runs, but whether it does depends on the model placing a press just before a wrap.
 - **Remaining false alarms** include two checks no correct firmware passes (`blend_tank_sum_ovf` a2, `loft_fan_ok` a3) and three where the reference passes the check.
 - **False alarms are counted against the planted-bug key.** A report about a real but unplanted problem still counts as a false alarm. The reference sketches pass every check, which limits that risk but does not remove it.
+
+### Experimental: spec coverage (off by default)
+
+An optional extra step (`COVERAGE` setting, or `run_dev.sh --coverage` in the benchmark; default off) finds spec bullets that have no check and asks the model for up to 2 checks per such bullet. Those checks go through the same gate, cross-check, fix loop and verification as every other check.
+
+On the development sets, single runs, it recovered `hold_to_arm_late` (missed in the main v2 run) and found a real integer-overflow failure on `silo_fill_gauge`. It did not recover `cold_store_alarm`.
+
+In a safety check on 10 cases, flag on against flag off, false alarms on correct sketches were 4 against 2 in total, which is within run-to-run noise, and none came from a coverage-added check. Of the 4 coverage checks added on the practice set, 3 were stopped by the gate or the cross-check before reaching a report. Cost was about 25 to 30% higher.
+
+These are single runs on development cases, so this is not claimed as an improvement and is not part of the headline numbers.
 
 ### Reproduce
 
