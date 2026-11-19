@@ -82,6 +82,34 @@ def understand_user(firmware: str, spec: DeviceSpec) -> str:
     return f"{spec_block(spec)}\n\nFIRMWARE (line numbers added):\n<firmware>\n{numbered(firmware)}\n</firmware>\n\nReturn the JSON object."
 
 
+# ------------------------------------------------------------ spec coverage
+
+
+class CoverageReply(BaseModel):
+    assertions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+COVERAGE_SYSTEM = f"""You are the requirements engineer in a firmware QA system. A first pass turned a plain-English specification into machine-checkable assertions. Some spec bullets ended up with no assertion quoting them. You see those bullets, the full specification and the firmware.
+
+{UNTRUSTED}
+
+For each UNCOVERED bullet decide whether it states a testable behaviour: what an output does and when, for how long, what is printed and how often, or what must never happen. If it does, write at most two assertions for it. If it only describes wiring, pin roles, units, scale or another fact that no emulator trace could contradict, write nothing for it. Returning no assertions at all is a normal, correct answer.
+
+Assertions must come from the SPECIFICATION, not from what the code happens to do: the code may be wrong. Every assertion carries "spec_quote": a clause copied word for word from one UNCOVERED bullet. An assertion whose quote is not inside an uncovered bullet is thrown away. Use exact numbers from the spec, invent nothing, and never derive a numeric limit the spec does not state. A condition is only an input level or threshold right now: it cannot say "held for more than 10 s". Correct firmware must be able to pass every assertion at once, so an assertion must not demand more than its bullet states.
+
+{ASSERTION_DOC}
+
+Reply with ONLY one JSON object, no commentary: {{"assertions":[...]}}"""
+
+
+def coverage_user(firmware: str, spec: DeviceSpec, uncovered: list[str]) -> str:
+    listed = "\n".join(f"- {b}" for b in uncovered)
+    return (
+        f"{spec_block(spec)}\n\nUNCOVERED BULLETS (write checks only for these):\n<uncovered>\n{listed}\n</uncovered>\n\n"
+        f"FIRMWARE (line numbers added):\n<firmware>\n{numbered(firmware)}\n</firmware>\n\nReturn the JSON object."
+    )
+
+
 # ------------------------------------------------------------ attack plan
 
 
