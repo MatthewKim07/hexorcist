@@ -23,6 +23,7 @@ from .approach import Attempt, find_code_reversion, find_measured_reversion
 from .assertions import evaluate_all
 from .clock import clamp_start, uses_elapsed_time
 from .config import Settings
+from .coverage import split_bullets, uncovered, vet
 from .crosscheck import Verdict, classify, unconfirmed_ids
 from .events import RunBus
 from .grounding import find_quote
@@ -132,6 +133,11 @@ def _describe(a: Any) -> str:
     return a.type.replace("_", " ")
 
 
+def assertion_key(a: Any) -> str:
+    """What makes two assertions the same check, ignoring their id, wording, quote and origin."""
+    return json.dumps(a.model_dump(exclude={"id", "description", "spec_quote", "origin"}), sort_keys=True)
+
+
 def normalize_assertions(raw: list[dict], spec: DeviceSpec, ground: bool = False, drops: Optional[list[dict]] = None) -> tuple[list, list[str]]:
     """Keep only assertions that validate against the schema and this device.
 
@@ -173,7 +179,8 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec, ground: bool = False
 
     for item in raw:
         try:
-            parsed = _ASSERTION.validate_python(item)
+            # Only the coverage step may set a check's origin, never the model's own reply.
+            parsed = _ASSERTION.validate_python({k: v for k, v in item.items() if k != "origin"} if isinstance(item, dict) else item)
         except ValidationError as exc:
             warnings.append(f"Dropped an invalid assertion: {str(exc).splitlines()[0][:160]}")
             continue
@@ -199,7 +206,7 @@ def normalize_assertions(raw: list[dict], spec: DeviceSpec, ground: bool = False
             if isinstance(parsed, SerialValueMatches) and compiled.groups < 1:
                 warnings.append(f"Dropped {parsed.type}: the regex has no capture group")
                 continue
-        key = json.dumps(parsed.model_dump(exclude={"id", "description", "spec_quote"}), sort_keys=True)
+        key = assertion_key(parsed)
         if key in seen or isinstance(parsed, NoCrash):
             continue
         seen.add(key)
@@ -342,6 +349,7 @@ class Pipeline:
         self._repro: dict[str, dict] = {}
         self._variant_names: dict[str, str] = {}
         self.grounding: Optional[dict] = None  # spec citations checked on the model's own assertions, and the ones dropped
+        self.coverage: Optional[dict] = None  # spec-coverage step: bullets without a check, and the checks it added (None when off)
 
     # ------------------------------------------------------------- plumbing
 
@@ -837,6 +845,38 @@ class Pipeline:
                 if not task.done():
                     task.cancel()
 
+    async def _cover_spec(self, firmware: str, spec: DeviceSpec, assertions: list) -> list:
+        """Spec coverage (off by default): one extra call for spec bullets no check quotes. The new checks join the list
+        and then take exactly the same path as every other check (gate, scenarios, cross-check, fix loop, verification)."""
+        parts = split_bullets(spec.behaviour, assertions)
+        missing = uncovered(parts)
+        info: dict = {"enabled": True, "bullets": parts, "uncovered": missing, "called": False, "proposed": 0, "added": [], "rejected": [], "dropped": [], "displaced": [], "error": ""}
+        self.coverage = info
+        if not missing:
+            return assertions
+        info["called"] = True
+        try:
+            reply = await self.llm.json(prompts.COVERAGE_SYSTEM, prompts.coverage_user(firmware, spec, missing), prompts.CoverageReply, "coverage")
+        except LLMError as exc:
+            info["error"] = str(exc)[:200]
+            await self._warn(f"The spec coverage step failed, so the checks are unchanged: {exc}")
+            return assertions
+        info["proposed"] = len(reply.assertions)
+        kept, info["rejected"] = vet(reply.assertions, missing)
+        if not kept:
+            return assertions
+        fresh, warnings = normalize_assertions(kept, spec, ground=True, drops=info["dropped"])
+        before = {assertion_key(a): a for a in assertions}
+        merged, more = normalize_assertions([a.model_dump(exclude_none=True) for a in assertions + fresh if not isinstance(a, NoCrash)], spec)
+        for w in warnings + more:
+            await self._warn(w)
+        for a in merged:
+            if assertion_key(a) not in before:
+                a.origin = "coverage"
+                info["added"].append(a.id)
+        info["displaced"] = [a.description for k, a in before.items() if k not in {assertion_key(m) for m in merged} and not isinstance(a, NoCrash)]
+        return merged
+
     async def _run_break(self, firmware: str, spec: DeviceSpec, extra_report: Optional[dict], checks: Optional["CheckSet"]) -> tuple[str, dict]:
         bus = self.bus
 
@@ -869,6 +909,8 @@ class Pipeline:
                     await self._warn("The LLM produced no usable assertions, so only baseline crash and chatter checks are running.")
                     assertions = fallback_assertions(spec)
                     spec_checked = False
+                elif self.settings.coverage:
+                    assertions = await self._cover_spec(firmware, spec, assertions)
             except LLMError as exc:
                 if not self.settings.llm_configured:
                     await bus.step("understand", "failed", str(exc))
@@ -1228,6 +1270,8 @@ class Pipeline:
         }
         if self.grounding is not None:
             report["grounding"] = self.grounding
+        if self.coverage is not None:
+            report["coverage"] = self.coverage
         if assertions:
             report["ungrounded"] = self._ungrounded_report(assertions, suites.get(0), scenarios or [])
             report["score"]["ungrounded_requirements"] = len(self.ungrounded)
