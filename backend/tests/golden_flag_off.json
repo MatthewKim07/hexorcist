@@ -1,0 +1,436 @@
+{
+ "compiled": [
+  "void setup() {}\nvoid loop() { read(); } // CHATTER SILENT\n",
+  "const int SWITCH_SAMPLES = 4;\nint stableCount = 0;\nvoid setup() {}\nvoid loop()\n{\n    stableCount = read() ? stableCount + 1 : 0;\n    if (stableCount >= SWITCH_SAMPLES)\n    {\n        act();\n    }\n    heartbeat();\n} // fixed\n"
+ ],
+ "report": {
+  "assertions": [
+   {
+    "description": "No chatter",
+    "id": "a1",
+    "max_toggles": 2,
+    "pin": "D9",
+    "spec_quote": "D9 must not chatter",
+    "type": "max_toggles",
+    "window_ms": 1000.0
+   },
+   {
+    "description": "Heartbeat",
+    "id": "a2",
+    "pattern": "^hb$",
+    "period_ms": 250.0,
+    "spec_quote": "Heartbeat every 250 ms",
+    "tolerance_ms": 50.0,
+    "type": "serial_period"
+   },
+   {
+    "description": "Firmware runs for the whole scenario without crashing or deadlocking",
+    "id": "a3",
+    "spec_quote": "",
+    "type": "no_crash"
+   }
+  ],
+  "bugs": [
+   {
+    "after": {
+     "evidence": "D9 toggled 0 time(s) in 2.00 s, within the limit of 2 per 1000 ms.",
+     "metrics": {
+      "total_toggles": 0
+     },
+     "status": "pass"
+    },
+    "assertion_id": "a1",
+    "assertion_type": "max_toggles",
+    "before": {
+     "evidence": "D9 toggled 19 times in a 1000 ms window starting at 20 ms (limit 2), and 19 times over the whole 2.00 s run.",
+     "metrics": {
+      "glitch_toggles": 0,
+      "limit": 2,
+      "total_toggles": 19,
+      "worst_window_toggles": 19
+     },
+     "status": "fail"
+    },
+    "code_lines": [],
+    "evidence": "D9 toggled 19 times in a 1000 ms window starting at 20 ms (limit 2), and 19 times over the whole 2.00 s run.",
+    "failing_scenarios": [
+     {
+      "evidence": "D9 toggled 19 times in a 1000 ms window starting at 20 ms (limit 2), and 19 times over the whole 2.00 s run.",
+      "id": "builtin-idle",
+      "name": "Free run"
+     }
+    ],
+    "id": "bug-a1",
+    "metrics": {
+     "glitch_toggles": 0,
+     "limit": 2,
+     "total_toggles": 19,
+     "worst_window_toggles": 19
+    },
+    "requirement": "No chatter",
+    "root_cause": "",
+    "scenario_id": "builtin-idle",
+    "scenario_name": "Free run",
+    "severity": "high",
+    "title": "No chatter",
+    "verified": true
+   },
+   {
+    "after": {
+     "evidence": "7 lines at a mean period of 250 ms.",
+     "metrics": {
+      "matches": 7,
+      "mean_gap_ms": 250.0
+     },
+     "status": "pass"
+    },
+    "assertion_id": "a2",
+    "assertion_type": "serial_period",
+    "before": {
+     "evidence": "No serial line matched /^hb$/ in 2.00 s; expected one every 250 ms.",
+     "metrics": {
+      "matches": 0
+     },
+     "status": "fail"
+    },
+    "code_lines": [],
+    "evidence": "No serial line matched /^hb$/ in 2.00 s; expected one every 250 ms.",
+    "failing_scenarios": [
+     {
+      "evidence": "No serial line matched /^hb$/ in 2.00 s; expected one every 250 ms.",
+      "id": "builtin-idle",
+      "name": "Free run"
+     }
+    ],
+    "id": "bug-a2",
+    "metrics": {
+     "matches": 0
+    },
+    "requirement": "Heartbeat",
+    "root_cause": "",
+    "scenario_id": "builtin-idle",
+    "scenario_name": "Free run",
+    "severity": "high",
+    "title": "Heartbeat",
+    "verified": true
+   }
+  ],
+  "compile_log": "",
+  "containment": {
+   "network_none": false,
+   "oom_kills": 0,
+   "records": [
+    {
+     "container_id": "",
+     "duration_ms": 0.0,
+     "env_names": [],
+     "exit_code": null,
+     "image": "",
+     "kind": "compile",
+     "label": "compile uploaded firmware",
+     "limits": {},
+     "oom_killed": false,
+     "removed": false,
+     "secrets_found": 0,
+     "timed_out": false,
+     "violations": []
+    },
+    {
+     "container_id": "",
+     "duration_ms": 0.0,
+     "env_names": [],
+     "exit_code": null,
+     "image": "",
+     "kind": "emulate",
+     "label": "attack: Free run",
+     "limits": {},
+     "oom_killed": false,
+     "removed": false,
+     "secrets_found": 0,
+     "timed_out": false,
+     "violations": []
+    },
+    {
+     "container_id": "",
+     "duration_ms": 0.0,
+     "env_names": [],
+     "exit_code": null,
+     "image": "",
+     "kind": "compile",
+     "label": "compile patch 1",
+     "limits": {},
+     "oom_killed": false,
+     "removed": false,
+     "secrets_found": 0,
+     "timed_out": false,
+     "violations": []
+    },
+    {
+     "container_id": "",
+     "duration_ms": 0.0,
+     "env_names": [],
+     "exit_code": null,
+     "image": "",
+     "kind": "emulate",
+     "label": "verify patch 1: Free run",
+     "limits": {},
+     "oom_killed": false,
+     "removed": false,
+     "secrets_found": 0,
+     "timed_out": false,
+     "violations": []
+    }
+   ],
+   "removed": 0,
+   "secrets_found": 0,
+   "timeouts": 0,
+   "total": 4,
+   "violations": 0
+  },
+  "cross_check": {
+   "firmware": "",
+   "model_diversity": {
+    "fallback": true,
+    "mixed": false,
+    "note": "OPENAI_* is not configured, so both clean rooms were written by m, the same model as the agent. Their mistakes are more likely to coincide.",
+    "rooms": [
+     {
+      "host": "unused",
+      "index": 1,
+      "model": "m"
+     },
+     {
+      "host": "unused",
+      "index": 2,
+      "model": "m"
+     }
+    ]
+   },
+   "reason": "",
+   "rooms": [],
+   "rule": "none",
+   "status": "disabled",
+   "unconfirmed": [],
+   "usage": {
+    "completion_tokens": 0,
+    "llm_calls": 0,
+    "prompt_tokens": 0,
+    "repaired": false,
+    "sandbox_runs": 0
+   }
+  },
+  "device_model": {
+   "inputs": [],
+   "outputs": [],
+   "risks": [],
+   "summary": "",
+   "thresholds": []
+  },
+  "error": "",
+  "exit_reasons": {
+   "0": {
+    "builtin-idle": "completed"
+   },
+   "1": {
+    "builtin-idle": "completed"
+   }
+  },
+  "firmware": "void setup() {}\nvoid loop() { read(); } // CHATTER SILENT\n",
+  "fix": {
+   "all_passing": true,
+   "diff": {
+    "added": 11,
+    "removed": 1,
+    "unified": "--- original.ino\n+++ patched.ino\n@@ -1,2 +1,12 @@\n+const int SWITCH_SAMPLES = 4;\n+int stableCount = 0;\n void setup() {}\n-void loop() { read(); } // CHATTER SILENT\n+void loop()\n+{\n+    stableCount = read() ? stableCount + 1 : 0;\n+    if (stableCount >= SWITCH_SAMPLES)\n+    {\n+        act();\n+    }\n+    heartbeat();\n+} // fixed"
+   },
+   "iteration": 1,
+   "patched_firmware": "const int SWITCH_SAMPLES = 4;\nint stableCount = 0;\nvoid setup() {}\nvoid loop()\n{\n    stableCount = read() ? stableCount + 1 : 0;\n    if (stableCount >= SWITCH_SAMPLES)\n    {\n        act();\n    }\n    heartbeat();\n} // fixed\n",
+   "regressions": [],
+   "summary": "Patch."
+  },
+  "grounding": {
+   "checked": 2,
+   "dropped": []
+  },
+  "iterations": [
+   {
+    "compile_ok": true,
+    "failing": 2,
+    "failing_assertions": [
+     "a1",
+     "a2"
+    ],
+    "n": 0,
+    "regressions": [],
+    "still_failing": [],
+    "summary": "Uploaded firmware"
+   },
+   {
+    "compile_ok": true,
+    "failing": 0,
+    "failing_assertions": [],
+    "n": 1,
+    "patch": "const int SWITCH_SAMPLES = 4;\nint stableCount = 0;\nvoid setup() {}\nvoid loop()\n{\n    stableCount = read() ? stableCount + 1 : 0;\n    if (stableCount >= SWITCH_SAMPLES)\n    {\n        act();\n    }\n    heartbeat();\n} // fixed\n",
+    "regressions": [],
+    "still_failing": [],
+    "summary": "Patch."
+   }
+  ],
+  "llm": {
+   "by_step": {},
+   "calls": 0,
+   "completion_tokens": 0,
+   "model": "m",
+   "prompt_tokens": 0,
+   "providers": [
+    {
+     "calls": 0,
+     "completion_tokens": 0,
+     "host": "unused",
+     "model": "m",
+     "prompt_tokens": 0,
+     "role": "agent"
+    }
+   ],
+   "repairs": 0
+  },
+  "matrix": {
+   "0": {
+    "builtin-idle": [
+     {
+      "assertion_id": "a1",
+      "evidence": "D9 toggled 19 times in a 1000 ms window starting at 20 ms (limit 2), and 19 times over the whole 2.00 s run.",
+      "metrics": {
+       "glitch_toggles": 0,
+       "limit": 2,
+       "total_toggles": 19,
+       "worst_window_toggles": 19
+      },
+      "scenario_id": "builtin-idle",
+      "status": "fail",
+      "type": "max_toggles",
+      "violations": [
+       {
+        "detail": "19 toggles",
+        "t_end": 380.0,
+        "t_start": 20.0
+       }
+      ]
+     },
+     {
+      "assertion_id": "a2",
+      "evidence": "No serial line matched /^hb$/ in 2.00 s; expected one every 250 ms.",
+      "metrics": {
+       "matches": 0
+      },
+      "scenario_id": "builtin-idle",
+      "status": "fail",
+      "type": "serial_period",
+      "violations": [
+       {
+        "detail": "no matching serial line",
+        "t_end": 2000.0,
+        "t_start": 0.0
+       }
+      ]
+     },
+     {
+      "assertion_id": "a3",
+      "evidence": "Ran the full 2.00 s of simulated time.",
+      "metrics": {},
+      "scenario_id": "builtin-idle",
+      "status": "pass",
+      "type": "no_crash",
+      "violations": []
+     }
+    ]
+   },
+   "1": {
+    "builtin-idle": [
+     {
+      "assertion_id": "a1",
+      "evidence": "D9 toggled 0 time(s) in 2.00 s, within the limit of 2 per 1000 ms.",
+      "metrics": {
+       "total_toggles": 0
+      },
+      "scenario_id": "builtin-idle",
+      "status": "pass",
+      "type": "max_toggles",
+      "violations": []
+     },
+     {
+      "assertion_id": "a2",
+      "evidence": "7 lines at a mean period of 250 ms.",
+      "metrics": {
+       "matches": 7,
+       "mean_gap_ms": 250.0
+      },
+      "scenario_id": "builtin-idle",
+      "status": "pass",
+      "type": "serial_period",
+      "violations": []
+     },
+     {
+      "assertion_id": "a3",
+      "evidence": "Ran the full 2.00 s of simulated time.",
+      "metrics": {},
+      "scenario_id": "builtin-idle",
+      "status": "pass",
+      "type": "no_crash",
+      "violations": []
+     }
+    ]
+   }
+  },
+  "scenarios": [
+   {
+    "analog": [],
+    "digital": [],
+    "duration_ms": 8000.0,
+    "floating": [],
+    "hypothesis": "With no inputs the firmware should simply run without crashing.",
+    "id": "builtin-idle",
+    "name": "Free run",
+    "parent": "",
+    "seed": 31,
+    "source": "builtin",
+    "start_millis": 0,
+    "variant": ""
+   }
+  ],
+  "score": {
+   "assertions": 3,
+   "bugs_found": 2,
+   "bugs_verified": 2,
+   "fix_attempts": 1,
+   "possible_ambiguities": 0,
+   "scenarios": 1,
+   "ungrounded_requirements": 0
+  },
+  "search": {
+   "enabled": false,
+   "unsupported": [
+    "uptime fast-forward (millis() near rollover, hours of runtime) is tried only when the firmware or the spec has elapsed-time logic"
+   ]
+  },
+  "spec": {
+   "behaviour": "D9 must not chatter. Heartbeat every 250 ms.",
+   "board": "uno",
+   "pins": [
+    {
+     "active_low": false,
+     "pin": "D9",
+     "role": "",
+     "scale": "",
+     "type": "digital_output"
+    }
+   ]
+  },
+  "spec_checked": true,
+  "status": "fixed",
+  "unexercised": [],
+  "ungrounded": [],
+  "warnings": []
+ },
+ "status": "fixed"
+}

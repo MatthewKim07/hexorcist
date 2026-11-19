@@ -199,6 +199,8 @@ class _AssertionBase(BaseModel):
     description: str = ""
     # The sentence or clause of the spec this assertion enforces, copied from it. Checked against the spec text.
     spec_quote: str = ""
+    # Where the check came from: "coverage" for a check the spec-coverage step added, None for the normal path.
+    origin: Optional[str] = None
 
 
 class OutputFollows(_AssertionBase):

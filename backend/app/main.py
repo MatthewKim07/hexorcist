@@ -143,6 +143,8 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
                 "rate_limit_per_hour": cfg.rate_limit_per_hour,
                 "max_active_runs": cfg.max_active_runs,
             },
+            # Spec-coverage step switch. Kept beside "agent", not in it, so the agent block the bench pins stays unchanged.
+            "coverage": {"enabled": cfg.coverage},
             "agent": {
                 "cross_check": cfg.cross_check,
                 "cleanroom_samples": cfg.cleanroom_samples,

@@ -57,6 +57,9 @@ class Settings:
     search_variants: int = 0
     search_seed: int = 1337
     search_budget_s: int = 90
+    # Spec coverage: after the assertions are written, one extra model call proposes checks for spec bullets no assertion
+    # quotes. Off by default; COVERAGE=1 (or the bench override) turns it on.
+    coverage: bool = False
 
     @property
     def llm_configured(self) -> bool:
@@ -93,6 +96,7 @@ def load_settings() -> Settings:
         search_variants=max(0, _int("SEARCH_VARIANTS", 0)),
         search_seed=_int("SEARCH_SEED", 1337),
         search_budget_s=max(0, _int("SEARCH_BUDGET_S", 90)),
+        coverage=_flag("COVERAGE", False),
     )
 
 
