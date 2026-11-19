@@ -15,7 +15,7 @@
 
 ## Why
 
-Asking an LLM to review a sketch gets you a list of worries. On these benchmarks most of them were wrong. Hexorcist compiles the firmware, runs it on an emulated ATmega328P under adversarial inputs, and reports a bug only with evidence from the emulator trace, for example `D9 toggled 23 times in a 5000 ms window (limit 2)`.
+Asking an LLM to review a sketch gets you a list of worries. On these benchmarks most of them did not match a planted bug. Hexorcist compiles the firmware, runs it on an emulated ATmega328P under adversarial inputs, and reports a bug only with evidence from the emulator trace, for example `D9 toggled 23 times in a 5000 ms window (limit 2)`.
 
 Against a plain LLM review of the same sketches (development benchmark, see [Benchmark](#benchmark)):
 
