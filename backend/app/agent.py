@@ -866,8 +866,11 @@ class Pipeline:
         if not kept:
             return assertions
         fresh, warnings = normalize_assertions(kept, spec, ground=True, drops=info["dropped"])
-        before = {assertion_key(a): a for a in assertions}
-        merged, more = normalize_assertions([a.model_dump(exclude_none=True) for a in assertions + fresh if not isinstance(a, NoCrash)], spec)
+        # Compare like with like: both lists go through the same normalization, because a default such as
+        # min_trigger_ms is an int on a freshly parsed check and a float after a dump and re-parse.
+        old_dump = [a.model_dump(exclude_none=True) for a in assertions if not isinstance(a, NoCrash)]
+        before = {assertion_key(a): a for a in normalize_assertions(old_dump, spec)[0]}
+        merged, more = normalize_assertions(old_dump + [a.model_dump(exclude_none=True) for a in fresh if not isinstance(a, NoCrash)], spec)
         for w in warnings + more:
             await self._warn(w)
         for a in merged:
