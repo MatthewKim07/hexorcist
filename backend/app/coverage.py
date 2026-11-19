@@ -44,6 +44,19 @@ def uncovered(split: list[dict]) -> list[str]:
     return [s["bullet"] for s in split if not s["covered"]]
 
 
+def _clip(value: Any, n: int = 80) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= n else text[: n - 1] + "\u2026"
+
+
+def _rejected(item: Any, reason: str) -> dict:
+    """What a rejected proposal looked like when vetting saw it, so a later reader can tell why it failed."""
+    if not isinstance(item, dict):
+        return {"reason": reason, "quote": "", "type": "", "title": _clip(item, 40), "keys": []}
+    title = item.get("id") or item.get("description") or item.get("title") or item.get("name") or ""
+    return {"reason": reason, "quote": _clip(item.get("spec_quote"), 160), "type": _clip(item.get("type"), 30), "title": _clip(title), "keys": sorted(str(k) for k in item)[:20]}
+
+
 def vet(raw: list[Any], uncovered_bullets: list[str]) -> tuple[list[dict], list[dict]]:
     """Keep proposed checks whose quote lies inside an uncovered bullet, at most MAX_CHECKS_PER_BULLET per bullet.
 
@@ -55,19 +68,19 @@ def vet(raw: list[Any], uncovered_bullets: list[str]) -> tuple[list[dict], list[
     per_bullet: dict[int, int] = {}
     for item in raw or []:
         if not isinstance(item, dict):
-            rejected.append({"reason": "not an object", "quote": ""})
+            rejected.append(_rejected(item, "not an object"))
             continue
         item = {k: v for k, v in item.items() if k != "origin"}
         quote = str(item.get("spec_quote") or "")
         if item.get("type") == "no_crash":
-            rejected.append({"reason": "a crash check is always present", "quote": quote})
+            rejected.append(_rejected(item, "a crash check is always present"))
             continue
         home = next((i for i, b in enumerate(uncovered_bullets) if quote_inside(quote, b)), None)
         if home is None:
-            rejected.append({"reason": "its spec_quote is not inside an uncovered bullet", "quote": quote})
+            rejected.append(_rejected(item, "it has no spec_quote" if not quote.strip() else "its spec_quote is not inside an uncovered bullet"))
             continue
         if per_bullet.get(home, 0) >= MAX_CHECKS_PER_BULLET:
-            rejected.append({"reason": f"more than {MAX_CHECKS_PER_BULLET} checks for one bullet", "quote": quote})
+            rejected.append(_rejected(item, f"more than {MAX_CHECKS_PER_BULLET} checks for one bullet"))
             continue
         per_bullet[home] = per_bullet.get(home, 0) + 1
         kept.append(item)
