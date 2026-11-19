@@ -78,6 +78,8 @@ export interface AssertionDef extends Check {
   unconfirmed?: boolean;
   /** Asks for more than the spec bullet it quotes: left out of bugs, fixes and verification. */
   ungrounded?: boolean;
+  /** "coverage": added by the spec-coverage step for a bullet the first pass left without a check. */
+  origin?: string;
 }
 
 /** A check left out because it asks for more than the spec bullet it quotes. */

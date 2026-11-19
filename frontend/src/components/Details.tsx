@@ -175,6 +175,7 @@ export function ScenariosTab({
 /** The checks that ran in the scenario on the board, with what each one measured. */
 export function ChecksTab({ results, assertions, scenarioName, side, ignore = NONE }: { results: AssertionResult[]; assertions: AssertionDef[]; scenarioName: string; side: string; ignore?: Set<string> }) {
   const names = new Map(assertions.map((a) => [a.id, a.description]));
+  const fromCoverage = new Set(assertions.filter((a) => a.origin === "coverage").map((a) => a.id));
   const failed = results.filter((r) => counts(r, ignore)).length;
   return (
     <div className="pt-4">
@@ -201,6 +202,7 @@ export function ChecksTab({ results, assertions, scenarioName, side, ignore = NO
               </td>
               <td className="py-2.5 pr-4 align-middle text-ink">
                 {names.get(r.assertion_id) ?? r.type}
+                {fromCoverage.has(r.assertion_id) && <span className="mt-0.5 block text-xs text-muted">Added by the spec coverage step</span>}
                 {ignore.has(r.assertion_id) && r.status === "fail" && <span className="mt-0.5 block text-xs text-muted">Possible spec ambiguity, not counted as a bug</span>}
                 <span className="mt-0.5 block text-xs text-muted sm:hidden">{r.evidence}</span>
               </td>
