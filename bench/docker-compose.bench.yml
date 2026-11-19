@@ -12,3 +12,5 @@ services:
       RATE_LIMIT_PER_HOUR: "1000"
       # The stimulus search is off in the bench stack unless run_dev.sh --search asks for it. This overrides .env.
       SEARCH_VARIANTS: "${BENCH_SEARCH_VARIANTS:-0}"
+      # The spec-coverage step is off in the bench stack unless run_dev.sh --coverage asks for it. This overrides .env.
+      COVERAGE: "${BENCH_COVERAGE:-0}"

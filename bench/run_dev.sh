@@ -6,6 +6,7 @@
 #   bench/run_dev.sh --list [--cases ...]            print what would run, then exit (touches nothing)
 #   bench/run_dev.sh --dir practice                  the practice set (bench/practice, 10 hidden-behaviour cases) instead of bench/cases
 #   bench/run_dev.sh --search [N]                    turn the stimulus search on for this run (N variants per case, default 30)
+#   bench/run_dev.sh --coverage                      turn the spec-coverage step on for this run (one extra call for spec bullets with no check)
 #   RUN_ID=my_id bench/run_dev.sh                    force a run id
 #   KEEP_BENCH_LIMITS=1 bench/run_dev.sh             leave the raised rate limit in place when the script ends
 #
@@ -17,7 +18,8 @@
 # Clean room 1 is written by DeepSeek, clean room 2 by the OPENAI_* model (gpt-4o-mini). The stimulus search is OFF unless
 # --search is given. It is switched on through the bench override (BENCH_SEARCH_VARIANTS), so .env is never touched, and it
 # keeps a finding only if it passes its three acceptance gates. The practice set is for tuning: it is not frozen, so --dir
-# practice skips the freeze check and only reports the set's fingerprint.
+# practice skips the freeze check and only reports the set's fingerprint. The spec-coverage step is OFF unless --coverage is
+# given; like the search it goes through the bench override (BENCH_COVERAGE) and the health pre-flight refuses a stack that disagrees.
 # ALLOW_FALLBACK=1 lets the run go ahead with two DeepSeek rooms when OPENAI_* is not configured (the report says so).
 # This script never reads or prints .env (the Python runners load it themselves).
 # Exit 3 = budget stop or incomplete.
@@ -41,6 +43,7 @@ SELECTED=()
 LIST_ONLY=0
 CASE_DIR="frozen"
 SEARCH_N=0
+COVERAGE_ON=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --cases)
@@ -64,7 +67,8 @@ while [ "$#" -gt 0 ]; do
       shift
       if [ "$#" -gt 0 ] && [[ "$1" =~ ^[0-9]+$ ]]; then SEARCH_N="$1"; shift; fi
       [ "$SEARCH_N" -ge 1 ] && [ "$SEARCH_N" -le 100 ] || { echo "--search takes 1 to 100 variants" >&2; exit 2; } ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    --coverage) COVERAGE_ON=1; shift ;;
+    -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
 done
@@ -111,6 +115,9 @@ fi
 if [ "$SEARCH_N" -gt 0 ]; then
   KIND="${KIND}_search"
 fi
+if [ "$COVERAGE_ON" -eq 1 ]; then
+  KIND="${KIND}_coverage"
+fi
 TOTAL="${#CASES[@]}"
 
 # --- Run id (resume-friendly, kept apart for case subsets and the full set) ----------------------------
@@ -131,6 +138,7 @@ if [ "$LIST_ONLY" -eq 1 ]; then
   echo "cases  : ${TOTAL} from ${CASE_DIR}"
   echo "search : $([ "$SEARCH_N" -gt 0 ] && echo "ON, ${SEARCH_N} variants per case, three acceptance gates" || echo off)"
   printf '  %s\n' "${CASES[@]}"
+  echo "coverage: $([ "$COVERAGE_ON" -eq 1 ] && echo "ON, one extra call per run for spec bullets with no check" || echo off)"
   echo "cap    : DeepSeek \$${CAP_DS}, OpenAI \$${CAP_OA}"
   echo "log    : ${LOG}"
   exit 0
@@ -211,7 +219,8 @@ restore_limits()
 trap restore_limits EXIT
 
 export BENCH_SEARCH_VARIANTS="$SEARCH_N"
-log "docker compose up --build -d (bench override: RATE_LIMIT_PER_HOUR=1000, SEARCH_VARIANTS=${SEARCH_N}). This builds the current agent code."
+export BENCH_COVERAGE="$COVERAGE_ON"
+log "docker compose up --build -d (bench override: RATE_LIMIT_PER_HOUR=1000, SEARCH_VARIANTS=${SEARCH_N}, COVERAGE=${COVERAGE_ON}). This builds the current agent code."
 run_logged "${COMPOSE[@]}" up --build -d || die "docker compose up failed"
 
 HEALTH=""
@@ -222,10 +231,11 @@ for _ in $(seq 1 60); do
 done
 [ -n "$HEALTH" ] || die "no answer from $API/api/health after 120 s"
 
-HEALTH_JSON="$HEALTH" ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" WANT_SEARCH="$SEARCH_N" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
+HEALTH_JSON="$HEALTH" ALLOW_FALLBACK="${ALLOW_FALLBACK:-0}" WANT_SEARCH="$SEARCH_N" WANT_COVERAGE="$COVERAGE_ON" "$PY" - <<'EOF' 2>&1 | tee -a "$LOG"
 import json, os, sys
 h = json.loads(os.environ["HEALTH_JSON"])
 want_search = int(os.environ.get("WANT_SEARCH", "0"))
+want_coverage = bool(int(os.environ.get("WANT_COVERAGE", "0")))
 lim = h.get("limits", {})
 agent = h.get("agent")
 print(f"health: ok={h.get('ok')} sandbox={h.get('sandbox')} llm_model={h.get('llm_model')} "
@@ -249,6 +259,10 @@ elif (agent.get("search_variants") or 0) != want_search:
     errs.append(f"the stimulus search must be {'OFF' if not want_search else 'ON with ' + str(want_search) + ' variants'} for this run, the stack has {agent.get('search_variants')}: {agent}")
 elif not (agent.get("cleanroom2") or {}).get("mixed") and os.environ.get("ALLOW_FALLBACK") != "1":
     errs.append(f"clean room 2 is not on a second model (OPENAI_* missing or CLEANROOM_MIXED=0): {agent.get('cleanroom2')}")
+if "coverage" not in h:
+    errs.append("the running backend does not know the spec-coverage switch (no 'coverage' in /api/health): the rebuild did not take")
+elif bool((h.get("coverage") or {}).get("enabled")) != want_coverage:
+    errs.append(f"the spec-coverage step must be {'ON' if want_coverage else 'OFF'} for this run, the stack has {h.get('coverage')}")
 if h.get("passcode_required") and not os.environ.get("DEMO_PASSCODE"):
     errs.append("passcode required but DEMO_PASSCODE is not set in this shell")
 if errs:
@@ -256,7 +270,7 @@ if errs:
     sys.exit(1)
 EOF
 [ "${PIPESTATUS[0]}" -eq 0 ] || die "health pre-flight failed (see above)"
-log "stack current, app on deepseek-chat, search $([ "$SEARCH_N" -gt 0 ] && echo "on (${SEARCH_N} variants)" || echo off), clean room 2 model: see agent settings above"
+log "stack current, app on deepseek-chat, search $([ "$SEARCH_N" -gt 0 ] && echo "on (${SEARCH_N} variants)" || echo off), spec coverage $([ "$COVERAGE_ON" -eq 1 ] && echo on || echo off), clean room 2 model: see agent settings above"
 
 # --- Hexorcist, one case at a time --------------------------------------------------------------------
 hex_case_done()
@@ -300,7 +314,7 @@ import json, sys
 c = json.loads(open(sys.argv[1]).read())["cases"][0]
 cc = c.get("cross_check") or {}
 rooms = " | ".join(f"room{r.get('index')} {r.get('model')} {r.get('status')}" for r in cc.get("rooms", [])) or "no rooms"
-print(f"status={c.get('status')} rule={cc.get('rule')} {rooms} left_out={len(c.get('ungrounded') or [])} cost ds=${c.get('cost_deepseek_usd')} oa=${c.get('cost_openai_usd')}")
+print(f"status={c.get('status')} rule={cc.get('rule')} {rooms} left_out={len(c.get('ungrounded') or [])} coverage={(c.get('coverage') or {}).get('added')} cost ds=${c.get('cost_deepseek_usd')} oa=${c.get('cost_openai_usd')}")
 EOF
 }
 

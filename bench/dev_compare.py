@@ -164,6 +164,17 @@ def summarize(run: str, replay: dict | None, old_replay: list | None = None) -> 
         out["grounding_dropped"] = sum(len((raw[c].get("grounding") or {}).get("dropped") or []) for c in ids)
         out["ungrounded_total"] = sum(len(raw[c].get("ungrounded") or []) for c in ids)
         out["ungrounded_cases"] = sum(1 for c in ids if raw[c].get("ungrounded"))
+    if any(raw[c].get("coverage") for c in ids):
+        cov = {c: raw[c]["coverage"] for c in ids if raw[c].get("coverage")}
+        out["coverage_cases"] = len(cov)
+        out["coverage_calls"] = sum(1 for v in cov.values() if v.get("called"))
+        out["coverage_added"] = {c: v["added"] for c, v in cov.items() if v.get("added")}
+        out["coverage_added_total"] = sum(len(v.get("added") or []) for v in cov.values())
+        out["coverage_bugs"] = {c: [b["assertion_id"] for b in raw[c]["bugs"] if b.get("origin") == "coverage"] for c in cov if any(b.get("origin") == "coverage" for b in raw[c]["bugs"])}
+        out["coverage_left_out"] = {c: [u["assertion_id"] for u in raw[c].get("ungrounded") or [] if u["assertion_id"] in (cov[c].get("added") or [])] for c in cov if any(u["assertion_id"] in (cov[c].get("added") or []) for u in raw[c].get("ungrounded") or [])}
+        out["coverage_unconfirmed"] = {c: [u["assertion_id"] for u in raw[c].get("unconfirmed") or [] if u["assertion_id"] in (cov[c].get("added") or [])] for c in cov if any(u["assertion_id"] in (cov[c].get("added") or []) for u in raw[c].get("unconfirmed") or [])}
+        out["coverage_displaced"] = {c: v["displaced"] for c, v in cov.items() if v.get("displaced")}
+        out["coverage_tokens"] = sum(((raw[c].get("llm_by_step") or {}).get("coverage") or {}).get("prompt_tokens", 0) + ((raw[c].get("llm_by_step") or {}).get("coverage") or {}).get("completion_tokens", 0) for c in cov)
     out.update(honest_recall(run, raw, score, replay, old_replay))
     if replay is not None:
         ref = lambda c, a: (replay.get(c, {}).get("assertions", {}).get(a) or {}).get("ref_fail")  # noqa: E731

@@ -17,6 +17,7 @@ sys.path[:0] = [str(_ROOT)]
 load_dotenv(_ROOT / ".env", override=False)
 
 from bench.case_io import RESULTS_DIR, add_dir_option, apply_dir_option, list_case_ids, load_case, write_json
+from bench.coverage_rows import coverage_row
 from bench.llm_budget import cost_by_bucket, estimate_cost
 
 
@@ -95,6 +96,7 @@ def main() -> None:
                 continue
 
             report = run.get("report") or {}
+            origins = {a.get("id"): a.get("origin") for a in report.get("assertions") or []}
             bugs = []
             for b in report.get("bugs") or []:
                 bugs.append(
@@ -107,6 +109,7 @@ def main() -> None:
                         "assertion_type": b.get("assertion_type"),
                         "assertion_id": b.get("assertion_id"),
                         "found_by_search": bool(b.get("found_by_search")),
+                        "origin": origins.get(b.get("assertion_id")),
                         "verified": b.get("verified"),
                         "evidence": b.get("evidence"),
                         "root_cause": b.get("root_cause"),
@@ -160,6 +163,8 @@ def main() -> None:
                     "search": {k: v for k, v in (report.get("search") or {}).items() if k != "mutations"},
                     "found_by_search": [b.get("assertion_id") for b in report.get("bugs") or [] if b.get("found_by_search")],
                     "grounding": {"checked": (report.get("grounding") or {}).get("checked"), "dropped": (report.get("grounding") or {}).get("dropped", [])},
+                    # Spec-coverage step (None when it is off): the bullets without a check, the call, and the checks it added.
+                    "coverage": coverage_row(report.get("coverage")),
                     "llm_by_step": llm.get("by_step"),
                     "assertion_ids": {b.get("id"): b.get("assertion_id") for b in report.get("bugs") or []},
                 }
