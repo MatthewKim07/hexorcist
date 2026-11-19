@@ -7,7 +7,7 @@
 
 <h1 align="center">Hexorcist</h1>
 
-<p align="center">An AI agent that attacks Arduino firmware on an emulated chip, then proves its own fix.</p>
+<p align="center">Hexorcist stays quiet when firmware is fine, and shows emulator evidence when it reports a bug.</p>
 
 <p align="center">
   <img src="docs/images/hero.png" alt="Finished thermostat report: verdict, stats, and board replay" width="900" />
@@ -15,7 +15,14 @@
 
 ## Why
 
-Firmware bugs like a fan that chatters at a threshold or a button that double-toggles often compile cleanly and look plausible when you only read the sketch. A code review can guess; Hexorcist compiles the firmware, runs it on an emulated chip under adversarial inputs, and measures what happened.
+Asking an LLM to review a sketch gets you a list of worries. On these benchmarks most of them were wrong. Hexorcist compiles the firmware, runs it on an emulated ATmega328P under adversarial inputs, and reports a bug only with evidence from the emulator trace, for example `D9 toggled 23 times in a 5000 ms window (limit 2)`.
+
+Against a plain LLM review of the same sketches (development benchmark, see [Benchmark](#benchmark)):
+
+- **Correct firmware:** on the 11 correct sketches of the 40-case set, Hexorcist stayed silent on 10 and raised one false alarm. Plain DeepSeek and gpt-4o-mini reviews reported problems on all 11 (31 and 23 false alarms). On the 3 correct decoys of the practice set it was silent on 2 and raised one false alarm; the plain reviews reported problems on all 3.
+- **Precision** (reports that match a planted bug, out of all reports): 88.1% against 32.5% (DeepSeek) and 37.6% (gpt-4o-mini) on the 40 cases, and 70.0% against 45.8% and 15.8% on the practice set.
+
+It finds about as many planted bugs as a plain DeepSeek review, not more (30 of 32 against 32 of 32 on the 40 cases, 6 of 7 against 7 of 7 on the practice set), and it costs more time: about 100 seconds per case against 4 to 10, and about 7 times the money. Both sets were used to tune the agent, so these are development numbers.
 
 ## What it does
 
@@ -66,22 +73,26 @@ Hexorcist is measured on two sets of firmware cases, both in `bench/`:
 
 ### v2, 40 cases
 
-| System | Recall (32 bugs) | Honest recall | False alarms | Verified fix (29 buggy) | Cost of the 40 cases |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Plain review, DeepSeek | 32/32 (100%) | n/a | 81 | 27/29 (93%) | $0.027 |
-| Plain review, gpt-4o-mini | 28/32 (88%) | n/a | 53 | 14/29 (48%) | $0.024 |
-| Hexorcist, first run (2026-11-15) | 31/32 (97%) | 26/32 (81%) | 27 | 27/29 (93%) | $0.241 |
-| Hexorcist, latest (`dev_full5`, 2026-11-18) | 30/32 (94%) | 28/32 (88%) | 5 | 26/29 (90%) | $0.201 |
+| System | Recall (32 bugs) | Honest recall | False alarms | Precision | Verified fix (29 buggy) | Cost of the 40 cases |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Plain review, DeepSeek | 32/32 (100%) | n/a | 81 | 32.5% (39/120) | 27/29 (93%) | $0.027 |
+| Plain review, gpt-4o-mini | 28/32 (88%) | n/a | 53 | 37.6% (32/85) | 14/29 (48%) | $0.024 |
+| Hexorcist, first run (2026-11-15) | 31/32 (97%) | 26/32 (81%) | 27 | 62.0% (44/71) | 27/29 (93%) | $0.241 |
+| Hexorcist, latest (`dev_full5`, 2026-11-18) | 30/32 (94%) | 28/32 (88%) | 5 | 88.1% (37/42) | 26/29 (90%) | $0.201 |
 
 Recall counts the planted bugs that a report was matched to (matching is judged by `gpt-4o-mini`). Honest recall counts a detection only if the matched check fails on the buggy sketch in a scenario where the known-good reference passes, so a check that no correct firmware passes does not count. It is computed for Hexorcist only. False alarms are strict: every report that matches no planted bug, on all 40 cases. Verified fix is the share of the 29 buggy cases whose patch passes the frozen checks. The plain reviews make no fix claim of their own, so theirs is the result of the patch they wrote. Hexorcist runs `deepseek-chat`, plus `gpt-4o-mini` for the second clean room. Cost leaves out the judge, about $0.006 per scoring.
 
+Precision is matched reports divided by matched reports plus false alarms. A matched report is one the judge credited to a planted bug, counting a second report of the same bug; the count comes from the judge files in `bench/judgements`, so it is exact, not estimated. False alarms are the column beside it, where reports on a correct sketch with the same root cause count once, so the denominator can be a little below the raw number of reports (DeepSeek wrote 124 reports; 120 are counted).
+
 ### Practice set, 10 cases
 
-| System | Recall (7 bugs) | Honest recall | False alarms (7 bugs + 3 decoys) | Verified fix (7 buggy) | Cost of the 10 cases |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Plain review, DeepSeek | 7/7 (6 defensible) | n/a | 13 | 5/7 | $0.0064 |
-| Plain review, gpt-4o-mini | 3/7 (2 defensible) | n/a | 16 | 0/7 | $0.0054 |
-| Hexorcist, latest (`dev_practice2`) | 6/7 | 4/7 | 3 | 4/7 | $0.052 |
+| System | Recall (7 bugs) | Honest recall | False alarms (7 bugs + 3 decoys) | Precision | Verified fix (7 buggy) | Cost of the 10 cases |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Plain review, DeepSeek | 7/7 (6 defensible) | n/a | 13 | 45.8% (11/24) | 5/7 | $0.0064 |
+| Plain review, gpt-4o-mini | 3/7 (2 defensible) | n/a | 16 | 15.8% (3/19) | 0/7 | $0.0054 |
+| Hexorcist, latest (`dev_practice2`) | 6/7 | 4/7 | 3 | 70.0% (7/10) | 4/7 | $0.052 |
+
+Precision is computed as under the 40-case table, from the judge files; the counts are exact. Here nothing was deduplicated: matched plus false alarms equals the number of reports in every row (24, 19 and 10).
 
 "Defensible" leaves out judge matches whose report does not name the planted cause (`bench/practice/README.md` lists them).
 
